@@ -98,6 +98,11 @@ All steps complete. Order followed during implementation:
 11. ✅ Filtering (text search + special keywords: error, agent, running)
 12. ✅ Sub-agent JSONL parsing (subagents/ directory, toolUseResult.agentId linking)
 13. ✅ CLI packaging (auto-open browser, port fallback, npm bin entry)
+14. ✅ Compact stats pill toolbar (agent count with robot icon, health badge, warning icon, token count, session duration)
+15. ✅ Agent duration bars (totalDurationMs from JSONL for real execution time)
+16. ✅ Filter text highlighting (yellow background on matched text in Name column)
+17. ✅ GitHub Pages site (`site/`) with Actions deploy workflow
+18. ✅ Landing page and docs page mockups (`noctrace-landing.jsx`, `noctrace-docs.jsx`)
 
 ### Remaining polish:
 - Loading state spinners
