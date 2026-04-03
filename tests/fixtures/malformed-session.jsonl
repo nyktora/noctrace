@@ -1,0 +1,5 @@
+{"type":"system","sessionId":"sess-005","timestamp":"2026-03-30T14:00:00.000Z","uuid":"sys-init-5","parentUuid":null,"subtype":"init"}
+this is not valid json
+{"type":"assistant","sessionId":"sess-005","timestamp":"2026-03-30T14:00:02.000Z","uuid":"asst-m1","parentUuid":null,"message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-m1","name":"Read","input":{"file_path":"/src/main.ts"}}],"usage":{"input_tokens":500,"output_tokens":50}}}
+{broken json here
+{"type":"user","sessionId":"sess-005","timestamp":"2026-03-30T14:00:03.000Z","uuid":"user-m1","parentUuid":"asst-m1","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-m1","content":"file contents here"}]},"isMeta":true}

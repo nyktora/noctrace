@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="80" viewBox="0 0 320 80">
+  <rect width="320" height="80" fill="#1e1e2e" rx="12"/>
+  <g transform="translate(24, 22)">
+    <svg width="36" height="36" viewBox="0 0 16 16" fill="none" stroke="#cba6f7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="2" y1="4" x2="9" y2="4"/>
+      <line x1="2" y1="8" x2="12" y2="8"/>
+      <line x1="2" y1="12" x2="7" y2="12"/>
+    </svg>
+  </g>
+  <text x="72" y="50" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace" font-size="28" font-weight="700" fill="#cba6f7">noctrace</text>
+</svg>
