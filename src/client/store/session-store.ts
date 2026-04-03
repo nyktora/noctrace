@@ -23,6 +23,10 @@ export interface SessionStore {
   zoomLevel: number;
   panOffset: number;
 
+  // Resume
+  resumeStatus: 'idle' | 'running' | 'done' | 'error';
+  resumeOutput: string;
+
   // Actions
   fetchProjects: () => Promise<void>;
   fetchSessions: (slug: string) => Promise<void>;
@@ -34,6 +38,9 @@ export interface SessionStore {
   setZoom: (level: number) => void;
   setPan: (offset: number) => void;
   addRows: (rows: WaterfallRow[], health: ContextHealth, boundaries: number[]) => void;
+  setResumeStatus: (status: 'idle' | 'running' | 'done' | 'error') => void;
+  appendResumeOutput: (text: string) => void;
+  clearResume: () => void;
 }
 
 /** Global session store powered by Zustand */
@@ -53,6 +60,9 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   zoomLevel: 1,
   panOffset: 0,
+
+  resumeStatus: 'idle',
+  resumeOutput: '',
 
   fetchProjects: async () => {
     const res = await fetch('/api/projects');
@@ -105,6 +115,10 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   setAutoScroll: (on) => set({ autoScroll: on }),
   setZoom: (level) => set({ zoomLevel: level }),
   setPan: (offset) => set({ panOffset: offset }),
+
+  setResumeStatus: (status) => set({ resumeStatus: status }),
+  appendResumeOutput: (text) => set((s) => ({ resumeOutput: s.resumeOutput + text })),
+  clearResume: () => set({ resumeStatus: 'idle', resumeOutput: '' }),
 
   addRows: (rows, health, boundaries) => {
     const existing = get().rows;

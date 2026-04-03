@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 
 import type { ContextHealth, WaterfallRow } from '../../shared/types.ts';
 import { useSessionStore } from '../store/session-store.ts';
@@ -10,22 +10,38 @@ interface WsRowsMessage {
   boundaries: number[];
 }
 
-interface WsWatchMessage {
-  type: 'watch';
-  slug: string;
-  id: string;
+interface WsResumeChunk {
+  type: 'resume-chunk';
+  text: string;
 }
 
-type WsOutgoing = WsWatchMessage;
-type WsIncoming = WsRowsMessage;
+interface WsResumeDone {
+  type: 'resume-done';
+  exitCode: number | null;
+}
+
+interface WsResumeError {
+  type: 'resume-error';
+  message: string;
+}
+
+type WsIncoming = WsRowsMessage | WsResumeChunk | WsResumeDone | WsResumeError;
 
 /**
  * Custom hook that maintains a WebSocket connection to the local Noctrace server.
  * Sends a watch command when the selected session changes and calls addRows when
- * new row data arrives from the server.
+ * new row data arrives from the server. Also handles resume session streaming.
+ *
+ * Returns a sendResume function to trigger session resume and a cancelResume function.
  */
-export function useSessionWs(): void {
+export function useSessionWs(): {
+  sendResume: (sessionId: string, message: string, fork?: boolean) => void;
+  cancelResume: () => void;
+} {
   const addRows = useSessionStore((s) => s.addRows);
+  const setResumeStatus = useSessionStore((s) => s.setResumeStatus);
+  const appendResumeOutput = useSessionStore((s) => s.appendResumeOutput);
+  const clearResume = useSessionStore((s) => s.clearResume);
   const selectedSessionId = useSessionStore((s) => s.selectedSessionId);
   const selectedProjectSlug = useSessionStore((s) => s.selectedProjectSlug);
 
@@ -44,12 +60,6 @@ export function useSessionWs(): void {
     const port = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
     const wsUrl = `ws://${window.location.hostname}:${port}/ws`;
 
-    function send(msg: WsOutgoing): void {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify(msg));
-      }
-    }
-
     function connect(): void {
       if (!isMountedRef.current) return;
 
@@ -57,8 +67,10 @@ export function useSessionWs(): void {
       wsRef.current = ws;
 
       ws.addEventListener('open', () => {
-        if (selectedProjectSlug && selectedSessionId) {
-          send({ type: 'watch', slug: selectedProjectSlug, id: selectedSessionId });
+        const slug = useSessionStore.getState().selectedProjectSlug;
+        const id = useSessionStore.getState().selectedSessionId;
+        if (slug && id) {
+          ws.send(JSON.stringify({ type: 'watch', slug, id }));
         }
       });
 
@@ -71,6 +83,13 @@ export function useSessionWs(): void {
         }
         if (msg.type === 'rows') {
           addRows(msg.rows, msg.health, msg.boundaries);
+        } else if (msg.type === 'resume-chunk') {
+          appendResumeOutput(msg.text);
+        } else if (msg.type === 'resume-done') {
+          setResumeStatus(msg.exitCode === 0 ? 'done' : 'error');
+        } else if (msg.type === 'resume-error') {
+          appendResumeOutput(msg.message);
+          setResumeStatus('error');
         }
       });
 
@@ -100,8 +119,22 @@ export function useSessionWs(): void {
   // Send watch message whenever selected session changes
   useEffect(() => {
     if (selectedProjectSlug && selectedSessionId && wsRef.current?.readyState === WebSocket.OPEN) {
-      const msg: WsWatchMessage = { type: 'watch', slug: selectedProjectSlug, id: selectedSessionId };
-      wsRef.current.send(JSON.stringify(msg));
+      wsRef.current.send(JSON.stringify({ type: 'watch', slug: selectedProjectSlug, id: selectedSessionId }));
     }
   }, [selectedProjectSlug, selectedSessionId]);
+
+  const sendResume = useCallback((sessionId: string, message: string, fork?: boolean) => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return;
+    clearResume();
+    setResumeStatus('running');
+    wsRef.current.send(JSON.stringify({ type: 'resume', sessionId, message, fork }));
+  }, [clearResume, setResumeStatus]);
+
+  const cancelResume = useCallback(() => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return;
+    wsRef.current.send(JSON.stringify({ type: 'resume-cancel' }));
+    setResumeStatus('idle');
+  }, [setResumeStatus]);
+
+  return { sendResume, cancelResume };
 }
