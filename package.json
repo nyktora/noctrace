@@ -9,9 +9,12 @@
     "type": "git",
     "url": "git+https://github.com/nyktora/noctrace.git"
   },
-  "homepage": "https://github.com/nyktora/noctrace",
+  "homepage": "https://nyktora.github.io/noctrace/",
   "bugs": {
     "url": "https://github.com/nyktora/noctrace/issues"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "keywords": [
     "claude",
@@ -27,7 +30,7 @@
     "visualizer"
   ],
   "bin": {
-    "noctrace": "./bin/noctrace.js"
+    "noctrace": "bin/noctrace.js"
   },
   "files": [
     "bin/",

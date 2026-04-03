@@ -8,6 +8,14 @@
   Zero config. Zero cloud. Just run <code>npx noctrace</code> and see what your agents are doing.
 </p>
 
+<p align="center">
+  <a href="https://www.npmjs.com/package/noctrace"><img src="https://img.shields.io/npm/v/noctrace?color=cb6f10&label=npm" alt="npm version" /></a>
+  <a href="https://github.com/nyktora/noctrace/blob/main/LICENSE"><img src="https://img.shields.io/github/license/nyktora/noctrace?color=green" alt="MIT License" /></a>
+  <a href="https://www.npmjs.com/package/noctrace"><img src="https://img.shields.io/npm/dm/noctrace?color=blue" alt="npm downloads" /></a>
+</p>
+
+---
+
 ![Noctrace waterfall timeline](docs/screenshots/noctrace-waterfall.png)
 
 ## Why
@@ -16,16 +24,30 @@ Claude Code's terminal output is opaque. Tool calls show summaries like "Read 3 
 
 Noctrace reads Claude Code's session logs from `~/.claude/projects/` and renders them as an interactive waterfall timeline — the same visual paradigm that makes Chrome DevTools' Network tab instantly readable.
 
+## Install
+
+```bash
+# Run directly (no install needed)
+npx noctrace
+
+# Or install globally
+npm install -g noctrace
+noctrace
+```
+
+Requires Node.js 20+. That's it. No config, no hooks, no API keys.
+
 ## Features
 
 - **Waterfall timeline** — horizontal bars on a shared time axis showing tool call concurrency and duration
-- **Collapsible agent groups** — sub-agents as expandable row groups with their tool calls nested inside
+- **Collapsible agent groups** — sub-agents as expandable row groups with real execution time bars showing parallel work
 - **Sub-agent visibility** — parses sub-agent JSONL files to show what happened inside each agent
 - **Real-time updates** — file watcher pushes new events via WebSocket as your session runs
-- **Context Health grade** — A-F letter grade computed from 5 signals (context fill, compaction count, re-read ratio, error acceleration, tool efficiency) with actionable recommendations
+- **Context Health grade** — A-F letter grade from 5 signals with actionable recommendations
+- **Compact stats pill** — toolbar shows agent count, health grade, total tokens, and session duration at a glance
+- **Filter with highlighting** — search by tool name, label, or keywords (`error`, `agent`, `running`) with yellow match highlighting
 - **Virtual scrolling** — handles sessions with hundreds of tool calls
 - **Zoom & pan** — mouse wheel zoom (1-50x), click-drag pan
-- **Filtering** — search by tool name, label, or special keywords (`error`, `agent`, `running`)
 - **Detail panel** — click any row for full tool input/output, resizable
 - **Re-read detection** — flags duplicate file reads that waste context
 - **Dark theme** — Catppuccin Mocha palette
@@ -36,18 +58,13 @@ Noctrace reads Claude Code's session logs from `~/.claude/projects/` and renders
 
 Noctrace computes a real-time health score from your session data and warns you before context rot degrades output quality. The breakdown panel shows per-signal grades and tells you exactly when to run `/compact`.
 
-## Install
-
-```bash
-# Run directly (no install)
-npx noctrace
-
-# Or install globally
-npm install -g noctrace
-noctrace
-```
-
-Requires Node.js 20+.
+| Signal | Weight | What it measures |
+|--------|--------|-----------------|
+| Context Fill | 40% | How full is the 200k token window |
+| Compactions | 25% | Number of lossy compaction events |
+| Re-reads | 15% | Duplicate file reads (retrieval failures) |
+| Error Rate | 10% | Accelerating errors in second half of session |
+| Tool Efficiency | 10% | Declining productive output |
 
 ## How it works
 
@@ -59,6 +76,13 @@ Requires Node.js 20+.
 
 No hooks to install. No config files. No cloud. Everything stays local.
 
+## Configuration
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `PORT` | `4117` | Server port (auto-increments if busy) |
+| `CLAUDE_HOME` | `~/.claude` | Override Claude home directory |
+
 ## Development
 
 ```bash
@@ -68,8 +92,6 @@ npm install
 npm run dev       # starts server + Vite dev server
 ```
 
-### Commands
-
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start dev server with HMR |
@@ -77,32 +99,6 @@ npm run dev       # starts server + Vite dev server
 | `npm test` | Run test suite (Vitest) |
 | `npm run typecheck` | TypeScript type checking |
 | `npm run lint` | ESLint |
-
-### Architecture
-
-```
-noctrace/
-├── src/
-│   ├── server/          # Express + WebSocket + file watcher
-│   ├── client/          # React 19 SPA
-│   │   ├── components/  # Waterfall, detail panel, session picker, health UI
-│   │   ├── store/       # Zustand state management
-│   │   ├── icons/       # Inline SVG components
-│   │   └── hooks/       # WebSocket hook
-│   └── shared/          # JSONL parser, types, health scoring
-├── tests/               # Vitest tests + JSONL fixtures
-├── demo/                # Sample data for testing
-└── bin/                 # CLI entry point
-```
-
-Single Node.js process serves the SPA, REST API, and WebSocket. No database — JSONL files on disk are the source of truth.
-
-## Configuration
-
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `PORT` | `4117` | Server port (auto-increments if busy) |
-| `CLAUDE_HOME` | `~/.claude` | Override Claude home directory |
 
 ## Tech Stack
 
@@ -114,3 +110,9 @@ Single Node.js process serves the SPA, REST API, and WebSocket. No database — 
 ## License
 
 [MIT](LICENSE)
+
+---
+
+<p align="center">
+  Built by <a href="https://nyktora.com">Nyktora Group</a>
+</p>
