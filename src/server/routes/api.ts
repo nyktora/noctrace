@@ -237,6 +237,16 @@ export function buildApiRouter(claudeHome: string): Router {
         }
       }
 
+      // Stretch agent rows to span from dispatch to last sub-agent child completion
+      for (const row of rows) {
+        if (row.type !== 'agent' || row.children.length === 0) continue;
+        const childMax = Math.max(...row.children.map((c) => c.endTime ?? c.startTime));
+        if (childMax > (row.endTime ?? 0)) {
+          row.endTime = childMax;
+          row.duration = childMax - row.startTime;
+        }
+      }
+
       res.json({ rows, compactionBoundaries: boundaries, health, sessionId });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

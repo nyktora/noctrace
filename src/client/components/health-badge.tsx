@@ -7,6 +7,8 @@ import { HealthBreakdown } from './health-breakdown.tsx';
 export interface HealthBadgeProps {
   grade: HealthGrade;
   score: number;
+  /** Diameter of the badge circle in pixels. Defaults to 28. */
+  size?: number;
 }
 
 const GRADE_COLORS: Record<HealthGrade, string> = {
@@ -21,9 +23,10 @@ const GRADE_COLORS: Record<HealthGrade, string> = {
  * Circular badge showing the context health letter grade.
  * Click toggles the health breakdown panel.
  */
-export function HealthBadge({ grade, score }: HealthBadgeProps): React.ReactElement {
+export function HealthBadge({ grade, score, size = 28 }: HealthBadgeProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   const color = GRADE_COLORS[grade];
+  const fontSize = Math.round(size * 0.46);
 
   return (
     <div className="relative">
@@ -32,20 +35,21 @@ export function HealthBadge({ grade, score }: HealthBadgeProps): React.ReactElem
         onClick={() => setOpen((v) => !v)}
         title={`Context Health: ${grade} (${score}/100) — click for breakdown`}
         style={{
-          width: 28,
-          height: 28,
+          width: size,
+          height: size,
           borderRadius: '50%',
           border: `2px solid ${color}`,
           backgroundColor: `${color}18`,
           color,
           fontWeight: 700,
-          fontSize: 13,
+          fontSize,
           fontFamily: 'ui-sans-serif, system-ui, sans-serif',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
           transition: 'background-color 150ms',
+          flexShrink: 0,
         }}
       >
         {grade}

@@ -4,7 +4,8 @@ import { useSessionStore } from '../store/session-store.ts';
 import { HealthBadge } from './health-badge.tsx';
 import { FilterIcon } from '../icons/filter-icon.tsx';
 import { WaterfallIcon } from '../icons/waterfall-icon.tsx';
-import { formatTokens } from '../utils/tool-colors.ts';
+import { WarningIcon } from '../icons/warning-icon.tsx';
+import { formatTokens, formatDuration } from '../utils/tool-colors.ts';
 
 /**
  * Top toolbar with logo, filter bar, auto-scroll toggle, and health badge.
@@ -17,7 +18,13 @@ export function Toolbar(): React.ReactElement {
   const health = useSessionStore((s) => s.health);
   const rows = useSessionStore((s) => s.rows);
 
+  const agentCount = rows.filter((r) => r.type === 'agent').length;
+
   const totalTokens = rows.reduce((sum, r) => sum + r.inputTokens + r.outputTokens, 0);
+
+  const sessionDuration = rows.length > 0
+    ? Math.max(...rows.map((r) => r.endTime ?? r.startTime)) - Math.min(...rows.map((r) => r.startTime))
+    : null;
 
   return (
     <div
@@ -78,17 +85,6 @@ export function Toolbar(): React.ReactElement {
         )}
       </div>
 
-      {/* Token count */}
-      {totalTokens > 0 && (
-        <div
-          className="text-xs font-mono shrink-0"
-          style={{ color: 'var(--ctp-subtext0)' }}
-          title={`Total tokens: ${totalTokens}`}
-        >
-          {formatTokens(totalTokens)} tok
-        </div>
-      )}
-
       {/* Auto-scroll toggle */}
       <button
         type="button"
@@ -106,10 +102,64 @@ export function Toolbar(): React.ReactElement {
         Auto
       </button>
 
-      {/* Health badge */}
-      {health && (
-        <div className="shrink-0 relative">
-          <HealthBadge grade={health.grade} score={health.score} />
+      {/* Compact stats pill */}
+      {rows.length > 0 && (
+        <div
+          className="flex items-center shrink-0"
+          style={{
+            backgroundColor: 'var(--ctp-crust)',
+            border: '1px solid var(--ctp-surface0)',
+            borderRadius: 9999,
+            padding: '2px 8px',
+            gap: 8,
+            fontSize: 11,
+          }}
+        >
+          {/* Agent count — grid icon + number */}
+          {agentCount > 0 && (
+            <div className="flex items-center" style={{ gap: 4 }}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <rect x="3" y="3" width="10" height="8" rx="2" stroke="var(--ctp-mauve)" strokeWidth="1.5" />
+                <circle cx="6" cy="7" r="1" fill="var(--ctp-mauve)" />
+                <circle cx="10" cy="7" r="1" fill="var(--ctp-mauve)" />
+                <path d="M5 13h6" stroke="var(--ctp-mauve)" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M8 11v2" stroke="var(--ctp-mauve)" strokeWidth="1.5" />
+                <path d="M5 3V1.5M11 3V1.5" stroke="var(--ctp-mauve)" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+              <span
+                className="font-mono"
+                style={{ color: 'var(--ctp-subtext0)', fontWeight: 600, fontSize: 11 }}
+              >
+                {agentCount}
+              </span>
+            </div>
+          )}
+
+          {/* Health grade badge — 20x20 compact circle */}
+          {health && <HealthBadge grade={health.grade} score={health.score} size={20} />}
+
+          {/* Warning icon */}
+          <WarningIcon size={12} color="var(--ctp-overlay0)" />
+
+          {/* Token count */}
+          <span
+            className="font-mono"
+            style={{ color: 'var(--ctp-subtext0)' }}
+            title={`Total tokens: ${totalTokens}`}
+          >
+            {formatTokens(totalTokens)}
+          </span>
+
+          {/* Session duration */}
+          {sessionDuration !== null && (
+            <span
+              className="font-mono"
+              style={{ color: 'var(--ctp-subtext0)' }}
+              title={`Session duration: ${formatDuration(sessionDuration)}`}
+            >
+              {formatDuration(sessionDuration)}
+            </span>
+          )}
         </div>
       )}
     </div>

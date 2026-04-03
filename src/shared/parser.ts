@@ -198,10 +198,13 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
   }
 
   // Build result map: tool_use_id → result data
-  const resultMap = new Map<string, { endTime: number; output: string; isError: boolean }>();
+  // For Agent/Task tool calls, also capture totalDurationMs so the agent bar
+  // can span its real lifetime instead of showing just the instant dispatch time.
+  const resultMap = new Map<string, { endTime: number; output: string; isError: boolean; totalDurationMs?: number }>();
   for (const rec of records) {
     if (rec.type !== 'user') continue;
-    const c = (rec as UserRecord).message.content;
+    const ur = rec as UserRecord;
+    const c = ur.message.content;
     if (!Array.isArray(c)) continue;
     const endTime = new Date(rec.timestamp).getTime();
     for (const block of c) {
@@ -211,6 +214,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
           endTime,
           output: extractContent(tb.content),
           isError: tb.is_error === true,
+          totalDurationMs: ur.toolUseResult?.totalDurationMs,
         });
       }
     }
@@ -326,13 +330,22 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       if (fp !== null) seenPaths.add(fp);
 
       const res = resultMap.get(block.id);
+      // For agent tool calls with totalDurationMs, use the real duration
+      // instead of the instant dispatch-to-result time.
+      const agentRealDuration = res?.totalDurationMs && isAgent(block.name) ? res.totalDurationMs : null;
+      const effectiveEndTime = agentRealDuration !== null
+        ? startTime + agentRealDuration
+        : (res ? res.endTime : null);
+      const effectiveDuration = agentRealDuration !== null
+        ? agentRealDuration
+        : (res ? res.endTime - startTime : null);
       pending.push({
         id: block.id,
         toolName: block.name,
         label: buildLabel(block.name, block.input),
         startTime,
-        endTime: res ? res.endTime : null,
-        duration: res ? res.endTime - startTime : null,
+        endTime: effectiveEndTime,
+        duration: effectiveDuration,
         status: res ? (res.isError ? 'error' : 'success') : 'running',
         input: block.input,
         output: res ? res.output : null,
@@ -462,6 +475,16 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
   for (const row of rowById.values()) {
     if (row.children.length > 1) {
       row.children.sort((a, b) => a.startTime - b.startTime);
+    }
+  }
+
+  // Stretch agent rows to span from dispatch to last child completion
+  for (const row of rowById.values()) {
+    if (row.type !== 'agent' || row.children.length === 0) continue;
+    const childMax = Math.max(...row.children.map((c) => c.endTime ?? c.startTime));
+    if (childMax > (row.endTime ?? 0)) {
+      row.endTime = childMax;
+      row.duration = childMax - row.startTime;
     }
   }
 

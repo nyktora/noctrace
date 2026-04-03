@@ -76,17 +76,13 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       health: ContextHealth;
       compactionBoundaries: number[];
     };
-    // Auto-expand all agents by default
-    const agentIds = new Set<string>(
-      data.rows.filter((r) => r.type === 'agent').map((r) => r.id),
-    );
     set({
       rows: data.rows,
       health: data.health,
       compactionBoundaries: data.compactionBoundaries ?? [],
       selectedSessionId: id,
       selectedRowId: null,
-      expandedAgents: agentIds,
+      expandedAgents: new Set<string>(),
       zoomLevel: 1,
       panOffset: 0,
       autoScroll: true,
