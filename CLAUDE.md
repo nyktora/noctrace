@@ -102,8 +102,6 @@ All steps complete. Order followed during implementation:
 15. ✅ Agent duration bars (totalDurationMs from JSONL for real execution time)
 16. ✅ Filter text highlighting (yellow background on matched text in Name column)
 17. ✅ GitHub Pages site (`site/`) with Actions deploy workflow
-18. ✅ Landing page and docs page mockups (`noctrace-landing.jsx`, `noctrace-docs.jsx`)
-
 ### Remaining polish:
 - Loading state spinners
 - Duration threshold filtering

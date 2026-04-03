@@ -107,7 +107,7 @@ Rationale:
 13. **Compaction boundaries** — vertical red dashed lines across the waterfall at each `compact_boundary` system record timestamp. Grid lines at 25/50/75% of session duration.
 14. **Re-read detection** — tracks Read calls to same file path within a session. Marks duplicates with a repeat icon (↻) on the waterfall bar.
 15. **CLI packaging** — `npx noctrace` or `noctrace` (global install). Auto-opens browser. Port 4117 default with auto-fallback (retries up to 10 ports on EADDRINUSE). `bin/noctrace.js` entry point.
-16. **GitHub Pages site** — static landing page and docs page in `site/` directory. Deployed via GitHub Actions workflow (`.github/workflows/pages.yml`). Landing page mockup (`noctrace-landing.jsx`) and docs page mockup (`noctrace-docs.jsx`) in repo root.
+16. **GitHub Pages site** — static landing page and docs page in `site/` directory. Deployed via GitHub Actions workflow (`.github/workflows/pages.yml`).
 16. **Multi-column waterfall layout** — Row # | Name | Type | Duration | Tokens | Context % | Waterfall bar. Time axis with 5 tick labels. Column headers with sort-like alignment.
 17. **Token tracking** — per-row input/output tokens from assistant record usage. Total token counter in toolbar. Yellow highlight on rows exceeding 5k tokens.
 18. **Dynamic context fill calculation** — uses session's peak observed token count to detect effective context window (handles Opus 4.6's ~300k auto-compaction ceiling). Falls back to 200k default for smaller sessions.
