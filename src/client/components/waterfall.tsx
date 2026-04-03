@@ -252,7 +252,7 @@ export function Waterfall(): React.ReactElement {
           Time
         </div>
         <div style={{ width: COL_TOKENS, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 6, borderRight: '1px solid var(--ctp-surface0)' }}>
-          Tokens
+          Δ Tok
         </div>
         <div
           className="hidden-mobile"

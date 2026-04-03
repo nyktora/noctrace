@@ -406,6 +406,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       output: p.output,
       inputTokens: p.inputTokens,
       outputTokens: p.outputTokens,
+      tokenDelta: 0,
       contextFillPercent: p.contextFillPercent,
       isReread: p.isReread,
       children: [],
@@ -439,6 +440,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       output: res ? res.output : null,
       inputTokens: sp.inputTokens,
       outputTokens: sp.outputTokens,
+      tokenDelta: 0,
       contextFillPercent: ctxFill,
       isReread,
       children: [],
@@ -499,6 +501,18 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
   for (const row of rowById.values()) {
     row.contextFillPercent = (row.inputTokens / effectiveWindow) * 100;
   }
+
+  // Compute per-row token delta from consecutive inputTokens (sorted by startTime)
+  function computeDeltas(rows: WaterfallRow[]): void {
+    const sorted = [...rows].sort((a, b) => a.startTime - b.startTime);
+    let prev = 0;
+    for (const row of sorted) {
+      row.tokenDelta = row.inputTokens > 0 ? Math.max(0, row.inputTokens - prev) : 0;
+      if (row.inputTokens > 0) prev = row.inputTokens;
+      if (row.children.length > 0) computeDeltas(row.children);
+    }
+  }
+  computeDeltas(top);
 
   return top;
 }
@@ -611,11 +625,20 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
         output: res ? res.output : null,
         inputTokens,
         outputTokens,
+        tokenDelta: 0,
         contextFillPercent,
         isReread,
         children: [],
       });
     }
+  }
+
+  // Compute per-row token delta for sub-agent rows
+  const sorted = [...rows].sort((a, b) => a.startTime - b.startTime);
+  let prevInput = 0;
+  for (const row of sorted) {
+    row.tokenDelta = row.inputTokens > 0 ? Math.max(0, row.inputTokens - prevInput) : 0;
+    if (row.inputTokens > 0) prevInput = row.inputTokens;
   }
 
   return rows;

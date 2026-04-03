@@ -100,7 +100,7 @@ export function WaterfallRowComponent({
   const scaledWidth = waterfallWidth * zoomLevel;
   const barLeft = startFraction * scaledWidth + panOffset;
   const barWidth = Math.max(durationFraction * scaledWidth, 2);
-  const totalTokens = row.inputTokens + row.outputTokens;
+  const tokenDelta = row.tokenDelta;
 
   // Row background — selected rows get a bright highlight
   let rowBg = 'transparent';
@@ -279,13 +279,13 @@ export function WaterfallRowComponent({
         <span
           className="font-mono text-xs"
           style={{
-            color: isDegraded ? 'var(--ctp-yellow)' : (totalTokens > 5000 ? 'var(--ctp-yellow)' : 'var(--ctp-subtext0)'),
+            color: isDegraded ? 'var(--ctp-yellow)' : 'var(--ctp-subtext0)',
             fontSize: 10,
             fontWeight: isDegraded ? 600 : 400,
           }}
-          title={`${row.inputTokens} in / ${row.outputTokens} out`}
+          title={`${row.tokenDelta} tokens added to context`}
         >
-          {formatTokens(totalTokens)}
+          {tokenDelta > 0 ? formatTokens(tokenDelta) : '—'}
         </span>
       </div>
 

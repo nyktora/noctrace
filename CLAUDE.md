@@ -6,6 +6,13 @@ Chrome DevTools Network-tab-style real-time waterfall visualizer for Claude Code
 
 Noctrace passively reads Claude Code session JSONL logs from `~/.claude/projects/` and renders them as an interactive waterfall timeline in a browser tab. Agents appear as collapsible row groups, tool calls as nested rows with colored timing bars on a shared time axis.
 
+### JSONL Log Paths
+
+- **Main session**: `~/.claude/projects/<project-slug>/<session-id>.jsonl`
+- **Sub-agent sessions**: `~/.claude/projects/<project-slug>/<session-id>/subagents/agent-<agent-id>.jsonl`
+
+Main and sub-agent logs are parsed by separate functions (`parseSessionContent` and `parseSubAgentContent`). Sub-agent rows are attached as children of their parent agent row in the API route, after both are independently parsed. Any per-row computation (like token deltas) must be done in **both** parsers.
+
 ## Tech Stack
 
 - **Runtime**: Node.js 20 LTS

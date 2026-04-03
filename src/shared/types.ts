@@ -25,6 +25,7 @@ export interface WaterfallRow {
   output: string | null;
   inputTokens: number;
   outputTokens: number;
+  tokenDelta: number;
   contextFillPercent: number;
   isReread: boolean;
   children: WaterfallRow[];

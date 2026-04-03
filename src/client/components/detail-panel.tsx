@@ -38,7 +38,6 @@ const DEFAULT_HEIGHT = 220;
 export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
   const selectRow = useSessionStore((s) => s.selectRow);
   const toolColor = getToolColor(row.toolName, row.status);
-  const totalTokens = row.inputTokens + row.outputTokens;
   const heatColor = getContextHeatColor(row.contextFillPercent);
 
   const [height, setHeight] = useState(DEFAULT_HEIGHT);
@@ -121,13 +120,16 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
         >
           {row.toolName}
         </span>
-        <span
-          className="font-mono text-xs truncate flex-1"
-          style={{ color: 'var(--ctp-subtext0)' }}
-          title={row.label}
-        >
-          {row.label}
-        </span>
+        {row.label !== row.toolName && (
+          <span
+            className="font-mono text-xs truncate flex-1"
+            style={{ color: 'var(--ctp-subtext0)' }}
+            title={row.label}
+          >
+            {row.label}
+          </span>
+        )}
+        {row.label === row.toolName && <span className="flex-1" />}
 
         {/* Metadata chips */}
         <div className="flex items-center gap-2 shrink-0 text-xs font-mono">
@@ -137,12 +139,12 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
           <span style={{ color: 'var(--ctp-subtext0)' }}>
             {formatDuration(row.duration)}
           </span>
-          {totalTokens > 0 && (
+          {row.tokenDelta > 0 && (
             <span
-              style={{ color: totalTokens > 5000 ? 'var(--ctp-yellow)' : 'var(--ctp-subtext0)' }}
-              title={`${row.inputTokens} in / ${row.outputTokens} out`}
+              style={{ color: row.tokenDelta > 5000 ? 'var(--ctp-yellow)' : 'var(--ctp-subtext0)' }}
+              title={`${row.tokenDelta} tokens added to context`}
             >
-              {formatTokens(row.inputTokens)}in / {formatTokens(row.outputTokens)}out
+              Δ {formatTokens(row.tokenDelta)}
             </span>
           )}
           {/* Context badge */}
@@ -176,14 +178,19 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
           style={{ borderRight: '1px solid var(--ctp-surface0)' }}
         >
           <div
-            className="px-2 py-1 text-xs uppercase tracking-wider shrink-0"
+            className="px-2 py-1 text-xs uppercase tracking-wider shrink-0 flex items-center justify-between"
             style={{
               color: 'var(--ctp-overlay0)',
               fontFamily: 'ui-sans-serif, system-ui, sans-serif',
               borderBottom: '1px solid var(--ctp-surface0)',
             }}
           >
-            Input
+            <span>Input</span>
+            {row.tokenDelta > 0 && (
+              <span className="font-mono" style={{ fontSize: 10, color: 'var(--ctp-subtext0)' }}>
+                {formatTokens(row.tokenDelta)}
+              </span>
+            )}
           </div>
           <pre
             className="text-xs p-2 overflow-auto font-mono whitespace-pre-wrap break-all"
@@ -194,14 +201,19 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
         </div>
         <div className="flex-1 overflow-auto">
           <div
-            className="px-2 py-1 text-xs uppercase tracking-wider shrink-0"
+            className="px-2 py-1 text-xs uppercase tracking-wider shrink-0 flex items-center justify-between"
             style={{
               color: 'var(--ctp-overlay0)',
               fontFamily: 'ui-sans-serif, system-ui, sans-serif',
               borderBottom: '1px solid var(--ctp-surface0)',
             }}
           >
-            Output
+            <span>Output</span>
+            {row.outputTokens > 0 && (
+              <span className="font-mono" style={{ fontSize: 10, color: 'var(--ctp-subtext0)' }}>
+                {formatTokens(row.outputTokens)}
+              </span>
+            )}
           </div>
           <pre
             className="text-xs p-2 font-mono whitespace-pre-wrap break-all"
