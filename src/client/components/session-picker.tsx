@@ -35,6 +35,27 @@ function formatSessionTime(startTime: string | null): string {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ` ${time}`;
 }
 
+interface SessionBadge {
+  label: string;
+  tooltip: string;
+  bgColor: string;
+  textColor: string;
+}
+
+function buildSessionBadges(session: SessionSummary): SessionBadge[] {
+  const badges: SessionBadge[] = [];
+  if (session.isActive) {
+    badges.push({ label: 'LIVE', tooltip: 'Process is running', bgColor: '#a6e3a133', textColor: '#a6e3a1' });
+  }
+  if (session.permissionMode === 'bypassPermissions') {
+    badges.push({ label: 'YOLO', tooltip: 'Dangerously skips permissions', bgColor: '#f38ba833', textColor: '#f38ba8' });
+  }
+  if (session.isRemoteControlled) {
+    badges.push({ label: 'RC', tooltip: 'Remote controlled', bgColor: '#89b4fa33', textColor: '#89b4fa' });
+  }
+  return badges;
+}
+
 /** Props for SessionPickerRow */
 export interface SessionPickerRowProps {
   session: SessionSummary;
@@ -47,23 +68,48 @@ function SessionPickerRow({ session, isSelected, onSelect }: SessionPickerRowPro
   const sessionTime = formatSessionTime(session.startTime);
   const relTime = formatRelativeTime(session.lastModified);
 
+  const badges = buildSessionBadges(session);
+
   return (
     <button
       type="button"
       onClick={() => onSelect(session.id)}
-      className="w-full text-left px-3 py-1.5 text-xs transition-colors"
+      className="w-full text-left py-1.5 text-xs transition-colors"
       style={{
+        paddingLeft: 16,
+        paddingRight: 12,
         backgroundColor: isSelected ? 'var(--ctp-surface1)' : 'transparent',
         color: isSelected ? 'var(--ctp-text)' : 'var(--ctp-subtext0)',
         borderLeft: isSelected ? '2px solid var(--ctp-mauve)' : '2px solid transparent',
+        opacity: session.isActive ? 1 : 0.5,
       }}
     >
-      <div
-        className="font-mono truncate"
-        style={{ fontSize: 11 }}
-        title={`${session.id}\n${session.startTime ?? ''}`}
-      >
-        {sessionTime || session.id.slice(0, 8) + '…'}
+      <div className="flex items-center gap-1.5">
+        <span
+          className="font-mono truncate"
+          style={{ fontSize: 11 }}
+          title={`${session.id}\n${session.startTime ?? ''}`}
+        >
+          {sessionTime || session.id.slice(0, 8) + '…'}
+        </span>
+        {badges.map((b) => (
+          <span
+            key={b.label}
+            title={b.tooltip}
+            className="shrink-0 font-mono"
+            style={{
+              fontSize: 8,
+              fontWeight: 700,
+              padding: '0px 3px',
+              borderRadius: 3,
+              backgroundColor: b.bgColor,
+              color: b.textColor,
+              lineHeight: '14px',
+            }}
+          >
+            {b.label}
+          </span>
+        ))}
       </div>
       <div className="flex justify-between mt-0.5" style={{ color: 'var(--ctp-overlay0)', fontSize: 10 }}>
         <span>{session.rowCount} calls</span>
@@ -93,7 +139,7 @@ function ProjectRow({ project, isSelected, onSelect }: ProjectRowProps): React.R
       style={{
         backgroundColor: isSelected ? 'var(--ctp-surface0)' : 'transparent',
         color: isSelected ? 'var(--ctp-lavender)' : 'var(--ctp-subtext1)',
-        opacity: project.sessionCount === 0 ? 0.5 : 1,
+        opacity: project.activeSessionCount > 0 ? 1 : 0.5,
       }}
       title={project.path}
     >

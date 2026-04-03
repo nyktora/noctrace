@@ -15,6 +15,42 @@ import {
 import { computeContextHealth } from '../../shared/health';
 import type { ProjectSummary, SessionSummary } from '../../shared/types';
 
+/**
+ * Read ~/.claude/sessions/*.json and return a Set of sessionIds
+ * that have a live process (verified via kill(pid, 0)).
+ * The registry's sessionId matches the JSONL filename (not the sessionId field inside the JSONL).
+ */
+async function getRunningSessionIds(claudeHome: string): Promise<Set<string>> {
+  const sessionsDir = path.join(claudeHome, 'sessions');
+  const running = new Set<string>();
+  let files: string[];
+  try {
+    files = await fs.readdir(sessionsDir);
+  } catch {
+    return running;
+  }
+  for (const file of files) {
+    if (!file.endsWith('.json')) continue;
+    try {
+      const raw = await fs.readFile(path.join(sessionsDir, file), 'utf8');
+      const data = JSON.parse(raw) as Record<string, unknown>;
+      const pid = typeof data['pid'] === 'number' ? data['pid'] : null;
+      const sid = typeof data['sessionId'] === 'string' ? (data['sessionId'] as string) : null;
+      if (pid !== null && sid) {
+        try {
+          process.kill(pid, 0); // check if process is alive
+          running.add(sid);
+        } catch {
+          // process not running
+        }
+      }
+    } catch {
+      // skip malformed files
+    }
+  }
+  return running;
+}
+
 /** Build the Express router, scoped to a given Claude home directory. */
 export function buildApiRouter(claudeHome: string): Router {
   const router = Router();
@@ -39,6 +75,7 @@ export function buildApiRouter(claudeHome: string): Router {
         return;
       }
 
+      const runningSessions = await getRunningSessionIds(claudeHome);
       const projects: ProjectSummary[] = [];
 
       for (const entry of entries) {
@@ -73,10 +110,22 @@ export function buildApiRouter(claudeHome: string): Router {
 
         const decodedPath = entry.replace(/-/g, '/');
 
+        // Count how many sessions in this project have a live process or recent activity
+        let activeSessionCount = 0;
+        for (const jf of jsonlFiles) {
+          const sid = jf.replace(/\.jsonl$/, '');
+          if (runningSessions.has(sid)) { activeSessionCount++; continue; }
+          try {
+            const jstat = await fs.stat(path.join(entryPath, jf));
+            if (Date.now() - jstat.mtime.getTime() < 120_000) activeSessionCount++;
+          } catch { /* skip */ }
+        }
+
         projects.push({
           slug: entry,
           path: decodedPath,
           sessionCount,
+          activeSessionCount,
           lastModified: latestMtime.toISOString(),
         });
       }
@@ -111,6 +160,8 @@ export function buildApiRouter(claudeHome: string): Router {
         return;
       }
 
+      const runningSessions = await getRunningSessionIds(claudeHome);
+
       const jsonlFiles = files.filter((f) => f.endsWith('.jsonl'));
       const sessions: SessionSummary[] = [];
 
@@ -127,28 +178,40 @@ export function buildApiRouter(claudeHome: string): Router {
 
         let startTime: string | null = null;
         let rowCount = 0;
+        let permissionMode: import('../../shared/types.ts').PermissionMode = null;
+        let isRemoteControlled = false;
+        let isActive = false;
         try {
           const content = await fs.readFile(filePath, 'utf8');
-          // Extract startTime from the first non-empty line's timestamp field
-          const firstLine = content.split('\n').find((l) => l.trim() !== '');
-          if (firstLine) {
-            let parsed: unknown;
+          const lines = content.split('\n');
+          // Extract metadata from lines (scan first 50 for speed)
+          const scanLimit = Math.min(lines.length, 50);
+          for (let i = 0; i < scanLimit; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            let parsed: Record<string, unknown>;
             try {
-              parsed = JSON.parse(firstLine);
+              parsed = JSON.parse(line) as Record<string, unknown>;
             } catch {
-              // skip
+              continue;
             }
-            if (
-              typeof parsed === 'object' &&
-              parsed !== null &&
-              !Array.isArray(parsed) &&
-              'timestamp' in parsed &&
-              typeof (parsed as Record<string, unknown>)['timestamp'] === 'string'
-            ) {
-              startTime = (parsed as Record<string, unknown>)['timestamp'] as string;
+            // Extract startTime from first record with timestamp
+            if (startTime === null && typeof parsed['timestamp'] === 'string') {
+              startTime = parsed['timestamp'];
+            }
+            // Extract permissionMode from user records
+            if (parsed['type'] === 'user' && 'permissionMode' in parsed && permissionMode === null) {
+              permissionMode = (parsed['permissionMode'] as import('../../shared/types.ts').PermissionMode) ?? null;
+            }
+            // Detect remote control from bridge_status system records
+            if (parsed['type'] === 'system' && parsed['subtype'] === 'bridge_status') {
+              isRemoteControlled = true;
             }
           }
           rowCount = parseJsonlContent(content).length;
+          // Active if: live process in registry OR file modified within last 2 minutes
+          // (some sessions e.g. desktop app don't register in ~/.claude/sessions/)
+          isActive = runningSessions.has(id) || (Date.now() - stat.mtime.getTime() < 120_000);
         } catch {
           // Unreadable file — still include with null startTime
         }
@@ -160,6 +223,9 @@ export function buildApiRouter(claudeHome: string): Router {
           startTime,
           lastModified: stat.mtime.toISOString(),
           rowCount,
+          isActive,
+          permissionMode,
+          isRemoteControlled,
         });
       }
 

@@ -58,8 +58,12 @@ export interface ProjectSummary {
   slug: string;
   path: string;
   sessionCount: number;
+  activeSessionCount: number;
   lastModified: string;
 }
+
+/** Permission mode for a session */
+export type PermissionMode = 'bypassPermissions' | 'acceptEdits' | 'default' | 'plan' | null;
 
 /** Summary of a single session */
 export interface SessionSummary {
@@ -69,6 +73,9 @@ export interface SessionSummary {
   startTime: string | null;
   lastModified: string;
   rowCount: number;
+  isActive: boolean;
+  permissionMode: PermissionMode;
+  isRemoteControlled: boolean;
 }
 
 /** Metadata about a sub-agent session file, linking it to the parent tool_use that spawned it */
