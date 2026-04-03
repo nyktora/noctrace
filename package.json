@@ -1,6 +1,6 @@
 {
   "name": "noctrace",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Chrome DevTools Network-tab-style waterfall visualizer for Claude Code agent workflows",
   "type": "module",
   "license": "MIT",
