@@ -27,20 +27,21 @@ import {
   formatTokens,
   getContextHeatColor,
   getToolColor,
+  resolveColor,
   rowMatchesFilter,
 } from '../utils/tool-colors.ts';
 
 /** Column widths in pixels */
-export const COL_NUM = 36;
+export const COL_NUM = 30;
 export const COL_NAME = 200;
-export const COL_TYPE = 56;
+export const COL_TYPE = 48;
 export const COL_TIME = 52;
-export const COL_TOKENS = 68;
-export const COL_CTX = 36;
+export const COL_TOKENS = 56;
+export const COL_CTX = 34;
 
 /** Row height in pixels */
-export const ROW_HEIGHT = 36;
-export const AGENT_ROW_HEIGHT = 36;
+export const ROW_HEIGHT = 28;
+export const AGENT_ROW_HEIGHT = 28;
 
 /** Props for WaterfallRowComponent */
 export interface WaterfallRowProps {
@@ -82,6 +83,7 @@ export function WaterfallRowComponent({
   const isAgent = row.type === 'agent';
   const indent = row.parentAgentId ? 24 : 0;
   const toolColor = getToolColor(row.toolName, row.status);
+  const toolHex = resolveColor(toolColor);
   const heatColor = getContextHeatColor(row.contextFillPercent);
   const isDegraded = row.contextFillPercent >= 80;
   const matched = rowMatchesFilter(row, filterText);
@@ -156,7 +158,7 @@ export function WaterfallRowComponent({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-end',
-          paddingRight: 6,
+          paddingRight: 4,
           borderRight: '1px solid rgba(69,71,90,0.5)',
         }}
       >
@@ -228,8 +230,15 @@ export function WaterfallRowComponent({
         }}
       >
         <span
-          className="font-mono text-xs"
-          style={{ color: toolColor, fontSize: 10 }}
+          className="font-mono"
+          style={{
+            color: toolColor,
+            fontSize: 9,
+            fontWeight: 600,
+            padding: '1px 5px',
+            borderRadius: 2,
+            backgroundColor: toolHex + '18',
+          }}
         >
           {typeShort}
         </span>
@@ -270,8 +279,9 @@ export function WaterfallRowComponent({
         <span
           className="font-mono text-xs"
           style={{
-            color: totalTokens > 5000 ? 'var(--ctp-yellow)' : 'var(--ctp-subtext0)',
+            color: isDegraded ? 'var(--ctp-yellow)' : (totalTokens > 5000 ? 'var(--ctp-yellow)' : 'var(--ctp-subtext0)'),
             fontSize: 10,
+            fontWeight: isDegraded ? 600 : 400,
           }}
           title={`${row.inputTokens} in / ${row.outputTokens} out`}
         >
@@ -320,9 +330,10 @@ export function WaterfallRowComponent({
             transform: 'translateY(-50%)',
             width: barWidth,
             height: isAgent ? 12 : 8,
-            backgroundColor: toolColor,
+            background: isDegraded
+              ? `linear-gradient(90deg, ${toolHex}66, #f38ba888)`
+              : toolHex + '77',
             borderRadius: 2,
-            opacity: row.status === 'running' ? undefined : 0.85,
           }}
         >
           {row.status === 'running' && (

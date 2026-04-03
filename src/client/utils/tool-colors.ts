@@ -29,6 +29,7 @@ const COLOR_HEX: Record<string, string> = {
   'var(--color-error)': '#f38ba8',
   'var(--color-running)': '#f5c2e7',
   'var(--ctp-overlay0)': '#6c7086',
+  'var(--ctp-teal)': '#94e2d5',
 };
 
 /** Resolves a CSS variable color string to its hex value */

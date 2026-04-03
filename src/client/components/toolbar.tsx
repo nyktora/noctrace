@@ -110,9 +110,9 @@ export function Toolbar(): React.ReactElement {
             backgroundColor: 'var(--ctp-crust)',
             border: '1px solid var(--ctp-surface0)',
             borderRadius: 9999,
-            padding: '2px 8px',
+            padding: '2px 10px',
             gap: 8,
-            fontSize: 11,
+            fontSize: 10,
           }}
         >
           {/* Agent count — grid icon + number */}

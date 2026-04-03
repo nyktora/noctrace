@@ -131,6 +131,9 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
 
         {/* Metadata chips */}
         <div className="flex items-center gap-2 shrink-0 text-xs font-mono">
+          <span style={{ color: 'var(--ctp-overlay0)' }} title={new Date(row.startTime).toISOString()}>
+            {new Date(row.startTime).toLocaleTimeString()}
+          </span>
           <span style={{ color: 'var(--ctp-subtext0)' }}>
             {formatDuration(row.duration)}
           </span>
