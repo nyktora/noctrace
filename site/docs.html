@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Noctrace documentation — installation, configuration, waterfall view, context health, context rot detection, and troubleshooting.">
+  <meta property="og:title" content="Noctrace Docs">
+  <meta property="og:description" content="Everything you need to install, run, and understand noctrace.">
+  <meta property="og:type" content="website">
+  <title>Noctrace Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #0a0e14; font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Menlo', 'Consolas', monospace; }
+    * { box-sizing: border-box; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@19?dev",
+        "react-dom/client": "https://esm.sh/react-dom@19/client?dev"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import React from "react";
+    import { createRoot } from "react-dom/client";
+
+    const { useState } = React;
+
+    var BG="#0a0e14",SF="#0f1318",SF2="#141a21",BD="#1b2028",BDL="#252c35",TX="#8b949e",TXB="#c9d1d9",TXM="#e6edf3",DM="#3d4450",DM2="#6e7681",GN="#3fb950",GND="#238636",TL="#39d4a5",BL="#58a6ff",YL="#d29922",PH="#db8544",RD="#f85149",MV="#a371f7";
+
+    var MV="#cba6f7",GN2="#3fb950",YL2="#d29922",RD2="#f85149";
+
+    var Logo=function(){return React.createElement("svg",{width:"16",height:"16",viewBox:"0 0 16 16",fill:"none",strokeWidth:"1.5",strokeLinecap:"round",strokeLinejoin:"round"},React.createElement("line",{x1:"2",y1:"4",x2:"9",y2:"4",stroke:GN2}),React.createElement("line",{x1:"2",y1:"8",x2:"12",y2:"8",stroke:YL2}),React.createElement("line",{x1:"2",y1:"12",x2:"7",y2:"12",stroke:RD2}))};
+    var GHI=function(){return React.createElement("svg",{width:"14",height:"14",viewBox:"0 0 16 16",fill:"currentColor"},React.createElement("path",{d:"M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"}))};
+
+    function Code(props){
+      return React.createElement("div",{style:{background:BG,border:"1px solid "+BD,padding:"12px 16px",fontSize:12,lineHeight:1.7,overflow:"auto",marginBottom:16,whiteSpace:"pre",wordBreak:"break-all"}},
+        props.children
+      );
+    }
+
+    function InlineCode(props){
+      return React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",borderRadius:2,fontSize:12}},props.children);
+    }
+
+    var toc=[
+      {id:"install",label:"Installation"},
+      {id:"quickstart",label:"Quick start"},
+      {id:"cli",label:"CLI options"},
+      {id:"waterfall",label:"Waterfall view"},
+      {id:"health",label:"Context health"},
+      {id:"rot",label:"Context rot detection"},
+      {id:"tokens",label:"Token tracking"},
+      {id:"config",label:"Configuration"},
+      {id:"troubleshoot",label:"Troubleshooting"},
+      {id:"compat",label:"Compatibility"},
+      {id:"contributing",label:"Contributing"},
+    ];
+
+    function Sec(props){
+      return React.createElement("section",{id:props.id,style:{marginBottom:48,scrollMarginTop:60}},
+        React.createElement("h2",{style:{fontSize:15,fontWeight:700,color:TXM,marginBottom:12,display:"flex",alignItems:"center",gap:8}},
+          React.createElement("span",{style:{color:GND}},"#")," "+props.title
+        ),
+        props.children
+      );
+    }
+
+    function P(props){
+      return React.createElement("p",{style:{color:TX,fontSize:13,lineHeight:1.8,marginBottom:12}},props.children);
+    }
+
+    function Table(props){
+      return React.createElement("div",{style:{border:"1px solid "+BD,marginBottom:16,overflow:"auto"}},
+        React.createElement("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:12}},
+          React.createElement("thead",null,
+            React.createElement("tr",{style:{background:SF2,borderBottom:"1px solid "+BD}},
+              props.headers.map(function(h,i){return React.createElement("th",{key:i,style:{padding:"8px 12px",textAlign:"left",color:DM2,fontWeight:600,fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em"}},h)})
+            )
+          ),
+          React.createElement("tbody",null,
+            props.rows.map(function(row,i){return React.createElement("tr",{key:i,style:{borderBottom:"1px solid "+BD+"60"}},
+              row.map(function(cell,j){return React.createElement("td",{key:j,style:{padding:"8px 12px",color:j===0?TXB:TX,fontWeight:j===0?600:400}},cell)})
+            )})
+          )
+        )
+      );
+    }
+
+    function Docs(){
+      var _a=useState(null),active=_a[0],setActive=_a[1];
+
+      return React.createElement("div",{style:{background:BG,color:TX,minHeight:"100vh",fontFamily:"'JetBrains Mono','IBM Plex Mono','Menlo','Consolas',monospace",fontSize:13,overflowX:"hidden"}},
+        React.createElement("style",null,"\
+          body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;\
+            background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.015) 2px,rgba(0,0,0,0.015) 4px)}\
+          ::selection{background:#3fb950;color:#0a0e14}\
+          a{color:#58a6ff;text-decoration:none}\
+          a:hover{text-decoration:underline}\
+        "),
+
+        /* NAV */
+        React.createElement("nav",{style:{position:"sticky",top:0,zIndex:100,background:BG+"ee",backdropFilter:"blur(8px)",borderBottom:"1px solid "+BD,height:44,display:"flex",alignItems:"center",padding:"0 24px",fontSize:12}},
+          React.createElement("a",{href:"/",style:{display:"flex",alignItems:"center",gap:6,textDecoration:"none"}},
+            React.createElement(Logo,null),React.createElement("span",{style:{color:MV,fontWeight:700,fontSize:13}},"noctrace")
+          ),
+          React.createElement("span",{style:{color:DM,margin:"0 10px"}},"/"),
+          React.createElement("span",{style:{color:TXB,fontWeight:600,fontSize:12}},"docs"),
+          React.createElement("div",{style:{flex:1}}),
+          React.createElement("div",{style:{display:"flex",gap:20,alignItems:"center"}},
+            React.createElement("a",{href:"index.html",style:{color:DM,fontSize:11}},"home"),
+            React.createElement("a",{href:"https://github.com/nyktora/noctrace",style:{color:DM,display:"flex"}},React.createElement(GHI,null))
+          )
+        ),
+
+        /* LAYOUT: sidebar + content */
+        React.createElement("div",{style:{display:"flex",maxWidth:1060,margin:"0 auto",minHeight:"calc(100vh - 44px)"}},
+
+          /* SIDEBAR TOC */
+          React.createElement("aside",{style:{width:200,flexShrink:0,padding:"24px 0 24px 24px",position:"sticky",top:44,alignSelf:"flex-start",height:"calc(100vh - 44px)",overflowY:"auto"}},
+            React.createElement("div",{style:{fontSize:10,color:DM,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:12,fontWeight:600}},"On this page"),
+            toc.map(function(t){return(
+              React.createElement("a",{key:t.id,href:"#"+t.id,
+                style:{display:"block",padding:"4px 0 4px 12px",fontSize:11,color:DM2,borderLeft:"1px solid "+BD,textDecoration:"none",transition:"all 0.15s",lineHeight:1.6},
+                onMouseEnter:function(e){e.currentTarget.style.color=TXB;e.currentTarget.style.borderLeftColor=GND},
+                onMouseLeave:function(e){e.currentTarget.style.color=DM2;e.currentTarget.style.borderLeftColor=BD}},
+                t.label
+              )
+            )}),
+            React.createElement("div",{style:{marginTop:20,paddingLeft:12}},
+              React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:4,background:SF,border:"1px solid "+BD,padding:"4px 8px",fontSize:10,color:DM,cursor:"pointer"},
+                onClick:function(){navigator.clipboard.writeText("npx noctrace")}},
+                React.createElement("span",{style:{color:GN}},"$")," npx noctrace"
+              )
+            )
+          ),
+
+          /* MAIN CONTENT */
+          React.createElement("main",{style:{flex:1,padding:"24px 24px 80px 32px",maxWidth:720,borderLeft:"1px solid "+BD+"60"}},
+
+            /* HEADER */
+            React.createElement("div",{style:{marginBottom:40}},
+              React.createElement("div",{style:{fontSize:11,color:DM,marginBottom:6}},"documentation"),
+              React.createElement("h1",{style:{fontSize:24,fontWeight:700,color:TXM,marginBottom:8,letterSpacing:"-0.02em"}},"noctrace docs"),
+              React.createElement("p",{style:{color:DM2,fontSize:13}},"Everything you need to install, run, and understand noctrace.")
+            ),
+
+            /* INSTALL */
+            React.createElement(Sec,{id:"install",title:"Installation"},
+              React.createElement(P,null,"Noctrace requires ",React.createElement(InlineCode,null,"Node.js 20+")," and an existing Claude Code installation (session logs at ",React.createElement(InlineCode,null,"~/.claude/"),")."),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"Option 1: run directly (recommended)"),
+              React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npx noctrace")),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"Option 2: install globally"),
+              React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npm install -g noctrace"),"\n",React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"noctrace")),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"Option 3: clone and run"),
+              React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"git clone https://github.com/nyktora/noctrace.git"),"\n",React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"cd noctrace && npm install && npm start"))
+            ),
+
+            /* QUICKSTART */
+            React.createElement(Sec,{id:"quickstart",title:"Quick start"},
+              React.createElement(P,null,"Noctrace is zero-config. It reads Claude Code session logs directly from disk."),
+              React.createElement(Code,null,
+                React.createElement("span",{style:{color:DM}},"# 1. Make sure Claude Code has run at least one session"),"\n",
+                React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"ls ~/.claude/projects/"),"\n\n",
+                React.createElement("span",{style:{color:DM}},"# 2. Start noctrace"),"\n",
+                React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npx noctrace"),"\n\n",
+                React.createElement("span",{style:{color:DM}},"# 3. Browser opens at http://localhost:4117"),"\n",
+                React.createElement("span",{style:{color:DM}},"# Select a project from the sidebar, pick a session"),"\n",
+                React.createElement("span",{style:{color:DM}},"# The waterfall renders immediately")
+              ),
+              React.createElement(P,null,"To watch a live session, start noctrace ",React.createElement("em",null,"before")," or ",React.createElement("em",null,"during")," a Claude Code session. The waterfall updates in real time as new tool calls are logged.")
+            ),
+
+            /* CLI OPTIONS */
+            React.createElement(Sec,{id:"cli",title:"CLI options"},
+              React.createElement(P,null,"Noctrace is configured via environment variables. There are no CLI flags — pass env vars directly on the command line."),
+              React.createElement(Table,{
+                headers:["Env variable","Default","Description"],
+                rows:[
+                  ["PORT","4117","Port for the local server"],
+                  ["CLAUDE_HOME","~/.claude","Custom path to Claude config directory"],
+                ]
+              }),
+              React.createElement(Code,null,
+                React.createElement("span",{style:{color:DM}},"# Custom port"),"\n",
+                React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"PORT=3000 npx noctrace"),"\n\n",
+                React.createElement("span",{style:{color:DM}},"# Custom Claude home (non-standard install)"),"\n",
+                React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"CLAUDE_HOME=/custom/path/.claude npx noctrace"),"\n\n",
+                React.createElement("span",{style:{color:DM}},"# Custom port + custom Claude home"),"\n",
+                React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"PORT=3000 CLAUDE_HOME=/opt/claude npx noctrace")
+              ),
+              React.createElement(P,null,"If port ",React.createElement(InlineCode,null,"4117")," is taken, noctrace automatically tries the next available port (up to 10 attempts) and prints the URL it bound to.")
+            ),
+
+            /* WATERFALL */
+            React.createElement(Sec,{id:"waterfall",title:"Waterfall view"},
+              React.createElement(P,null,"The waterfall renders every tool call as a horizontal bar on a shared time axis, modeled after Chrome DevTools' Network tab."),
+              React.createElement(Table,{
+                headers:["Column","Description"],
+                rows:[
+                  ["#","Row number in chronological order"],
+                  ["Name","Tool type and target (file path, command, agent name)"],
+                  ["Type","Color-coded badge: Read, Write, Edit, Bash, Task, Grep, MCP"],
+                  ["Time","Wall-clock duration of the tool call"],
+                  ["Tokens","Total input + output tokens consumed by this call"],
+                  ["Ctx %","Context window fill percentage at the moment this call executed"],
+                  ["Waterfall","Timing bar — position = start time, width = duration"],
+                ]
+              }),
+              React.createElement(P,null,React.createElement("strong",{style:{color:TXB}},"Agent hierarchy.")," When Claude Code spawns a sub-agent (Task/Agent tool), it appears as a collapsible row group. Click the chevron to expand and see the agent's child tool calls nested inside."),
+              React.createElement(P,null,React.createElement("strong",{style:{color:TXB}},"Row detail.")," Click any row to open the detail panel showing the full tool input, output, token split (in/out), context percentage, parent agent, and error info if applicable."),
+              React.createElement(P,null,React.createElement("strong",{style:{color:TXB}},"Filtering.")," Use the filter bar to search by tool name, file path, or label. Non-matching rows are dimmed to 25% opacity. Special keywords: ",React.createElement(InlineCode,null,"error")," shows only failed calls, ",React.createElement(InlineCode,null,"running")," shows only in-progress calls, ",React.createElement(InlineCode,null,"agent")," shows only agent rows.")
+            ),
+
+            /* CONTEXT HEALTH */
+            React.createElement(Sec,{id:"health",title:"Context health"},
+              React.createElement(P,null,"Noctrace computes a real-time A-F grade representing the overall health of the session's context window. The grade appears as a badge in the toolbar. Click it to expand the signal breakdown."),
+              React.createElement(Table,{
+                headers:["Signal","Weight","What it measures"],
+                rows:[
+                  ["Context Fill","40%","Latest input_tokens vs detected context window size (defaults to 200k; auto-detected from session peak). How full is the window right now."],
+                  ["Compactions","25%","Number of compact_boundary events. Each one is lossy."],
+                  ["Re-reads","15%","Duplicate Read file paths / total Reads. Retrieval failures."],
+                  ["Error Rate","10%","Error rate in 2nd half vs 1st half. Accelerating errors = degradation."],
+                  ["Tool Efficiency","10%","Write+Edit calls / total calls, comparing halves. Declining = spinning."],
+                ]
+              }),
+              React.createElement(P,null,"Each signal produces a 0-100 sub-score. The composite is the weighted average."),
+              React.createElement(Table,{
+                headers:["Grade","Score range","Meaning"],
+                rows:[
+                  ["A","85-100","Healthy. No action needed."],
+                  ["B","70-84","Good. Monitor if session is long."],
+                  ["C","55-69","Caution. Consider /compact at next milestone."],
+                  ["D","40-54","Degraded. /compact now or /clear soon."],
+                  ["F","0-39","Critical. Session quality is severely compromised. /clear recommended."],
+                ]
+              })
+            ),
+
+            /* CONTEXT ROT */
+            React.createElement(Sec,{id:"rot",title:"Context rot detection"},
+              React.createElement(P,null,"Context rot is the progressive degradation of Claude's output quality as the context window fills. Noctrace makes it visible through five indicators:"),
+              React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:2,marginBottom:16}},
+                [
+                  {name:"Heat strip",desc:"3px colored bar on the left edge of every row. Transitions from green (<50%) through yellow (65-80%) to red (>90%) based on context fill at execution time. Scan it top-to-bottom to see the session's health trajectory."},
+                  {name:"Context % column",desc:"Shows the exact context window fill percentage when each tool call executed. Values at or above 80% are rendered bold in the warning color."},
+                  {name:"Row tinting",desc:"Rows where the context was 80%+ at execution get a red background tint. The deeper the fill, the stronger the tint. This is the most visually obvious signal — you can see the waterfall turning red as the session degrades."},
+                  {name:"Re-read markers",desc:"A yellow circular-arrow icon appears next to any Read call that targets a file already read earlier in the session. This is a retrieval failure — Claude forgot it already has the file."},
+                  {name:"Compaction lines",desc:"Red dashed vertical lines span the full height of the waterfall at every compaction boundary. Everything after a compaction line ran on a compressed summary, not the full context."},
+                ].map(function(item,i){return(
+                  React.createElement("div",{key:i,style:{display:"flex",border:"1px solid "+BD,background:SF}},
+                    React.createElement("div",{style:{width:160,padding:"10px 14px",borderRight:"1px solid "+BD,color:TXB,fontWeight:600,fontSize:12,flexShrink:0}},item.name),
+                    React.createElement("div",{style:{padding:"10px 14px",fontSize:12,color:TX,lineHeight:1.7}},item.desc)
+                  )
+                )})
+              ),
+              React.createElement(P,null,React.createElement("strong",{style:{color:TXB}},"When to act.")," If you see rows turning red, it means the work those rows produced may be unreliable — Claude was operating with a nearly full context window. Run ",React.createElement(InlineCode,null,"/compact")," with targeted instructions or ",React.createElement(InlineCode,null,"/clear")," and start a fresh session.")
+            ),
+
+            /* TOKENS */
+            React.createElement(Sec,{id:"tokens",title:"Token tracking"},
+              React.createElement(P,null,"Every row displays the total tokens consumed (input + output). The toolbar shows the cumulative session total."),
+              React.createElement(Table,{
+                headers:["Display","Meaning"],
+                rows:[
+                  ["340","Under 1,000 tokens — shown as raw number"],
+                  ["4.1k","1,000+ tokens — shown with k suffix"],
+                  ["Yellow text","Total exceeds 5,000 tokens — expensive call highlighted"],
+                  ["Detail: 2.8k in / 95 out","Click a row to see the input/output token split"],
+                ]
+              }),
+              React.createElement(P,null,"Token data comes from the ",React.createElement(InlineCode,null,"message.usage")," field on assistant records in the JSONL log. Not all records include usage data — rows without it show a dash.")
+            ),
+
+            /* CONFIG */
+            React.createElement(Sec,{id:"config",title:"Configuration"},
+              React.createElement(P,null,"Noctrace is zero-config by design. These are the only knobs:"),
+              React.createElement(Table,{
+                headers:["Env variable","Default","Description"],
+                rows:[
+                  ["PORT","4117","Server port."],
+                  ["CLAUDE_HOME","~/.claude","Path to Claude Code config directory."],
+                ]
+              }),
+              React.createElement(Code,null,
+                React.createElement("span",{style:{color:DM}},"# Example: custom port + custom Claude home"),"\n",
+                React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"PORT=3000 CLAUDE_HOME=/opt/claude npx noctrace")
+              ),
+              React.createElement(P,null,"There are no config files, no settings to edit, no hooks to install. Noctrace reads ",React.createElement(InlineCode,null,"~/.claude/projects/")," directly and never writes to it.")
+            ),
+
+            /* TROUBLESHOOT */
+            React.createElement(Sec,{id:"troubleshoot",title:"Troubleshooting"},
+              React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:2,marginBottom:16}},
+                [
+                  {q:'"No projects found" on startup',a:"Make sure Claude Code has been used at least once. Session logs are stored at ~/.claude/projects/ — if this directory doesn't exist or is empty, noctrace has nothing to display."},
+                  {q:"Waterfall shows no rows",a:"Select a session from the sidebar. If the session file is empty or contains only system records (no tool calls), the waterfall will be blank. Try a session with actual coding activity."},
+                  {q:"Real-time updates aren't appearing",a:"Noctrace watches the JSONL file for changes. If you started noctrace after the session ended, it renders the completed session. For live updates, keep both Claude Code and noctrace running simultaneously."},
+                  {q:"Port 4117 is already in use",a:"Noctrace will automatically try the next available port (up to 10 attempts) and print the URL it bound to. To pin a specific port, use the PORT env var: PORT=3001 npx noctrace"},
+                  {q:"Context health shows no grade",a:"The session has no rows yet. Once at least one tool call is logged, noctrace computes a health score. Sessions with fewer than 4 tool calls will show A grades for the error-rate and tool-efficiency signals since there's not enough data to detect trends."},
+                  {q:"Browser doesn't open automatically",a:"Some environments (WSL, SSH, headless Linux) can't open browsers. Noctrace still starts the server — navigate to http://localhost:4117 manually (or whatever port it printed to stdout)."},
+                ].map(function(item,i){return(
+                  React.createElement("div",{key:i,style:{border:"1px solid "+BD,background:SF}},
+                    React.createElement("div",{style:{padding:"10px 14px",borderBottom:"1px solid "+BD,color:TXB,fontWeight:600,fontSize:12}},item.q),
+                    React.createElement("div",{style:{padding:"10px 14px",fontSize:12,color:TX,lineHeight:1.7}},item.a)
+                  )
+                )})
+              )
+            ),
+
+            /* COMPAT */
+            React.createElement(Sec,{id:"compat",title:"Compatibility"},
+              React.createElement(Table,{
+                headers:["Requirement","Version"],
+                rows:[
+                  ["Node.js","20 LTS or later"],
+                  ["Claude Code","Any version that writes JSONL logs to ~/.claude/projects/"],
+                  ["OS","macOS, Linux, Windows (WSL recommended)"],
+                  ["Browser","Any modern browser (Chrome, Firefox, Safari, Edge)"],
+                ]
+              }),
+              React.createElement(P,null,"Noctrace reads the JSONL session log format that Claude Code writes to disk. This format is undocumented and could change between Claude Code versions. If you encounter parsing errors after a Claude Code update, ",React.createElement("a",{href:"https://github.com/nyktora/noctrace/issues"},"file an issue"),".")
+            ),
+
+            /* CONTRIBUTING */
+            React.createElement(Sec,{id:"contributing",title:"Contributing"},
+              React.createElement(P,null,"Noctrace is MIT-licensed and open source. Contributions are welcome."),
+              React.createElement(Code,null,
+                React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"git clone https://github.com/nyktora/noctrace.git"),"\n",
+                React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"cd noctrace"),"\n",
+                React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npm install"),"\n",
+                React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npm run dev"),"    ",React.createElement("span",{style:{color:DM}},"# starts server + client in dev mode"),"\n",
+                React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npm test"),"      ",React.createElement("span",{style:{color:DM}},"# runs Vitest suite")
+              ),
+              React.createElement(P,null,"Before submitting a PR: run ",React.createElement(InlineCode,null,"npm test")," and ",React.createElement(InlineCode,null,"npm run lint"),". The parser module (",React.createElement(InlineCode,null,"src/shared/"),") requires 80% test coverage."),
+              React.createElement(P,null,"See ",React.createElement("a",{href:"https://github.com/nyktora/noctrace/blob/main/CONTRIBUTING.md"},"CONTRIBUTING.md")," for full guidelines.")
+            )
+
+          )
+        ),
+
+        /* FOOTER */
+        React.createElement("footer",{style:{borderTop:"1px solid "+BD,maxWidth:1060,margin:"0 auto",padding:"16px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11,color:DM}},
+          React.createElement("span",null,"noctrace \u00B7 MIT \u00B7 ",React.createElement("a",{href:"https://nyktora.com",style:{color:DM}},"Nyktora Group")),
+          React.createElement("div",{style:{display:"flex",gap:16}},
+            React.createElement("a",{href:"https://github.com/nyktora/noctrace",style:{color:DM}},"github"),
+            React.createElement("a",{href:"https://npmjs.com/package/noctrace",style:{color:DM}},"npm")
+          )
+        )
+      );
+    }
+
+    createRoot(document.getElementById("root")).render(React.createElement(Docs, null));
+  </script>
+</body>
+</html>

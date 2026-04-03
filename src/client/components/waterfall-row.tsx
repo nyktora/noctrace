@@ -1,8 +1,27 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import type { WaterfallRow as WaterfallRowData } from '../../shared/types.ts';
 import { ChevronIcon } from '../icons/chevron-icon.tsx';
 import { RepeatIcon } from '../icons/repeat-icon.tsx';
+
+/** Highlights filter matches in text with a colored span */
+function highlightMatch(text: string, filter: string): React.ReactNode {
+  if (!filter || filter.length < 2) return text;
+  const lower = filter.toLowerCase();
+  // Skip special keyword filters
+  if (lower === 'error' || lower === 'agent' || lower === 'running') return text;
+  const idx = text.toLowerCase().indexOf(lower);
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <span style={{ backgroundColor: 'var(--ctp-yellow)', color: 'var(--ctp-base)', borderRadius: 2, padding: '0 1px' }}>
+        {text.slice(idx, idx + filter.length)}
+      </span>
+      {text.slice(idx + filter.length)}
+    </>
+  );
+}
 import {
   formatDuration,
   formatTokens,
@@ -193,7 +212,7 @@ export function WaterfallRowComponent({
           }}
           title={row.label}
         >
-          {row.label}
+          {highlightMatch(row.label, filterText)}
         </span>
       </div>
 
