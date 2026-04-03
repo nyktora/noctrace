@@ -249,7 +249,7 @@ export function Waterfall(): React.ReactElement {
           Type
         </div>
         <div style={{ width: COL_TIME, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 6, borderRight: '1px solid var(--ctp-surface0)' }}>
-          Time
+          Dur.
         </div>
         <div style={{ width: COL_TOKENS, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 6, borderRight: '1px solid var(--ctp-surface0)' }}>
           Δ Tok

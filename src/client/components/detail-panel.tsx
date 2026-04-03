@@ -21,7 +21,9 @@ function StatusIcon({ status }: { status: WaterfallRow['status'] }): React.React
 
 function renderInput(input: Record<string, unknown>): string {
   try {
-    return JSON.stringify(input, null, 2);
+    const json = JSON.stringify(input, null, 2);
+    // Unescape string values so embedded newlines render properly
+    return json.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
   } catch {
     return String(input);
   }
