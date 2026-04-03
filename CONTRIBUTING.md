@@ -83,6 +83,10 @@ Open an issue with:
 - OS and browser
 - Relevant console output or screenshots
 
+## Contributor License Agreement
+
+By opening a pull request, you agree to the [Contributor License Agreement](CLA.md). This grants Nyktora Group LLC a license to use your contribution while you retain your copyright. Please read it before submitting.
+
 ## License
 
-By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE).
