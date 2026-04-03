@@ -1,0 +1,68 @@
+{
+  "name": "noctrace",
+  "version": "0.1.0",
+  "description": "Chrome DevTools Network-tab-style waterfall visualizer for Claude Code agent workflows",
+  "type": "module",
+  "license": "MIT",
+  "author": "Nyktora Group LLC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nyktora/noctrace.git"
+  },
+  "homepage": "https://github.com/nyktora/noctrace",
+  "bugs": {
+    "url": "https://github.com/nyktora/noctrace/issues"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "anthropic",
+    "devtools",
+    "waterfall",
+    "observability",
+    "agent",
+    "ai",
+    "llm",
+    "timeline",
+    "visualizer"
+  ],
+  "bin": {
+    "noctrace": "./bin/noctrace.js"
+  },
+  "files": [
+    "bin/",
+    "dist/"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c blue,green \"tsx watch src/server/index.ts\" \"vite\"",
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "test": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit"
+  },
+  "dependencies": {
+    "chokidar": "4.0.3",
+    "express": "5.2.1",
+    "open": "11.0.0",
+    "ws": "8.20.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.2.2",
+    "@types/express": "5.0.6",
+    "@types/node": "22.19.15",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@types/ws": "8.18.1",
+    "@vitejs/plugin-react": "5.2.0",
+    "concurrently": "9.2.1",
+    "eslint": "9.39.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwindcss": "4.2.2",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "vite": "8.0.3",
+    "vitest": "4.1.2",
+    "zustand": "5.0.12"
+  }
+}

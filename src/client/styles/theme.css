@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+/* Catppuccin Mocha palette */
+:root {
+  --ctp-base: #1e1e2e;
+  --ctp-mantle: #181825;
+  --ctp-crust: #11111b;
+  --ctp-surface0: #313244;
+  --ctp-surface1: #45475a;
+  --ctp-surface2: #585b70;
+  --ctp-overlay0: #6c7086;
+  --ctp-overlay1: #7f849c;
+  --ctp-text: #cdd6f4;
+  --ctp-subtext0: #a6adc8;
+  --ctp-subtext1: #bac2de;
+  --ctp-blue: #89b4fa;
+  --ctp-green: #a6e3a1;
+  --ctp-yellow: #f9e2af;
+  --ctp-peach: #fab387;
+  --ctp-mauve: #cba6f7;
+  --ctp-teal: #94e2d5;
+  --ctp-red: #f38ba8;
+  --ctp-pink: #f5c2e7;
+  --ctp-lavender: #b4befe;
+
+  /* Tool colors */
+  --color-read: var(--ctp-blue);
+  --color-write: var(--ctp-green);
+  --color-edit: var(--ctp-yellow);
+  --color-bash: var(--ctp-peach);
+  --color-agent: var(--ctp-mauve);
+  --color-grep: var(--ctp-teal);
+  --color-error: var(--ctp-red);
+  --color-running: var(--ctp-pink);
+}
+
+body {
+  background-color: var(--ctp-base);
+  color: var(--ctp-text);
+  font-family: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+/* Running bar pulse animation */
+@keyframes pulse-edge {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.1; }
+}
+
+.running-pulse {
+  animation: pulse-edge 1.2s ease-in-out infinite;
+}
+
+/* Responsive: hide Context % column on small screens */
+@media (max-width: 768px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+}
