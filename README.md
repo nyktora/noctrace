@@ -114,5 +114,5 @@ npm run dev       # starts server + Vite dev server
 ---
 
 <p align="center">
-  Built by <a href="https://nyktora.com">Nyktora Group</a>
+  Created and maintained by <a href="https://nyktora.com">Nyktora Group</a> · Contributions welcome
 </p>
