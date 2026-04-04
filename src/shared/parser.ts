@@ -338,7 +338,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
         : (res ? res.endTime : null);
       const effectiveDuration = agentRealDuration !== null
         ? agentRealDuration
-        : (res ? res.endTime - startTime : null);
+        : (res ? Math.max(0, res.endTime - startTime) : null);
       pending.push({
         id: block.id,
         toolName: block.name,
@@ -483,7 +483,11 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
   // Stretch agent rows to span from dispatch to last child completion
   for (const row of rowById.values()) {
     if (row.type !== 'agent' || row.children.length === 0) continue;
-    const childMax = Math.max(...row.children.map((c) => c.endTime ?? c.startTime));
+    let childMax = -Infinity;
+    for (const c of row.children) {
+      const end = c.endTime ?? c.startTime;
+      if (end > childMax) childMax = end;
+    }
     if (childMax > (row.endTime ?? 0)) {
       row.endTime = childMax;
       row.duration = childMax - row.startTime;
@@ -618,7 +622,7 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
         label: buildLabel(block.name, block.input),
         startTime,
         endTime: res ? res.endTime : null,
-        duration: res ? res.endTime - startTime : null,
+        duration: res ? Math.max(0, res.endTime - startTime) : null,
         status: res ? (res.isError ? 'error' : 'success') : 'running',
         parentAgentId: null,
         input: block.input,

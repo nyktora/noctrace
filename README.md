@@ -16,7 +16,9 @@
 
 ---
 
-![Noctrace waterfall timeline](docs/screenshots/noctrace-waterfall.png)
+<p align="center">
+  <img src="docs/screenshots/noctrace-demo.gif" alt="Noctrace demo — waterfall timeline, agent groups, detail panel" width="100%" />
+</p>
 
 ## Why
 
@@ -43,14 +45,21 @@ Requires Node.js 20+. That's it. No config, no hooks, no API keys.
 - **Collapsible agent groups** — sub-agents as expandable row groups with real execution time bars showing parallel work
 - **Sub-agent visibility** — parses sub-agent JSONL files to show what happened inside each agent
 - **Real-time updates** — file watcher pushes new events via WebSocket as your session runs
+- **Token drift detection** — tracks how per-turn token cost drifts from baseline, warns when sessions burn excessive quota
 - **Context Health grade** — A-F letter grade from 5 signals with actionable recommendations
-- **Compact stats pill** — toolbar shows agent count, health grade, total tokens, and session duration at a glance
+- **Compact stats pill** — toolbar shows agent count, health grade, drift factor, total tokens, and session duration at a glance
 - **Filter with highlighting** — search by tool name, label, or keywords (`error`, `agent`, `running`) with yellow match highlighting
-- **Virtual scrolling** — handles sessions with hundreds of tool calls
+- **Virtual scrolling** — handles sessions with thousands of tool calls
 - **Zoom & pan** — mouse wheel zoom (1-50x), click-drag pan
 - **Detail panel** — click any row for full tool input/output, resizable
 - **Re-read detection** — flags duplicate file reads that waste context
 - **Dark theme** — Catppuccin Mocha palette
+
+![Noctrace waterfall timeline](docs/screenshots/noctrace-waterfall.png)
+
+### Token Drift
+
+The stats pill shows a **drift factor** (e.g. `2.8x`) measuring how much each turn costs compared to the session's baseline. A 10x drift means every turn burns 10x more quota than it did at the start. Session picker shows drift per-session so you can spot wasteful sessions at a glance.
 
 ### Context Health
 
@@ -65,6 +74,12 @@ Noctrace computes a real-time health score from your session data and warns you 
 | Re-reads | 15% | Duplicate file reads (retrieval failures) |
 | Error Rate | 10% | Accelerating errors in second half of session |
 | Tool Efficiency | 10% | Declining productive output |
+
+### Detail Panel
+
+![Detail panel with agent inspection](docs/screenshots/noctrace-detail-panel.png)
+
+Click any row to inspect the full tool input and output. Two-column layout shows the request on the left and response on the right. Resizable, closes with Esc.
 
 ## How it works
 

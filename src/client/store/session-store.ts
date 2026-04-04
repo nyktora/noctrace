@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { ContextHealth, ProjectSummary, SessionSummary, WaterfallRow } from '../../shared/types.ts';
+import type { ContextHealth, DriftAnalysis, ProjectSummary, SessionSummary, WaterfallRow } from '../../shared/types.ts';
 
 /** A single message in a resume conversation */
 export interface ResumeMessage {
@@ -16,6 +16,7 @@ export interface SessionStore {
   rows: WaterfallRow[];
   health: ContextHealth | null;
   compactionBoundaries: number[];
+  drift: DriftAnalysis | null;
 
   // UI state
   selectedProjectSlug: string | null;
@@ -43,7 +44,7 @@ export interface SessionStore {
   setAutoScroll: (on: boolean) => void;
   setZoom: (level: number) => void;
   setPan: (offset: number) => void;
-  addRows: (rows: WaterfallRow[], health: ContextHealth, boundaries: number[]) => void;
+  addRows: (rows: WaterfallRow[], health: ContextHealth, boundaries: number[], drift: DriftAnalysis) => void;
   setResumeStatus: (status: 'idle' | 'running' | 'done' | 'error') => void;
   addResumeUserMessage: (text: string) => void;
   appendResumeOutput: (text: string) => void;
@@ -57,6 +58,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   rows: [],
   health: null,
   compactionBoundaries: [],
+  drift: null,
 
   selectedProjectSlug: null,
   selectedSessionId: null,
@@ -92,11 +94,13 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       rows: WaterfallRow[];
       health: ContextHealth;
       compactionBoundaries: number[];
+      drift: DriftAnalysis;
     };
     set({
       rows: data.rows,
       health: data.health,
       compactionBoundaries: data.compactionBoundaries ?? [],
+      drift: data.drift ?? null,
       selectedSessionId: id,
       selectedRowId: null,
       expandedAgents: new Set<string>(),
@@ -142,11 +146,17 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   clearResume: () => set({ resumeStatus: 'idle', resumeMessages: [] }),
 
-  addRows: (rows, health, boundaries) => {
+  addRows: (rows, health, boundaries, drift) => {
     const existing = get().rows;
     // Merge by id — update existing, append new
     const map = new Map(existing.map((r) => [r.id, r]));
     for (const row of rows) {
+      // Preserve children from existing row when incoming row has none
+      // (incremental watcher parse doesn't load sub-agent files)
+      const prev = map.get(row.id);
+      if (prev && prev.children.length > 0 && row.children.length === 0) {
+        row.children = prev.children;
+      }
       map.set(row.id, row);
     }
     const agentIds = new Set<string>(get().expandedAgents);
@@ -157,6 +167,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       rows: Array.from(map.values()),
       health,
       compactionBoundaries: boundaries,
+      drift,
       expandedAgents: agentIds,
     });
   },

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import type { WaterfallRow } from '../shared/types.ts';
 import { useSessionStore } from './store/session-store.ts';
@@ -32,7 +32,10 @@ export function App(): React.ReactElement {
   const selectedRowId = useSessionStore((s) => s.selectedRowId);
   const rows = useSessionStore((s) => s.rows);
 
-  const detailRow = selectedRowId ? findRowById(rows, selectedRowId) : null;
+  const detailRow = useMemo(
+    () => (selectedRowId ? findRowById(rows, selectedRowId) : null),
+    [rows, selectedRowId],
+  );
 
   return (
     <ResumeContext value={{ sendResume, cancelResume }}>

@@ -76,6 +76,7 @@ export interface SessionSummary {
   isActive: boolean;
   permissionMode: PermissionMode;
   isRemoteControlled: boolean;
+  driftFactor: number | null;  // null if < 5 turns
 }
 
 /** Metadata about a sub-agent session file, linking it to the parent tool_use that spawned it */
@@ -83,4 +84,24 @@ export interface SubAgentData {
   agentId: string;
   toolUseId: string;  // parent's tool_use.id that spawned this agent
   rows: WaterfallRow[];
+}
+
+/** Token usage for a single assistant turn */
+export interface AssistantTurn {
+  timestamp: number;
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+}
+
+/** Token drift analysis for a session */
+export interface DriftAnalysis {
+  driftFactor: number;       // current / baseline ratio (1.0 = no drift)
+  baselineTokens: number;    // avg tokens for first 5 turns
+  currentTokens: number;     // avg tokens for last 5 turns
+  turnCount: number;
+  totalTokens: number;       // sum of all turns
+  estimatedSavings: number;  // tokens that could be saved with session rotation (0 if drift < 2)
 }

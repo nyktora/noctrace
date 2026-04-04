@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 
-import type { ContextHealth, WaterfallRow } from '../../shared/types.ts';
+import type { ContextHealth, DriftAnalysis, WaterfallRow } from '../../shared/types.ts';
 import { useSessionStore } from '../store/session-store.ts';
 
 interface WsRowsMessage {
@@ -8,6 +8,7 @@ interface WsRowsMessage {
   rows: WaterfallRow[];
   health: ContextHealth;
   boundaries: number[];
+  drift: DriftAnalysis;
 }
 
 interface WsResumeChunk {
@@ -83,7 +84,7 @@ export function useSessionWs(): {
           return;
         }
         if (msg.type === 'rows') {
-          addRows(msg.rows, msg.health, msg.boundaries);
+          addRows(msg.rows, msg.health, msg.boundaries, msg.drift);
         } else if (msg.type === 'resume-chunk') {
           appendResumeOutput(msg.text);
         } else if (msg.type === 'resume-done') {

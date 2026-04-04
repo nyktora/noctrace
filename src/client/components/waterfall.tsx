@@ -91,11 +91,13 @@ export function Waterfall(): React.ReactElement {
   // Compute session time bounds
   const { sessionStart, totalDuration } = useMemo(() => {
     if (rows.length === 0) return { sessionStart: 0, totalDuration: 1 };
-    const start = Math.min(...rows.map((r) => r.startTime));
     const now = Date.now();
-    const end = Math.max(
-      ...rows.map((r) => r.endTime ?? (r.status === 'running' ? now : r.startTime)),
-    );
+    let start = Infinity, end = -Infinity;
+    for (const r of rows) {
+      if (r.startTime < start) start = r.startTime;
+      const e = r.endTime ?? (r.status === 'running' ? now : r.startTime);
+      if (e > end) end = e;
+    }
     return { sessionStart: start, totalDuration: Math.max(end - start, 1) };
   }, [rows]);
 

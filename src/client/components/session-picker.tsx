@@ -112,7 +112,14 @@ function SessionPickerRow({ session, isSelected, onSelect }: SessionPickerRowPro
         ))}
       </div>
       <div className="flex justify-between mt-0.5" style={{ color: 'var(--ctp-overlay0)', fontSize: 10 }}>
-        <span>{session.rowCount} calls</span>
+        <span className="flex items-center gap-1">
+          <span>{session.rowCount} calls</span>
+          {session.driftFactor !== null && session.driftFactor !== undefined && session.driftFactor >= 2 && (
+            <span style={{ color: session.driftFactor >= 5 ? 'var(--ctp-red)' : session.driftFactor >= 3 ? 'var(--ctp-peach)' : 'var(--ctp-yellow)' }}>
+              {session.driftFactor}x
+            </span>
+          )}
+        </span>
         <span>{relTime}</span>
       </div>
     </button>

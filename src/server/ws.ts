@@ -9,7 +9,7 @@ import path from 'node:path';
 import type { IncomingMessage } from 'node:http';
 import type { Server } from 'node:http';
 import { watchSession } from './watcher';
-import type { WaterfallRow, ContextHealth } from '../shared/types';
+import type { WaterfallRow, ContextHealth, DriftAnalysis } from '../shared/types';
 
 // ---------------------------------------------------------------------------
 // Message types
@@ -43,6 +43,7 @@ interface RowsServerMessage {
   rows: WaterfallRow[];
   health: ContextHealth;
   boundaries: number[];
+  drift: DriftAnalysis;
 }
 
 interface ResumeChunkMessage {
@@ -99,7 +100,7 @@ function send(ws: WebSocket, msg: ServerMessage): void {
  * back in real time using chokidar file watching.
  */
 export function setupWebSocket(server: Server, claudeHome: string): void {
-  const wss = new WebSocketServer({ server, path: '/ws' });
+  const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 64 * 1024 });
 
   wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
     let stopWatcher: (() => void) | null = null;
@@ -148,6 +149,11 @@ export function setupWebSocket(server: Server, claudeHome: string): void {
         const { sessionId, message: userMsg, fork } = parsed;
         if (!sessionId || !userMsg) {
           send(ws, { type: 'resume-error', message: 'resume requires sessionId and message' });
+          return;
+        }
+        // Validate sessionId format — must be a UUID-like string, no dashes-starting args
+        if (!/^[a-zA-Z0-9_-]+$/.test(sessionId) || sessionId.startsWith('-')) {
+          send(ws, { type: 'resume-error', message: 'Invalid sessionId format' });
           return;
         }
 
@@ -250,11 +256,17 @@ export function setupWebSocket(server: Server, claudeHome: string): void {
       // Stop any existing watcher before starting a new one
       stopCurrent();
 
-      const filePath = path.join(claudeHome, 'projects', slug, `${id}.jsonl`);
+      const projectsBase = path.join(claudeHome, 'projects');
+      const filePath = path.join(projectsBase, slug, `${id}.jsonl`);
+      const resolved = path.resolve(filePath);
+      if (!resolved.startsWith(path.resolve(projectsBase) + path.sep)) {
+        send(ws, { type: 'error', message: 'Invalid path' });
+        return;
+      }
 
       const handle = watchSession(filePath, {
-        onNewRows: (rows, health, boundaries) => {
-          send(ws, { type: 'rows', rows, health, boundaries });
+        onNewRows: (rows, health, boundaries, drift) => {
+          send(ws, { type: 'rows', rows, health, boundaries, drift });
         },
       });
 

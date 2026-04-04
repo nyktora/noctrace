@@ -13,6 +13,7 @@ import {
   parseSubAgentContent,
 } from '../../shared/parser';
 import { computeContextHealth } from '../../shared/health';
+import { parseAssistantTurns, computeDrift } from '../../shared/drift';
 import type { ProjectSummary, SessionSummary } from '../../shared/types';
 
 /**
@@ -49,6 +50,15 @@ async function getRunningSessionIds(claudeHome: string): Promise<Set<string>> {
     }
   }
   return running;
+}
+
+/** Validate that a resolved path is within the allowed base directory. */
+function assertWithinBase(resolved: string, base: string): void {
+  const normalizedResolved = path.resolve(resolved);
+  const normalizedBase = path.resolve(base);
+  if (!normalizedResolved.startsWith(normalizedBase + path.sep) && normalizedResolved !== normalizedBase) {
+    throw new Error('Path traversal detected');
+  }
 }
 
 /** Build the Express router, scoped to a given Claude home directory. */
@@ -152,6 +162,13 @@ export function buildApiRouter(claudeHome: string): Router {
     const projectDir = path.join(projectsDir, slug);
 
     try {
+      assertWithinBase(projectDir, projectsDir);
+    } catch {
+      res.status(400).json({ error: 'Invalid path' });
+      return;
+    }
+
+    try {
       let files: string[];
       try {
         files = await fs.readdir(projectDir);
@@ -207,12 +224,22 @@ export function buildApiRouter(claudeHome: string): Router {
               isRemoteControlled = true;
             }
           }
-          rowCount = parseJsonlContent(content).length;
+          rowCount = lines.filter((l) => l.trim()).length;
           // Active if: live process in registry OR file modified within last 2 minutes
           // Registry covers CLI sessions; mtime covers Desktop app sessions
           isActive = runningSessions.has(id) || (Date.now() - stat.mtime.getTime() < 120_000);
         } catch {
           // Unreadable file — still include with null startTime
+        }
+
+        let driftFactor: number | null = null;
+        try {
+          const content = await fs.readFile(filePath, 'utf8');
+          const sessionTurns = parseAssistantTurns(content);
+          const sessionDrift = computeDrift(sessionTurns);
+          driftFactor = sessionTurns.length >= 5 ? sessionDrift.driftFactor : null;
+        } catch {
+          // Drift computation is best-effort — don't fail the session listing
         }
 
         sessions.push({
@@ -225,6 +252,7 @@ export function buildApiRouter(claudeHome: string): Router {
           isActive,
           permissionMode,
           isRemoteControlled,
+          driftFactor,
         });
       }
 
@@ -251,6 +279,13 @@ export function buildApiRouter(claudeHome: string): Router {
     const filePath = path.join(projectsDir, slug, `${id}.jsonl`);
 
     try {
+      assertWithinBase(filePath, projectsDir);
+    } catch {
+      res.status(400).json({ error: 'Invalid path' });
+      return;
+    }
+
+    try {
       let content: string;
       try {
         content = await fs.readFile(filePath, 'utf8');
@@ -263,6 +298,8 @@ export function buildApiRouter(claudeHome: string): Router {
       const boundaries = parseCompactionBoundaries(content);
       const health = computeContextHealth(rows, boundaries.length);
       const sessionId = extractSessionId(content) ?? id;
+      const turns = parseAssistantTurns(content);
+      const drift = computeDrift(turns);
 
       // Load sub-agent JSONL files and attach as children to matching agent rows
       const subagentsDir = path.join(projectsDir, slug, id, 'subagents');
@@ -279,6 +316,8 @@ export function buildApiRouter(claudeHome: string): Router {
         const agentIdMap = extractAgentIds(content);
 
         for (const [toolUseId, agentId] of agentIdMap) {
+          // Validate agentId to prevent path traversal via crafted JSONL content
+          if (!/^[a-zA-Z0-9_-]+$/.test(agentId)) continue;
           const subAgentFile = path.join(subagentsDir, `agent-${agentId}.jsonl`);
           let subAgentContent: string;
           try {
@@ -305,14 +344,18 @@ export function buildApiRouter(claudeHome: string): Router {
       // Stretch agent rows to span from dispatch to last sub-agent child completion
       for (const row of rows) {
         if (row.type !== 'agent' || row.children.length === 0) continue;
-        const childMax = Math.max(...row.children.map((c) => c.endTime ?? c.startTime));
+        let childMax = -Infinity;
+        for (const c of row.children) {
+          const end = c.endTime ?? c.startTime;
+          if (end > childMax) childMax = end;
+        }
         if (childMax > (row.endTime ?? 0)) {
           row.endTime = childMax;
           row.duration = childMax - row.startTime;
         }
       }
 
-      res.json({ rows, compactionBoundaries: boundaries, health, sessionId });
+      res.json({ rows, compactionBoundaries: boundaries, health, sessionId, drift });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: message });

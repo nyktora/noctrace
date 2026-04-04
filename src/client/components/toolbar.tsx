@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import { useSessionStore } from '../store/session-store.ts';
 import { HealthBadge } from './health-badge.tsx';
 import { FilterIcon } from '../icons/filter-icon.tsx';
 import { WaterfallIcon } from '../icons/waterfall-icon.tsx';
 import { WarningIcon } from '../icons/warning-icon.tsx';
+import { DriftIcon } from '../icons/drift-icon.tsx';
 import { formatTokens, formatDuration } from '../utils/tool-colors.ts';
 
 /**
@@ -17,14 +18,26 @@ export function Toolbar(): React.ReactElement {
   const setAutoScroll = useSessionStore((s) => s.setAutoScroll);
   const health = useSessionStore((s) => s.health);
   const rows = useSessionStore((s) => s.rows);
+  const drift = useSessionStore((s) => s.drift);
 
-  const agentCount = rows.filter((r) => r.type === 'agent').length;
+  const driftColor = !drift ? 'var(--ctp-overlay0)'
+    : drift.driftFactor >= 5 ? 'var(--ctp-red)'
+    : drift.driftFactor >= 3 ? 'var(--ctp-peach)'
+    : drift.driftFactor >= 2 ? 'var(--ctp-yellow)'
+    : 'var(--ctp-green)';
 
-  const totalTokens = rows.reduce((sum, r) => sum + r.inputTokens + r.outputTokens, 0);
-
-  const sessionDuration = rows.length > 0
-    ? Math.max(...rows.map((r) => r.endTime ?? r.startTime)) - Math.min(...rows.map((r) => r.startTime))
-    : null;
+  const { agentCount, totalTokens, sessionDuration } = useMemo(() => {
+    if (rows.length === 0) return { agentCount: 0, totalTokens: 0, sessionDuration: null as number | null };
+    let agents = 0, tokens = 0, minStart = Infinity, maxEnd = -Infinity;
+    for (const r of rows) {
+      if (r.type === 'agent') agents++;
+      tokens += r.inputTokens + r.outputTokens;
+      const end = r.endTime ?? r.startTime;
+      if (end > maxEnd) maxEnd = end;
+      if (r.startTime < minStart) minStart = r.startTime;
+    }
+    return { agentCount: agents, totalTokens: tokens, sessionDuration: maxEnd - minStart };
+  }, [rows]);
 
   return (
     <div
@@ -137,6 +150,20 @@ export function Toolbar(): React.ReactElement {
 
           {/* Health grade badge — 20x20 compact circle */}
           {health && <HealthBadge grade={health.grade} score={health.score} size={20} />}
+
+          {/* Drift indicator */}
+          {drift && drift.driftFactor >= 1.5 && (
+            <div className="flex items-center" style={{ gap: 3 }}>
+              <DriftIcon size={12} color={driftColor} />
+              <span
+                className="font-mono"
+                style={{ color: driftColor, fontWeight: 600, fontSize: 11 }}
+                title={`Token drift: ${drift.driftFactor}x baseline (${Math.round(drift.baselineTokens / 1000)}k → ${Math.round(drift.currentTokens / 1000)}k per turn)`}
+              >
+                {drift.driftFactor}x
+              </span>
+            </div>
+          )}
 
           {/* Warning icon */}
           <WarningIcon size={12} color="var(--ctp-overlay0)" />

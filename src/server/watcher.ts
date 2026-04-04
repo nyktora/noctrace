@@ -6,11 +6,12 @@ import chokidar from 'chokidar';
 import fs from 'node:fs';
 import { parseJsonlContent, parseCompactionBoundaries } from '../shared/parser';
 import { computeContextHealth } from '../shared/health';
-import type { WaterfallRow, ContextHealth } from '../shared/types';
+import { parseAssistantTurns, computeDrift } from '../shared/drift';
+import type { WaterfallRow, ContextHealth, DriftAnalysis } from '../shared/types';
 
 /** Callbacks provided to watchSession. */
 export interface WatcherCallbacks {
-  onNewRows: (rows: WaterfallRow[], health: ContextHealth, boundaries: number[]) => void;
+  onNewRows: (rows: WaterfallRow[], health: ContextHealth, boundaries: number[], drift: DriftAnalysis) => void;
 }
 
 /** Handle returned by watchSession to stop the watcher. */
@@ -54,26 +55,34 @@ export function watchSession(filePath: string, callbacks: WatcherCallbacks): Wat
       } finally {
         fs.closeSync(fd);
       }
-      bytesRead = fileSize;
 
-      const newContent = buffer.toString('utf8');
-      const newRows = parseJsonlContent(newContent);
+      // Only advance bytesRead for complete lines to avoid partial JSONL reads
+      const raw = buffer.toString('utf8');
+      const lastNewline = raw.lastIndexOf('\n');
+      if (lastNewline === -1) {
+        // No complete line yet — wait for next change event
+        return;
+      }
+      bytesRead += Buffer.byteLength(raw.slice(0, lastNewline + 1), 'utf8');
 
-      if (newRows.length === 0) return;
-
-      // Re-read full file for accurate health score (it's cumulative)
+      // Read full file once — needed for accurate health (cumulative metrics)
+      // and to produce complete rows with correct parent-child relationships
       let fullContent = '';
       try {
         fullContent = fs.readFileSync(filePath, 'utf8');
       } catch {
-        fullContent = newContent;
+        fullContent = buffer.toString('utf8');
       }
 
-      const boundaries = parseCompactionBoundaries(fullContent);
       const allRows = parseJsonlContent(fullContent);
-      const health = computeContextHealth(allRows, boundaries.length);
+      if (allRows.length === 0) return;
 
-      callbacks.onNewRows(newRows, health, boundaries);
+      const boundaries = parseCompactionBoundaries(fullContent);
+      const health = computeContextHealth(allRows, boundaries.length);
+      const turns = parseAssistantTurns(fullContent);
+      const drift = computeDrift(turns);
+
+      callbacks.onNewRows(allRows, health, boundaries, drift);
     } catch (err) {
       console.warn('[noctrace] watcher error:', err instanceof Error ? err.message : String(err));
     }
