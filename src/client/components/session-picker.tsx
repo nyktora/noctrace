@@ -163,7 +163,13 @@ function ProjectRow({ project, isSelected, onSelect }: ProjectRowProps): React.R
  * Left sidebar component for browsing projects and sessions.
  * Fetches project list on mount and sessions when a project is selected.
  */
-export function SessionPicker(): React.ReactElement {
+/** Props for SessionPicker */
+export interface SessionPickerProps {
+  /** Called after a session is selected (useful for closing mobile sidebar) */
+  onSessionSelect?: () => void;
+}
+
+export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.ReactElement {
   const projects = useSessionStore((s) => s.projects);
   const sessions = useSessionStore((s) => s.sessions);
   const selectedProjectSlug = useSessionStore((s) => s.selectedProjectSlug);
@@ -183,6 +189,7 @@ export function SessionPicker(): React.ReactElement {
   function handleSessionSelect(id: string): void {
     if (!selectedProjectSlug) return;
     void fetchSession(selectedProjectSlug, id);
+    onSessionSelect?.();
   }
 
   const sortedSessions = [...sessions].sort((a, b) => {

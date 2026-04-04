@@ -111,7 +111,7 @@ export function App(): React.ReactElement {
             </div>
 
             <div className="flex-1 overflow-hidden flex flex-col">
-              <SessionPicker />
+              <SessionPicker onSessionSelect={closeSidebar} />
             </div>
           </div>
 
