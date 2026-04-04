@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import type { ProjectSummary, SessionSummary } from '../../shared/types.ts';
 import { useSessionStore } from '../store/session-store.ts';
@@ -177,6 +177,7 @@ export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.Re
   const fetchProjects = useSessionStore((s) => s.fetchProjects);
   const fetchSessions = useSessionStore((s) => s.fetchSessions);
   const fetchSession = useSessionStore((s) => s.fetchSession);
+  const [showEmpty, setShowEmpty] = useState(false);
 
   useEffect(() => {
     void fetchProjects();
@@ -199,6 +200,9 @@ export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.Re
     const bTime = b.startTime ? new Date(b.startTime).getTime() : 0;
     return bTime - aTime;
   });
+
+  const emptyProjectCount = projects.filter((p) => p.sessionCount === 0).length;
+  const visibleProjects = showEmpty ? projects : projects.filter((p) => p.sessionCount > 0);
 
   return (
     <div
@@ -223,7 +227,7 @@ export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.Re
           </div>
         )}
 
-        {projects.map((project: ProjectSummary) => (
+        {visibleProjects.map((project: ProjectSummary) => (
           <div key={project.slug}>
             <ProjectRow
               project={project}
@@ -245,6 +249,21 @@ export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.Re
           </div>
         ))}
       </div>
+
+      {emptyProjectCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowEmpty((v) => !v)}
+          className="shrink-0 px-3 py-1.5 text-left text-xs transition-colors"
+          style={{
+            borderTop: '1px solid var(--ctp-surface0)',
+            color: 'var(--ctp-overlay0)',
+            backgroundColor: 'transparent',
+          }}
+        >
+          {showEmpty ? `Hide empty projects` : `Show ${emptyProjectCount} empty project${emptyProjectCount === 1 ? '' : 's'}`}
+        </button>
+      )}
     </div>
   );
 }
