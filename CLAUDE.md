@@ -82,6 +82,23 @@ Agent(subagent_type="core:code-reviewer", prompt="Review changes in Y for...")
 
 When in doubt, delegate. The cost of a subagent is near-zero. The cost of filling main context is permanent until compaction.
 
+## Releasing
+
+Releases are published to npm **exclusively via GitHub Actions** (`.github/workflows/publish.yml`). Never run `npm publish` locally.
+
+### Release process:
+1. Bump version in `package.json`
+2. Commit: `git commit -m "Bump version to X.Y.Z"`
+3. Tag: `git tag vX.Y.Z`
+4. Push: `git push && git push --tags`
+5. **Monitor the CI/CD run** — check GitHub Actions to confirm the publish workflow succeeds. Use `gh run list --workflow=publish.yml --limit=1` or check the Actions tab in the browser.
+6. If the workflow fails, diagnose and fix before retrying. To re-trigger, delete and recreate the tag: `git tag -d vX.Y.Z && git push origin :refs/tags/vX.Y.Z && git tag vX.Y.Z && git push origin vX.Y.Z`
+
+### Important:
+- The workflow uses `--allow-same-version` so the version in `package.json` can already match the tag
+- The workflow uses npm provenance (`--provenance`) which requires `id-token: write` permission
+- The `NPM_TOKEN` secret must be configured in the GitHub repo settings
+
 ## Rules
 
 Follow all rules in `.claude/rules/` strictly. They cover:
