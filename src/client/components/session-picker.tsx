@@ -4,8 +4,43 @@ import type { ProjectSummary, SessionSummary } from '../../shared/types.ts';
 import { useSessionStore } from '../store/session-store.ts';
 import { formatRelativeTime } from '../utils/tool-colors.ts';
 
+/**
+ * Detect if a slug is a git worktree path.
+ * Worktree slugs contain the pattern "--claude-worktrees-" which corresponds
+ * to the literal path segment "/.claude/worktrees/" in the original filesystem path.
+ */
+function isWorktreeSlug(slug: string): boolean {
+  return slug.includes('--claude-worktrees-');
+}
+
+/**
+ * Extract a human-readable label for a worktree project.
+ * For "-Users-lam-dev-project--claude-worktrees-adjective" returns "project (adjective)".
+ */
+function worktreeDisplayName(slug: string): string {
+  const match = /^(.*?)--claude-worktrees-([^-]+(?:-[^-]+)*)$/.exec(slug);
+  if (!match) return slug;
+  const beforeWorktrees = match[1]; // e.g. "-Users-lam-dev-svgmint-com"
+  const adjective = match[2];       // e.g. "xenodochial"
+  const projectParts = beforeWorktrees.replace(/^-/, '').split('-');
+  const projectName = projectParts[projectParts.length - 1] || beforeWorktrees;
+  return `${projectName} (${adjective})`;
+}
+
+/**
+ * Extract the parent path for a worktree project.
+ * For "-Users-lam-dev-svgmint-com--claude-worktrees-xenodochial" returns "~/Users/lam/dev/svgmint/com".
+ */
+function worktreeParentPath(slug: string): string {
+  const match = /^(.*?)--claude-worktrees-/.exec(slug);
+  if (!match) return '';
+  const beforeWorktrees = match[1]; // e.g. "-Users-lam-dev-svgmint-com"
+  return '~/' + beforeWorktrees.replace(/^-/, '').split('-').join('/');
+}
+
 /** Extract the last meaningful path segment as the project display name */
 function projectDisplayName(slug: string): string {
+  if (isWorktreeSlug(slug)) return worktreeDisplayName(slug);
   // slug looks like "-Users-lam-dev-noctrace" → split on hyphens, take last segment
   const parts = slug.replace(/^-/, '').split('-');
   // Find the last non-empty segment
@@ -14,6 +49,7 @@ function projectDisplayName(slug: string): string {
 
 /** Format the parent path (everything before the project name) */
 function projectParentPath(slug: string): string {
+  if (isWorktreeSlug(slug)) return worktreeParentPath(slug);
   const parts = slug.replace(/^-/, '').split('-');
   if (parts.length <= 1) return '';
   return '~/' + parts.slice(0, -1).join('/');
