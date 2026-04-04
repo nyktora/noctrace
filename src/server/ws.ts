@@ -151,7 +151,7 @@ export function setupWebSocket(server: Server, claudeHome: string): void {
           return;
         }
 
-        const args = ['--resume', sessionId, '--print', '--output-format', 'stream-json'];
+        const args = ['--resume', sessionId, '--print', '--verbose', '--output-format', 'stream-json'];
         if (fork) args.push('--fork-session');
         args.push(userMsg);
 
