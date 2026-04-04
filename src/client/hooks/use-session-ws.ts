@@ -26,7 +26,12 @@ interface WsResumeError {
   message: string;
 }
 
-type WsIncoming = WsRowsMessage | WsResumeChunk | WsResumeDone | WsResumeError;
+interface WsSessionCreated {
+  type: 'session-created';
+  slug: string;
+}
+
+type WsIncoming = WsRowsMessage | WsResumeChunk | WsResumeDone | WsResumeError | WsSessionCreated;
 
 /**
  * Custom hook that maintains a WebSocket connection to the local Noctrace server.
@@ -44,6 +49,7 @@ export function useSessionWs(): {
   const appendResumeOutput = useSessionStore((s) => s.appendResumeOutput);
   const addResumeUserMessage = useSessionStore((s) => s.addResumeUserMessage);
   const fetchSession = useSessionStore((s) => s.fetchSession);
+  const fetchSessions = useSessionStore((s) => s.fetchSessions);
   const selectedSessionId = useSessionStore((s) => s.selectedSessionId);
   const selectedProjectSlug = useSessionStore((s) => s.selectedProjectSlug);
 
@@ -100,6 +106,13 @@ export function useSessionWs(): {
         } else if (msg.type === 'resume-error') {
           appendResumeOutput(msg.message);
           setResumeStatus('error');
+        } else if (msg.type === 'session-created') {
+          // A new session file appeared — refresh the session list if we're
+          // viewing the same project so the user sees it without a page reload
+          const currentSlug = useSessionStore.getState().selectedProjectSlug;
+          if (currentSlug === msg.slug) {
+            void useSessionStore.getState().fetchSessions(msg.slug);
+          }
         }
       });
 

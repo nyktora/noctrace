@@ -5,6 +5,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
+import chokidar from 'chokidar';
 import path from 'node:path';
 import type { IncomingMessage } from 'node:http';
 import type { Server } from 'node:http';
@@ -61,6 +62,11 @@ interface ResumeErrorMessage {
   message: string;
 }
 
+interface SessionCreatedMessage {
+  type: 'session-created';
+  slug: string;
+}
+
 interface ErrorServerMessage {
   type: 'error';
   message: string;
@@ -71,6 +77,7 @@ type ServerMessage =
   | ResumeChunkMessage
   | ResumeDoneMessage
   | ResumeErrorMessage
+  | SessionCreatedMessage
   | ErrorServerMessage;
 
 // ---------------------------------------------------------------------------
@@ -101,6 +108,40 @@ function send(ws: WebSocket, msg: ServerMessage): void {
  */
 export function setupWebSocket(server: Server, claudeHome: string): void {
   const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 64 * 1024 });
+
+  // Watch the projects directory for new .jsonl session files.
+  // When a new file appears, broadcast to all connected clients so they
+  // can refresh their session list without a manual page reload.
+  const projectsBase = path.join(claudeHome, 'projects');
+  const dirWatcher = chokidar.watch(projectsBase, {
+    persistent: true,
+    ignoreInitial: true,
+    depth: 1,
+  });
+
+  dirWatcher.on('add', (filePath: string) => {
+    if (!filePath.endsWith('.jsonl')) return;
+    // Derive the project slug from the parent directory name
+    const relative = path.relative(projectsBase, filePath);
+    const slug = path.dirname(relative);
+    if (!slug || slug === '.') return;
+
+    const msg: SessionCreatedMessage = { type: 'session-created', slug };
+    const payload = JSON.stringify(msg);
+    for (const client of wss.clients) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(payload);
+      }
+    }
+  });
+
+  dirWatcher.on('error', (err) => {
+    console.warn('[noctrace] dir watcher error:', err instanceof Error ? err.message : String(err));
+  });
+
+  wss.on('close', () => {
+    dirWatcher.close().catch(() => {});
+  });
 
   wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
     let stopWatcher: (() => void) | null = null;
