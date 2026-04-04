@@ -123,7 +123,7 @@ interface WaterfallRow {
   output: string | null;
   inputTokens: number;        // from assistant record usage
   outputTokens: number;       // from assistant record usage
-  contextFillPercent: number;  // input_tokens / 200000 * 100 at time of execution
+  contextFillPercent: number;  // input_tokens / effective_window * 100 (window auto-detected from session peak, default 200k)
   tokens?: { input: number; output: number };
   children: WaterfallRow[];
 }

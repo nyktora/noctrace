@@ -69,7 +69,7 @@ Noctrace computes a real-time health score from your session data and warns you 
 
 | Signal | Weight | What it measures |
 |--------|--------|-----------------|
-| Context Fill | 40% | How full is the 200k token window |
+| Context Fill | 40% | How full is the context window (auto-detected per model) |
 | Compactions | 25% | Number of lossy compaction events |
 | Re-reads | 15% | Duplicate file reads (retrieval failures) |
 | Error Rate | 10% | Accelerating errors in second half of session |

@@ -226,7 +226,7 @@
               React.createElement(Table,{
                 headers:["Signal","Weight","What it measures"],
                 rows:[
-                  ["Context Fill","40%","Latest input_tokens vs detected context window size (defaults to 200k; auto-detected from session peak). How full is the window right now."],
+                  ["Context Fill","40%","Latest input_tokens vs detected context window size (auto-detected from session peak; 200k–1M depending on model). How full is the window right now."],
                   ["Compactions","25%","Number of compact_boundary events. Each one is lossy."],
                   ["Re-reads","15%","Duplicate Read file paths / total Reads. Retrieval failures."],
                   ["Error Rate","10%","Error rate in 2nd half vs 1st half. Accelerating errors = degradation."],

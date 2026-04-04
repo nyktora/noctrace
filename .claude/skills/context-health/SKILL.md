@@ -170,7 +170,7 @@ function computeHealthGrade(input: HealthInput): ContextHealth {
   return {
     grade: toGrade(composite),
     score: Math.round(composite),
-    fillPercent: /* latest input_tokens / 200000 * 100 */,
+    fillPercent: /* latest input_tokens / effective_window * 100 (window auto-detected from session peak) */,
     compactionCount: input.compactionEvents.length,
     rereadRatio: /* computed above */,
     errorAcceleration: /* computed above */,
