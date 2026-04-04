@@ -17,8 +17,8 @@ import type { ProjectSummary, SessionSummary } from '../../shared/types';
 
 /**
  * Read ~/.claude/sessions/*.json and return a Set of sessionIds
- * that have a live process (verified via kill(pid, 0)).
- * The registry's sessionId matches the JSONL filename (not the sessionId field inside the JSONL).
+ * whose PID is still a running claude process.
+ * The registry sessionId matches the JSONL filename.
  */
 async function getRunningSessionIds(claudeHome: string): Promise<Set<string>> {
   const sessionsDir = path.join(claudeHome, 'sessions');
@@ -38,7 +38,7 @@ async function getRunningSessionIds(claudeHome: string): Promise<Set<string>> {
       const sid = typeof data['sessionId'] === 'string' ? (data['sessionId'] as string) : null;
       if (pid !== null && sid) {
         try {
-          process.kill(pid, 0); // check if process is alive
+          process.kill(pid, 0);
           running.add(sid);
         } catch {
           // process not running
@@ -110,7 +110,7 @@ export function buildApiRouter(claudeHome: string): Router {
 
         const decodedPath = entry.replace(/-/g, '/');
 
-        // Count how many sessions in this project have a live process or recent activity
+        // Count sessions with a live process or recent file activity
         let activeSessionCount = 0;
         for (const jf of jsonlFiles) {
           const sid = jf.replace(/\.jsonl$/, '');
@@ -161,7 +161,6 @@ export function buildApiRouter(claudeHome: string): Router {
       }
 
       const runningSessions = await getRunningSessionIds(claudeHome);
-
       const jsonlFiles = files.filter((f) => f.endsWith('.jsonl'));
       const sessions: SessionSummary[] = [];
 
@@ -210,7 +209,7 @@ export function buildApiRouter(claudeHome: string): Router {
           }
           rowCount = parseJsonlContent(content).length;
           // Active if: live process in registry OR file modified within last 2 minutes
-          // (some sessions e.g. desktop app don't register in ~/.claude/sessions/)
+          // Registry covers CLI sessions; mtime covers Desktop app sessions
           isActive = runningSessions.has(id) || (Date.now() - stat.mtime.getTime() < 120_000);
         } catch {
           // Unreadable file — still include with null startTime

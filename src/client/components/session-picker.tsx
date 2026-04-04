@@ -178,9 +178,13 @@ export function SessionPicker(): React.ReactElement {
     void fetchSession(selectedProjectSlug, id);
   }
 
-  const sortedSessions = [...sessions].sort(
-    (a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime(),
-  );
+  const sortedSessions = [...sessions].sort((a, b) => {
+    // Active sessions first, then by start time descending
+    if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+    const aTime = a.startTime ? new Date(a.startTime).getTime() : 0;
+    const bTime = b.startTime ? new Date(b.startTime).getTime() : 0;
+    return bTime - aTime;
+  });
 
   return (
     <div
