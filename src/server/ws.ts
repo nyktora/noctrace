@@ -162,27 +162,66 @@ export function setupWebSocket(server: Server, claudeHome: string): void {
           });
           resumeProc = proc;
 
-          proc.stdout?.on('data', (chunk: Buffer) => {
-            const text = chunk.toString();
-            // Parse stream-json lines for assistant text
-            for (const line of text.split('\n')) {
-              if (!line.trim()) continue;
-              try {
-                const obj = JSON.parse(line) as Record<string, unknown>;
-                if (obj['type'] === 'assistant' && typeof obj['message'] === 'string') {
-                  send(ws, { type: 'resume-chunk', text: obj['message'] as string });
-                } else if (obj['type'] === 'result' && typeof obj['result'] === 'string') {
-                  send(ws, { type: 'resume-chunk', text: obj['result'] as string });
+          // Buffer for incomplete lines from chunked TCP data
+          let lineBuffer = '';
+
+          /**
+           * Process a complete, newline-terminated stream-json line.
+           * Extracts assistant text chunks and ignores result-type messages
+           * (the final result is already accumulated via chunk messages).
+           */
+          const processLine = (line: string): void => {
+            if (!line.trim()) return;
+            try {
+              const obj = JSON.parse(line) as Record<string, unknown>;
+              if (obj['type'] === 'assistant') {
+                // Extract text from message content blocks
+                const msgContent = obj['message'];
+                if (typeof msgContent === 'object' && msgContent !== null) {
+                  const content = (msgContent as Record<string, unknown>)['content'];
+                  if (Array.isArray(content)) {
+                    for (const block of content as unknown[]) {
+                      if (
+                        typeof block === 'object' && block !== null &&
+                        (block as Record<string, unknown>)['type'] === 'text' &&
+                        typeof (block as Record<string, unknown>)['text'] === 'string'
+                      ) {
+                        send(ws, { type: 'resume-chunk', text: (block as Record<string, unknown>)['text'] as string });
+                      }
+                    }
+                  }
+                } else if (typeof msgContent === 'string') {
+                  send(ws, { type: 'resume-chunk', text: msgContent });
                 }
-              } catch {
-                // Not JSON or partial line — send raw
-                send(ws, { type: 'resume-chunk', text: line });
               }
+              // 'result' type: final accumulated text — no additional chunk needed
+              // since assistant chunks have already been streamed incrementally
+            } catch {
+              // Non-JSON line (e.g. debug output) — ignore silently
+            }
+          };
+
+          proc.stdout?.on('data', (chunk: Buffer) => {
+            lineBuffer += chunk.toString();
+            const lines = lineBuffer.split('\n');
+            // All but the last element are complete lines; last may be partial
+            lineBuffer = lines.pop() ?? '';
+            for (const line of lines) {
+              processLine(line);
             }
           });
 
-          proc.stderr?.on('data', (chunk: Buffer) => {
-            send(ws, { type: 'resume-chunk', text: chunk.toString() });
+          proc.stdout?.on('end', () => {
+            // Flush any remaining buffered content
+            if (lineBuffer.trim()) {
+              processLine(lineBuffer);
+              lineBuffer = '';
+            }
+          });
+
+          proc.stderr?.on('data', (_chunk: Buffer) => {
+            // Intentionally suppress stderr — claude CLI writes progress to stderr
+            // which would pollute the chat output with non-content noise
           });
 
           proc.on('close', (code) => {

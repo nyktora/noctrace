@@ -50,6 +50,17 @@ body {
   animation: pulse-edge 1.2s ease-in-out infinite;
 }
 
+/* Resume bar animations */
+@keyframes noc-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+@keyframes noc-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
 /* Responsive: hide Context % column on small screens */
 @media (max-width: 768px) {
   .hidden-mobile {

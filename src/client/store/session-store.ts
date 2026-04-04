@@ -2,6 +2,12 @@ import { create } from 'zustand';
 
 import type { ContextHealth, ProjectSummary, SessionSummary, WaterfallRow } from '../../shared/types.ts';
 
+/** A single message in a resume conversation */
+export interface ResumeMessage {
+  role: 'user' | 'assistant';
+  text: string;
+}
+
 /** Shape of the session Zustand store */
 export interface SessionStore {
   // Data
@@ -25,7 +31,7 @@ export interface SessionStore {
 
   // Resume
   resumeStatus: 'idle' | 'running' | 'done' | 'error';
-  resumeOutput: string;
+  resumeMessages: ResumeMessage[];
 
   // Actions
   fetchProjects: () => Promise<void>;
@@ -39,6 +45,7 @@ export interface SessionStore {
   setPan: (offset: number) => void;
   addRows: (rows: WaterfallRow[], health: ContextHealth, boundaries: number[]) => void;
   setResumeStatus: (status: 'idle' | 'running' | 'done' | 'error') => void;
+  addResumeUserMessage: (text: string) => void;
   appendResumeOutput: (text: string) => void;
   clearResume: () => void;
 }
@@ -62,7 +69,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   panOffset: 0,
 
   resumeStatus: 'idle',
-  resumeOutput: '',
+  resumeMessages: [],
 
   fetchProjects: async () => {
     const res = await fetch('/api/projects');
@@ -117,8 +124,23 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   setPan: (offset) => set({ panOffset: offset }),
 
   setResumeStatus: (status) => set({ resumeStatus: status }),
-  appendResumeOutput: (text) => set((s) => ({ resumeOutput: s.resumeOutput + text })),
-  clearResume: () => set({ resumeStatus: 'idle', resumeOutput: '' }),
+
+  addResumeUserMessage: (text) =>
+    set((s) => ({
+      resumeMessages: [...s.resumeMessages, { role: 'user', text }, { role: 'assistant', text: '' }],
+    })),
+
+  appendResumeOutput: (text) =>
+    set((s) => {
+      const msgs = s.resumeMessages;
+      if (msgs.length === 0) return {};
+      const last = msgs[msgs.length - 1];
+      if (last.role !== 'assistant') return {};
+      const updated: ResumeMessage = { role: 'assistant', text: last.text + text };
+      return { resumeMessages: [...msgs.slice(0, -1), updated] };
+    }),
+
+  clearResume: () => set({ resumeStatus: 'idle', resumeMessages: [] }),
 
   addRows: (rows, health, boundaries) => {
     const existing = get().rows;

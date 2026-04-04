@@ -41,7 +41,8 @@ export function useSessionWs(): {
   const addRows = useSessionStore((s) => s.addRows);
   const setResumeStatus = useSessionStore((s) => s.setResumeStatus);
   const appendResumeOutput = useSessionStore((s) => s.appendResumeOutput);
-  const clearResume = useSessionStore((s) => s.clearResume);
+  const addResumeUserMessage = useSessionStore((s) => s.addResumeUserMessage);
+  const fetchSession = useSessionStore((s) => s.fetchSession);
   const selectedSessionId = useSessionStore((s) => s.selectedSessionId);
   const selectedProjectSlug = useSessionStore((s) => s.selectedProjectSlug);
 
@@ -86,7 +87,15 @@ export function useSessionWs(): {
         } else if (msg.type === 'resume-chunk') {
           appendResumeOutput(msg.text);
         } else if (msg.type === 'resume-done') {
-          setResumeStatus(msg.exitCode === 0 ? 'done' : 'error');
+          const status = msg.exitCode === 0 ? 'done' : 'error';
+          setResumeStatus(status);
+          // Re-fetch the session so the waterfall reflects any new tool calls
+          if (status === 'done') {
+            const { selectedProjectSlug: slug, selectedSessionId: id } = useSessionStore.getState();
+            if (slug && id) {
+              void fetchSession(slug, id);
+            }
+          }
         } else if (msg.type === 'resume-error') {
           appendResumeOutput(msg.message);
           setResumeStatus('error');
@@ -125,10 +134,10 @@ export function useSessionWs(): {
 
   const sendResume = useCallback((sessionId: string, message: string, fork?: boolean) => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) return;
-    clearResume();
+    addResumeUserMessage(message);
     setResumeStatus('running');
     wsRef.current.send(JSON.stringify({ type: 'resume', sessionId, message, fork }));
-  }, [clearResume, setResumeStatus]);
+  }, [addResumeUserMessage, setResumeStatus]);
 
   const cancelResume = useCallback(() => {
     if (wsRef.current?.readyState !== WebSocket.OPEN) return;
