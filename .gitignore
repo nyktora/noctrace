@@ -4,3 +4,4 @@ dist/
 *.tsbuildinfo
 PRD.md
 docs/claude-code-tips.md
+.gstack/
