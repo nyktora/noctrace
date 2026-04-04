@@ -297,6 +297,9 @@ export function Waterfall(): React.ReactElement {
       {/* Scrollable rows */}
       <div
         ref={scrollRef}
+        role="grid"
+        aria-label="Waterfall timeline"
+        aria-rowcount={flatRows.length}
         className="flex-1 overflow-auto"
         onScroll={(e) => {
           const el = e.target as HTMLDivElement;
@@ -320,27 +323,59 @@ export function Waterfall(): React.ReactElement {
 
         <div style={{ height: topSpacer }} />
 
-        {visibleRows.map(({ row, isSummary, isChild, rowNumber }) => (
-          isSummary ? (
-            <AgentSummaryRow key={`${row.id}-summary`} row={row} onSelect={selectRow} />
+        {visibleRows.map(({ row, isSummary, isChild, rowNumber }, visibleIdx) => {
+          // Absolute index within flatRows for focus navigation
+          const flatIdx = startIndex + visibleIdx;
+
+          function focusNeighbor(direction: 'up' | 'down'): void {
+            const targetFlatIdx = direction === 'up' ? flatIdx - 1 : flatIdx + 1;
+            if (targetFlatIdx < 0 || targetFlatIdx >= flatRows.length) return;
+            const targetRow = flatRows[targetFlatIdx];
+            if (!targetRow) return;
+            // Select in store so the row is scrolled into view, then focus the element
+            selectRow(targetRow.row.id);
+            // Use requestAnimationFrame to wait for the scroll/render to settle
+            requestAnimationFrame(() => {
+              const grid = scrollRef.current;
+              if (!grid) return;
+              const rowEls = grid.querySelectorAll<HTMLElement>('[role="row"]');
+              // Find the rendered element that corresponds to the target flat index.
+              // After virtual scroll re-render the target may be at a different rendered position.
+              const newVisibleStart = grid.querySelectorAll<HTMLElement>('[role="row"]').length > 0
+                ? startIndex
+                : 0;
+              const renderedIdx = targetFlatIdx - newVisibleStart;
+              const el = rowEls[renderedIdx];
+              el?.focus();
+            });
+          }
+
+          return isSummary ? (
+            <AgentSummaryRow
+              key={`${row.id}-summary`}
+              row={row}
+              onSelect={selectRow}
+              onFocusNeighbor={focusNeighbor}
+            />
           ) : (
-          <WaterfallRowComponent
-            key={isChild ? `child-${row.id}` : row.id}
-            row={row}
-            rowIndex={isChild ? null : rowNumber}
-            sessionStart={sessionStart}
-            totalDuration={totalDuration}
-            isSelected={row.id === selectedRowId}
-            isExpanded={expandedAgents.has(row.id)}
-            filterText={filterText}
-            waterfallWidth={waterfallWidth}
-            zoomLevel={zoomLevel}
-            panOffset={panOffset}
-            onSelect={selectRow}
-            onToggle={toggleAgent}
-          />
-          )
-        ))}
+            <WaterfallRowComponent
+              key={isChild ? `child-${row.id}` : row.id}
+              row={row}
+              rowIndex={isChild ? null : rowNumber}
+              sessionStart={sessionStart}
+              totalDuration={totalDuration}
+              isSelected={row.id === selectedRowId}
+              isExpanded={expandedAgents.has(row.id)}
+              filterText={filterText}
+              waterfallWidth={waterfallWidth}
+              zoomLevel={zoomLevel}
+              panOffset={panOffset}
+              onSelect={selectRow}
+              onToggle={toggleAgent}
+              onFocusNeighbor={focusNeighbor}
+            />
+          );
+        })}
 
         <div style={{ height: Math.max(0, (totalRows - endIndex) * ROW_HEIGHT) }} />
       </div>
@@ -348,14 +383,37 @@ export function Waterfall(): React.ReactElement {
   );
 }
 
+interface AgentSummaryRowProps {
+  row: WaterfallRow;
+  onSelect: (id: string) => void;
+  onFocusNeighbor?: (direction: 'up' | 'down') => void;
+}
+
 /** Inline summary shown when an agent has no child telemetry */
-function AgentSummaryRow({ row, onSelect }: { row: WaterfallRow; onSelect: (id: string) => void }): React.ReactElement {
+function AgentSummaryRow({ row, onSelect, onFocusNeighbor }: AgentSummaryRowProps): React.ReactElement {
   const agentType = typeof row.input['subagent_type'] === 'string'
     ? row.input['subagent_type'] as string : null;
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>): void {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelect(row.id);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      onFocusNeighbor?.('down');
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      onFocusNeighbor?.('up');
+    }
+  }
+
   return (
     <div
+      role="row"
+      tabIndex={0}
+      aria-label={`Agent summary: ${row.label}, ran in separate context`}
       onClick={() => onSelect(row.id)}
+      onKeyDown={handleKeyDown}
       style={{
         height: ROW_HEIGHT,
         display: 'flex',

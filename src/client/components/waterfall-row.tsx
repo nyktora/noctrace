@@ -57,6 +57,7 @@ export interface WaterfallRowProps {
   panOffset: number;
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
+  onFocusNeighbor?: (direction: 'up' | 'down') => void;
 }
 
 /** Minimum bar width as a fraction */
@@ -79,6 +80,7 @@ export function WaterfallRowComponent({
   panOffset,
   onSelect,
   onToggle,
+  onFocusNeighbor,
 }: WaterfallRowProps): React.ReactElement {
   const isAgent = row.type === 'agent';
   const indent = row.parentAgentId ? 24 : 0;
@@ -109,11 +111,32 @@ export function WaterfallRowComponent({
 
   const typeShort = getTypeShort(row.toolName);
 
+  // Build a human-readable label for screen readers
+  const durationLabel = row.duration != null ? `, ${formatDuration(row.duration)}` : '';
+  const statusLabel = row.status === 'running' ? ', running' : row.status === 'error' ? ', error' : '';
+  const ariaLabel = `${typeShort}: ${row.label}${durationLabel}${statusLabel}`;
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>): void {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelect(row.id);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      onFocusNeighbor?.('down');
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      onFocusNeighbor?.('up');
+    }
+  }
+
   return (
     <div
       role="row"
+      tabIndex={0}
       aria-selected={isSelected}
+      aria-label={ariaLabel}
       onClick={() => onSelect(row.id)}
+      onKeyDown={handleKeyDown}
       style={{
         display: 'flex',
         alignItems: 'stretch',
