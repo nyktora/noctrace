@@ -138,7 +138,7 @@ export function ResumeBar(): React.ReactElement | null {
                   }}
                 />
               )}
-              {isRunning ? 'Claude is responding\u2026' : resumeStatus === 'error' ? 'Error' : 'Conversation'}
+              {isRunning ? 'Claude is responding…' : resumeStatus === 'error' ? 'Error' : 'Conversation'}
             </span>
             {!isRunning && (
               <button
@@ -169,7 +169,7 @@ export function ResumeBar(): React.ReactElement | null {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Send a follow-up to this session\u2026"
+          placeholder="Send a follow-up to this session…"
           disabled={isRunning}
           className="flex-1 font-mono text-xs px-2 py-1.5 rounded"
           style={{
