@@ -7,6 +7,12 @@
   <meta property="og:title" content="Noctrace Docs">
   <meta property="og:description" content="Everything you need to install, run, and understand noctrace.">
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nyktora.github.io/noctrace/docs.html">
+  <meta property="og:site_name" content="Noctrace">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Noctrace Docs">
+  <meta name="twitter:description" content="Noctrace documentation — installation, configuration, waterfall view, context health, context rot detection, and troubleshooting.">
+  <link rel="canonical" href="https://nyktora.github.io/noctrace/docs.html">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>Noctrace Docs</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,15 +22,44 @@
     body { margin: 0; background: #0a0e14; font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Menlo', 'Consolas', monospace; }
     * { box-sizing: border-box; }
   </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Noctrace Documentation",
+    "description": "Installation, configuration, waterfall view, context health, context rot detection, and troubleshooting guide for Noctrace.",
+    "url": "https://nyktora.github.io/noctrace/docs.html",
+    "isPartOf": { "@type": "WebSite", "name": "Noctrace", "url": "https://nyktora.github.io/noctrace/" }
+  }
+  </script>
 </head>
 <body>
   <div id="root"></div>
+  <noscript>
+    <div style="max-width:900px;margin:0 auto;padding:48px 24px;color:#c9d1d9;font-family:monospace;">
+      <h1>Noctrace Documentation</h1>
+      <h2>Installation</h2>
+      <p>Run <code>npx noctrace</code> to start. No install required. Or install globally: <code>npm install -g noctrace</code></p>
+      <h2>What is Noctrace?</h2>
+      <p>Noctrace is a Chrome DevTools Network-tab-style waterfall visualizer for Claude Code agent workflows. It reads JSONL session logs from ~/.claude/projects/ and renders them as an interactive timeline.</p>
+      <h2>Features</h2>
+      <ul>
+        <li>Waterfall timeline with tool calls, API requests, and agent spawns</li>
+        <li>Context health scoring to detect context rot</li>
+        <li>Token tracking across sessions</li>
+        <li>Sub-agent visibility with collapsible groups</li>
+        <li>Real-time WebSocket streaming</li>
+        <li>Zoom, pan, and filtering</li>
+      </ul>
+      <p><a href="https://github.com/nyktora/noctrace">View on GitHub</a> | <a href="/">Back to home</a></p>
+    </div>
+  </noscript>
 
   <script type="importmap">
     {
       "imports": {
-        "react": "https://esm.sh/react@19?dev",
-        "react-dom/client": "https://esm.sh/react-dom@19/client?dev"
+        "react": "https://esm.sh/react@19",
+        "react-dom/client": "https://esm.sh/react-dom@19/client"
       }
     }
   </script>
@@ -351,7 +386,7 @@
 
         /* FOOTER */
         React.createElement("footer",{style:{borderTop:"1px solid "+BD,maxWidth:1060,margin:"0 auto",padding:"16px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11,color:DM}},
-          React.createElement("span",null,"noctrace \u00B7 MIT \u00B7 ",React.createElement("a",{href:"https://nyktora.com",style:{color:DM}},"Nyktora Group")),
+          React.createElement("span",null,"noctrace \u00B7 MIT \u00B7 Maintained by ",React.createElement("a",{href:"https://nyktora.com",style:{color:DM}},"nyktora.com"),". Contributions welcome."),
           React.createElement("div",{style:{display:"flex",gap:16}},
             React.createElement("a",{href:"https://github.com/nyktora/noctrace",style:{color:DM}},"github"),
             React.createElement("a",{href:"https://npmjs.com/package/noctrace",style:{color:DM}},"npm")
