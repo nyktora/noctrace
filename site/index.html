@@ -7,6 +7,12 @@
   <meta property="og:title" content="Noctrace — See what your AI agents are actually doing">
   <meta property="og:description" content="Chrome DevTools Network-tab-style real-time waterfall visualizer for Claude Code agent workflows. Waterfall timelines, token tracking, and context rot detection.">
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nyktora.github.io/noctrace/">
+  <meta property="og:site_name" content="Noctrace">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Noctrace — See what your AI agents are actually doing">
+  <meta name="twitter:description" content="Chrome DevTools Network-tab-style real-time waterfall visualizer for Claude Code agent workflows. Open source, local-only, zero config.">
+  <link rel="canonical" href="https://nyktora.github.io/noctrace/">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>Noctrace — See what your AI agents are actually doing</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,15 +22,46 @@
     body { margin: 0; background: #0a0e14; font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Menlo', 'Consolas', monospace; }
     * { box-sizing: border-box; }
   </style>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Noctrace",
+  "description": "Chrome DevTools Network-tab-style real-time waterfall visualizer for Claude Code agent workflows.",
+  "url": "https://nyktora.github.io/noctrace/",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS, Linux, Windows",
+  "license": "https://opensource.org/licenses/MIT",
+  "codeRepository": "https://github.com/nyktora/noctrace",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
 </head>
 <body>
   <div id="root"></div>
+  <noscript>
+  <div style="max-width:900px;margin:0 auto;padding:48px 24px;color:#c9d1d9;font-family:monospace;">
+    <h1>Noctrace</h1>
+    <p>Chrome DevTools Network-tab-style real-time waterfall visualizer for Claude Code agent workflows. Open source, local-only, zero config.</p>
+    <h2>Features</h2>
+    <ul>
+      <li>Waterfall timeline — see every tool call, API request, and agent spawn on a shared time axis</li>
+      <li>Context health scoring — detect context rot before it derails your session</li>
+      <li>Token tracking — monitor cumulative token usage across the session</li>
+      <li>Sub-agent visibility — collapsible agent groups with nested tool calls</li>
+      <li>Real-time streaming — live updates via WebSocket as your session progresses</li>
+    </ul>
+    <h2>Install</h2>
+    <p><code>npx noctrace</code></p>
+    <p><a href="https://github.com/nyktora/noctrace">View on GitHub</a> | <a href="https://npmjs.com/package/noctrace">View on npm</a></p>
+  </div>
+</noscript>
 
   <script type="importmap">
     {
       "imports": {
-        "react": "https://esm.sh/react@19?dev",
-        "react-dom/client": "https://esm.sh/react-dom@19/client?dev"
+        "react": "https://esm.sh/react@19",
+        "react-dom/client": "https://esm.sh/react-dom@19/client"
       }
     }
   </script>
