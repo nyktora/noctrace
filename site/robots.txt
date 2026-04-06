@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://nyktora.github.io/noctrace/sitemap.xml
