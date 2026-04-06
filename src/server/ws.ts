@@ -205,6 +205,11 @@ export function setupWebSocket(server: Server, claudeHome: string): void {
           send(ws, { type: 'resume-error', message: 'resume requires sessionId and message' });
           return;
         }
+        // Cap message length to prevent abuse via cross-origin or oversized prompts
+        if (userMsg.length > 10_000) {
+          send(ws, { type: 'resume-error', message: 'Message too long (max 10000 chars)' });
+          return;
+        }
         // Validate sessionId format — must be a UUID-like string, no dashes-starting args
         if (!/^[a-zA-Z0-9_-]+$/.test(sessionId) || sessionId.startsWith('-')) {
           send(ws, { type: 'resume-error', message: 'Invalid sessionId format' });
