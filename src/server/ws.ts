@@ -107,7 +107,20 @@ function send(ws: WebSocket, msg: ServerMessage): void {
  * back in real time using chokidar file watching.
  */
 export function setupWebSocket(server: Server, claudeHome: string): void {
-  const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 64 * 1024 });
+  const wss = new WebSocketServer({
+    server,
+    path: '/ws',
+    maxPayload: 64 * 1024,
+    verifyClient: ({ origin }: { origin?: string }) => {
+      if (!origin) return true; // non-browser clients (curl, wscat)
+      try {
+        const url = new URL(origin);
+        return url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+      } catch {
+        return false;
+      }
+    },
+  });
 
   // Watch the projects directory for new .jsonl session files.
   // When a new file appears, broadcast to all connected clients so they
