@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { ContextHealth, DriftAnalysis, ProjectSummary, SessionSummary, WaterfallRow } from '../../shared/types.ts';
+import type { ContextHealth, DriftAnalysis, ProjectSummary, SessionCost, SessionSummary, WaterfallRow } from '../../shared/types.ts';
 
 /** A single message in a resume conversation */
 export interface ResumeMessage {
@@ -17,6 +17,7 @@ export interface SessionStore {
   health: ContextHealth | null;
   compactionBoundaries: number[];
   drift: DriftAnalysis | null;
+  cost: SessionCost | null;
 
   // UI state
   selectedProjectSlug: string | null;
@@ -59,6 +60,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   health: null,
   compactionBoundaries: [],
   drift: null,
+  cost: null,
 
   selectedProjectSlug: null,
   selectedSessionId: null,
@@ -95,12 +97,14 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       health: ContextHealth;
       compactionBoundaries: number[];
       drift: DriftAnalysis;
+      cost: SessionCost;
     };
     set({
       rows: data.rows,
       health: data.health,
       compactionBoundaries: data.compactionBoundaries ?? [],
       drift: data.drift ?? null,
+      cost: data.cost ?? null,
       selectedSessionId: id,
       selectedRowId: null,
       expandedAgents: new Set<string>(),
