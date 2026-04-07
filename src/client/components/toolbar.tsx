@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo } from 'react';
 
 import { useSessionStore } from '../store/session-store.ts';
 import { HealthBadge } from './health-badge.tsx';
@@ -6,9 +6,6 @@ import { FilterIcon } from '../icons/filter-icon.tsx';
 import { WaterfallIcon } from '../icons/waterfall-icon.tsx';
 import { WarningIcon } from '../icons/warning-icon.tsx';
 import { DriftIcon } from '../icons/drift-icon.tsx';
-import { DriftRateIcon } from '../icons/drift-rate-icon.tsx';
-import { DollarIcon } from '../icons/dollar-icon.tsx';
-import { ShareIcon } from '../icons/share-icon.tsx';
 import { formatTokens, formatDuration } from '../utils/tool-colors.ts';
 
 /**
@@ -22,34 +19,6 @@ export function Toolbar(): React.ReactElement {
   const health = useSessionStore((s) => s.health);
   const rows = useSessionStore((s) => s.rows);
   const drift = useSessionStore((s) => s.drift);
-  const cost = useSessionStore((s) => s.cost);
-  const selectedProjectSlug = useSessionStore((s) => s.selectedProjectSlug);
-  const selectedSessionId = useSessionStore((s) => s.selectedSessionId);
-
-  const [isExporting, setIsExporting] = useState(false);
-
-  /** Download the current session as a self-contained HTML export file. */
-  const handleExport = useCallback(async () => {
-    if (!selectedProjectSlug || !selectedSessionId || isExporting) return;
-    setIsExporting(true);
-    try {
-      const url = `/api/session/${encodeURIComponent(selectedProjectSlug)}/${encodeURIComponent(selectedSessionId)}/export`;
-      const res = await fetch(url);
-      if (!res.ok) return;
-      const html = await res.text();
-      const exportDate = new Date().toISOString().slice(0, 10);
-      const filename = `noctrace-${selectedSessionId.slice(0, 8)}-${exportDate}.html`;
-      const blob = new Blob([html], { type: 'text/html' });
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(blobUrl);
-    } finally {
-      setIsExporting(false);
-    }
-  }, [selectedProjectSlug, selectedSessionId, isExporting]);
 
   const driftColor = !drift ? 'var(--ctp-overlay0)'
     : drift.driftFactor >= 5 ? 'var(--ctp-red)'
@@ -146,27 +115,6 @@ export function Toolbar(): React.ReactElement {
         Auto
       </button>
 
-      {/* Share / export session button */}
-      {selectedSessionId && (
-        <button
-          type="button"
-          onClick={() => { void handleExport(); }}
-          disabled={isExporting}
-          className="flex items-center gap-1 text-xs px-2 py-0.5 rounded shrink-0 transition-colors"
-          style={{
-            backgroundColor: 'transparent',
-            border: '1px solid var(--ctp-surface1)',
-            color: isExporting ? 'var(--ctp-overlay0)' : 'var(--ctp-subtext0)',
-            fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-            cursor: isExporting ? 'default' : 'pointer',
-          }}
-          title="Export session as standalone HTML file"
-        >
-          <ShareIcon size={11} />
-          {isExporting ? 'Exporting…' : 'Export'}
-        </button>
-      )}
-
       {/* Compact stats pill */}
       {rows.length > 0 && (
         <div
@@ -217,28 +165,6 @@ export function Toolbar(): React.ReactElement {
             </div>
           )}
 
-          {/* Drift rate indicator — only shown when >= 6 turns */}
-          {drift && drift.turnCount >= 6 && drift.driftRateLabel !== 'stable' && (
-            <div className="flex items-center" style={{ gap: 3 }}>
-              <DriftRateIcon label={drift.driftRateLabel} size={12} />
-              <span
-                className="font-mono"
-                style={{
-                  color: drift.driftRateLabel === 'critical'
-                    ? 'var(--ctp-red)'
-                    : drift.driftRateLabel === 'accelerating'
-                    ? 'var(--ctp-peach)'
-                    : 'var(--ctp-yellow)',
-                  fontWeight: 600,
-                  fontSize: 11,
-                }}
-                title={`Drift rate: ${drift.driftRate > 0 ? '+' : ''}${drift.driftRate} tokens/min growth`}
-              >
-                {drift.driftRateLabel}
-              </span>
-            </div>
-          )}
-
           {/* Warning icon */}
           <WarningIcon size={12} color="var(--ctp-overlay0)" />
 
@@ -260,20 +186,6 @@ export function Toolbar(): React.ReactElement {
             >
               {formatDuration(sessionDuration)}
             </span>
-          )}
-
-          {/* Cost estimate */}
-          {cost != null && (
-            <div className="flex items-center" style={{ gap: 3 }}>
-              <DollarIcon size={12} color="var(--ctp-green)" />
-              <span
-                className="font-mono"
-                style={{ color: 'var(--ctp-green)', fontWeight: 600, fontSize: 11 }}
-                title={`Estimated cost (${cost.model} pricing): input $${cost.inputCost.toFixed(4)} + output $${cost.outputCost.toFixed(4)} + cache write $${cost.cacheWriteCost.toFixed(4)} + cache read $${cost.cacheReadCost.toFixed(4)}`}
-              >
-                ${cost.totalCost < 0.01 ? cost.totalCost.toFixed(4) : cost.totalCost.toFixed(2)}
-              </span>
-            </div>
           )}
         </div>
       )}

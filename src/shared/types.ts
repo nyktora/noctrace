@@ -96,26 +96,7 @@ export interface AssistantTurn {
   cacheReadTokens: number;
 }
 
-/**
- * Estimated USD cost breakdown for a session derived from token usage.
- * Pricing is model-tier-based and defaults to sonnet when the model is unknown.
- */
-export interface SessionCost {
-  /** Total estimated cost in USD. */
-  totalCost: number;
-  /** Cost attributable to input (non-cached) tokens. */
-  inputCost: number;
-  /** Cost attributable to output tokens. */
-  outputCost: number;
-  /** Cost attributable to cache-write tokens. */
-  cacheWriteCost: number;
-  /** Cost attributable to cache-read tokens. */
-  cacheReadCost: number;
-  /** Model tier key used for pricing (opus | sonnet | haiku). */
-  model: string;
-}
-
-/** Drift rate classification label */
+/** Drift rate classification */
 export type DriftRateLabel = 'stable' | 'rising' | 'accelerating' | 'critical';
 
 /** Token drift analysis for a session */
@@ -126,8 +107,8 @@ export interface DriftAnalysis {
   turnCount: number;
   totalTokens: number;       // sum of all turns
   estimatedSavings: number;  // tokens that could be saved with session rotation (0 if drift < 2)
-  driftRate: number;         // tokens per minute growth rate (positive = growing)
-  driftRateLabel: DriftRateLabel;  // 'stable' | 'rising' | 'accelerating' | 'critical'
+  driftRate: number;         // tokens per minute growth rate
+  driftRateLabel: DriftRateLabel;
 }
 
 /**
