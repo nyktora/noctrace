@@ -188,11 +188,6 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
             }}
           >
             <span>Input</span>
-            {row.tokenDelta > 0 && (
-              <span className="font-mono" style={{ fontSize: 10, color: 'var(--ctp-subtext0)' }}>
-                {formatTokens(row.tokenDelta)}
-              </span>
-            )}
           </div>
           <pre
             className="text-xs p-2 overflow-auto font-mono whitespace-pre-wrap break-all"
@@ -211,11 +206,6 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
             }}
           >
             <span>Output</span>
-            {row.outputTokens > 0 && (
-              <span className="font-mono" style={{ fontSize: 10, color: 'var(--ctp-subtext0)' }}>
-                {formatTokens(row.outputTokens)}
-              </span>
-            )}
           </div>
           <pre
             className="text-xs p-2 font-mono whitespace-pre-wrap break-all"
