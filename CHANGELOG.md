@@ -2,6 +2,14 @@
 
 All notable changes to noctrace will be documented in this file.
 
+## [0.4.0] - 2026-04-07
+
+### Added
+- Hooks receiver: `POST /api/hooks` endpoint receives Claude Code hook events and broadcasts to WebSocket clients in real time
+- CLI `--install-hooks` / `--uninstall-hooks` to auto-configure Claude Code hooks for PostToolUse, SubagentStart/Stop, Stop, PreCompact, PostCompact
+- Context Drift Rate metric: measures token consumption growth rate (tokens/min) with 3-window linear regression, classified as stable/rising/accelerating/critical
+- Session export: Share button exports current session as a self-contained offline HTML file with embedded waterfall data
+
 ## [0.3.6] - 2026-04-06
 
 ### Security
