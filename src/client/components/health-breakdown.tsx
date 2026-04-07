@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 
-import type { ContextHealth, HealthGrade, HealthSignal } from '../../shared/types.ts';
+import type { ContextHealth, DriftAnalysis, HealthGrade, HealthSignal } from '../../shared/types.ts';
 import { useSessionStore } from '../store/session-store.ts';
 import { CloseIcon } from '../icons/close-icon.tsx';
+import { DriftRateIcon } from '../icons/drift-rate-icon.tsx';
 
 /** Props for HealthBreakdown */
 export interface HealthBreakdownProps {
@@ -51,8 +52,8 @@ interface Recommendation {
   text: string;
 }
 
-/** Generate actionable recommendations from health signals */
-function getRecommendations(health: ContextHealth): Recommendation[] {
+/** Generate actionable recommendations from health signals and drift rate */
+function getRecommendations(health: ContextHealth, drift: DriftAnalysis | null): Recommendation[] {
   const recs: Recommendation[] = [];
 
   // Context fill — progressive recommendations (compact early, not late!)
@@ -120,6 +121,26 @@ function getRecommendations(health: ContextHealth): Recommendation[] {
     });
   }
 
+  // Drift rate
+  if (drift && drift.turnCount >= 6) {
+    if (drift.driftRateLabel === 'critical') {
+      recs.push({
+        severity: 'critical',
+        text: `Token consumption accelerating fast (+${drift.driftRate} tokens/min). Each turn is costing significantly more than the last — rotate the session or /compact before the context window fills.`,
+      });
+    } else if (drift.driftRateLabel === 'accelerating') {
+      recs.push({
+        severity: 'warning',
+        text: `Token growth rate is high (+${drift.driftRate} tokens/min). Context is inflating rapidly — consider /compact soon to arrest the trend.`,
+      });
+    } else if (drift.driftRateLabel === 'rising') {
+      recs.push({
+        severity: 'info',
+        text: `Token consumption is slowly rising (+${drift.driftRate} tokens/min). Normal for long sessions — watch for acceleration.`,
+      });
+    }
+  }
+
   // Overall healthy
   if (recs.length === 0 && health.grade === 'A') {
     recs.push({
@@ -142,6 +163,7 @@ const SEVERITY_COLORS: Record<string, { bg: string; border: string; text: string
  */
 export function HealthBreakdown({ onClose }: HealthBreakdownProps): React.ReactElement {
   const health = useSessionStore((s) => s.health);
+  const drift = useSessionStore((s) => s.drift);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent): void {
@@ -153,7 +175,8 @@ export function HealthBreakdown({ onClose }: HealthBreakdownProps): React.ReactE
 
   if (!health) return <></>;
 
-  const recs = getRecommendations(health);
+  const recs = getRecommendations(health, drift);
+  const showDriftRate = drift !== null && drift.turnCount >= 6;
 
   return (
     <div
@@ -193,6 +216,35 @@ export function HealthBreakdown({ onClose }: HealthBreakdownProps): React.ReactE
         <span>Compactions: <strong style={{ color: 'var(--ctp-text)' }}>{health.compactionCount}</strong></span>
         <span>Rereads: <strong style={{ color: 'var(--ctp-text)' }}>{(health.rereadRatio * 100).toFixed(0)}%</strong></span>
       </div>
+
+      {/* Drift rate row */}
+      {showDriftRate && drift !== null && (
+        <div
+          className="px-3 py-2 text-xs flex items-center gap-2"
+          style={{ borderTop: '1px solid var(--ctp-surface0)', color: 'var(--ctp-subtext0)' }}
+        >
+          <DriftRateIcon label={drift.driftRateLabel} size={12} />
+          <span>
+            Drift rate:{' '}
+            <strong
+              style={{
+                color: drift.driftRateLabel === 'critical'
+                  ? 'var(--ctp-red)'
+                  : drift.driftRateLabel === 'accelerating'
+                  ? 'var(--ctp-peach)'
+                  : drift.driftRateLabel === 'rising'
+                  ? 'var(--ctp-yellow)'
+                  : 'var(--ctp-green)',
+              }}
+            >
+              {drift.driftRateLabel}
+            </strong>
+          </span>
+          <span style={{ marginLeft: 'auto', fontFamily: 'ui-monospace, monospace' }}>
+            {drift.driftRate > 0 ? '+' : ''}{drift.driftRate} tok/min
+          </span>
+        </div>
+      )}
 
       {/* Recommendations */}
       {recs.length > 0 && (
