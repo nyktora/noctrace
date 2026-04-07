@@ -1,4 +1,4 @@
-import type { WaterfallRow, ContextHealth, HealthSignal, HealthGrade } from './types.ts';
+import type { WaterfallRow, ContextHealth, HealthSignal, HealthGrade } from './types.js';
 
 /**
  * Fallback context window size when no peak has been observed yet.

@@ -34,7 +34,10 @@
   },
   "files": [
     "bin/",
-    "dist/"
+    "dist/",
+    ".claude-plugin/",
+    "hooks/",
+    ".mcp.json"
   ],
   "scripts": {
     "dev": "concurrently -k -n server,client -c blue,green \"tsx watch src/server/index.ts\" \"vite\"",

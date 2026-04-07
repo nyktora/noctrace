@@ -178,6 +178,7 @@ if (args.includes('--uninstall-hooks')) {
 }
 
 // Default: start the server and open the browser
+process.env.NOCTRACE_NO_AUTOSTART = '1';
 const { startServer } = await import('../dist/server/server/index.js');
 const open = (await import('open')).default;
 const port = await startServer();

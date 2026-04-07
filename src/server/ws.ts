@@ -9,8 +9,8 @@ import chokidar from 'chokidar';
 import path from 'node:path';
 import type { IncomingMessage } from 'node:http';
 import type { Server } from 'node:http';
-import { watchSession } from './watcher';
-import type { WaterfallRow, ContextHealth, DriftAnalysis, HookEventMessage } from '../shared/types';
+import { watchSession } from './watcher.js';
+import type { WaterfallRow, ContextHealth, DriftAnalysis, HookEventMessage } from '../shared/types.js';
 
 // ---------------------------------------------------------------------------
 // Message types
@@ -125,6 +125,9 @@ export function setupWebSocket(server: Server, claudeHome: string): WebSocketSer
       }
     },
   });
+
+  // Suppress unhandled WSS errors during port retry (EADDRINUSE propagates here)
+  wss.on('error', () => {});
 
   // Watch the projects directory for new .jsonl session files.
   // When a new file appears, broadcast to all connected clients so they

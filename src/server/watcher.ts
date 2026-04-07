@@ -4,10 +4,10 @@
  */
 import chokidar from 'chokidar';
 import fs from 'node:fs';
-import { parseJsonlContent, parseCompactionBoundaries } from '../shared/parser';
-import { computeContextHealth } from '../shared/health';
-import { parseAssistantTurns, computeDrift } from '../shared/drift';
-import type { WaterfallRow, ContextHealth, DriftAnalysis } from '../shared/types';
+import { parseJsonlContent, parseCompactionBoundaries } from '../shared/parser.js';
+import { computeContextHealth } from '../shared/health.js';
+import { parseAssistantTurns, computeDrift } from '../shared/drift.js';
+import type { WaterfallRow, ContextHealth, DriftAnalysis } from '../shared/types.js';
 
 /** Callbacks provided to watchSession. */
 export interface WatcherCallbacks {

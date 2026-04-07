@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "noctrace": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/noctrace-mcp.js"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}

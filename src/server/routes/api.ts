@@ -12,10 +12,10 @@ import {
   extractSessionId,
   extractAgentIds,
   parseSubAgentContent,
-} from '../../shared/parser';
-import { computeContextHealth } from '../../shared/health';
-import { parseAssistantTurns, computeDrift } from '../../shared/drift';
-import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage } from '../../shared/types';
+} from '../../shared/parser.js';
+import { computeContextHealth } from '../../shared/health.js';
+import { parseAssistantTurns, computeDrift } from '../../shared/drift.js';
+import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage } from '../../shared/types.js';
 
 /**
  * Read ~/.claude/sessions/*.json and return a Set of sessionIds

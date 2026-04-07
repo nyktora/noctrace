@@ -1,0 +1,68 @@
+{
+  "PostToolUse": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST http://localhost:4117/api/hooks -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "SubagentStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST http://localhost:4117/api/hooks -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "SubagentStop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST http://localhost:4117/api/hooks -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST http://localhost:4117/api/hooks -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "PreCompact": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST http://localhost:4117/api/hooks -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "PostCompact": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST http://localhost:4117/api/hooks -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ]
+}
