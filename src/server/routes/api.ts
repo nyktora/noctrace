@@ -5,6 +5,7 @@
 import { Router } from 'express';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { WebSocketServer, WebSocket } from 'ws';
 import {
   parseJsonlContent,
   parseCompactionBoundaries,
@@ -14,7 +15,7 @@ import {
 } from '../../shared/parser';
 import { computeContextHealth } from '../../shared/health';
 import { parseAssistantTurns, computeDrift } from '../../shared/drift';
-import type { ProjectSummary, SessionSummary } from '../../shared/types';
+import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage } from '../../shared/types';
 
 /**
  * Read ~/.claude/sessions/*.json and return a Set of sessionIds
@@ -61,8 +62,12 @@ function assertWithinBase(resolved: string, base: string): void {
   }
 }
 
-/** Build the Express router, scoped to a given Claude home directory. */
-export function buildApiRouter(claudeHome: string): Router {
+/**
+ * Build the Express router, scoped to a given Claude home directory.
+ * `wss` is the WebSocketServer instance used to broadcast hook events to
+ * all connected browser clients.
+ */
+export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router {
   const router = Router();
   const projectsDir = path.join(claudeHome, 'projects');
 
@@ -356,6 +361,51 @@ export function buildApiRouter(claudeHome: string): Router {
       }
 
       res.json({ rows, compactionBoundaries: boundaries, health, sessionId, drift });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /api/hooks
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Receives Claude Code hook events and broadcasts them to all connected
+   * WebSocket clients as `{ type: 'hook-event', event }` messages.
+   * Claude Code sends the event JSON on stdin; the hook command pipes it here
+   * via curl. Returns `{ ok: true }` on success.
+   */
+  router.post('/hooks', (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown>;
+
+      const event: HookEvent = {
+        session_id: typeof body['session_id'] === 'string' ? body['session_id'] : '',
+        hook_event_name: typeof body['hook_event_name'] === 'string' ? body['hook_event_name'] : '',
+        ...(typeof body['tool_name'] === 'string' ? { tool_name: body['tool_name'] } : {}),
+        ...(body['tool_input'] !== undefined ? { tool_input: body['tool_input'] } : {}),
+        ...(body['tool_response'] !== undefined ? { tool_response: body['tool_response'] } : {}),
+        ...(typeof body['tool_use_id'] === 'string' ? { tool_use_id: body['tool_use_id'] } : {}),
+        ...(typeof body['cwd'] === 'string' ? { cwd: body['cwd'] } : {}),
+        ...(typeof body['transcript_path'] === 'string' ? { transcript_path: body['transcript_path'] } : {}),
+        ...(typeof body['agent_id'] === 'string' ? { agent_id: body['agent_id'] } : {}),
+        ...(typeof body['agent_type'] === 'string' ? { agent_type: body['agent_type'] } : {}),
+        ...(typeof body['permission_mode'] === 'string' ? { permission_mode: body['permission_mode'] } : {}),
+        received_at: new Date().toISOString(),
+      };
+
+      const message: HookEventMessage = { type: 'hook-event', event };
+      const payload = JSON.stringify(message);
+
+      for (const client of wss.clients) {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(payload);
+        }
+      }
+
+      res.json({ ok: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: message });

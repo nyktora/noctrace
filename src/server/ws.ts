@@ -10,7 +10,7 @@ import path from 'node:path';
 import type { IncomingMessage } from 'node:http';
 import type { Server } from 'node:http';
 import { watchSession } from './watcher';
-import type { WaterfallRow, ContextHealth, DriftAnalysis } from '../shared/types';
+import type { WaterfallRow, ContextHealth, DriftAnalysis, HookEventMessage } from '../shared/types';
 
 // ---------------------------------------------------------------------------
 // Message types
@@ -78,6 +78,7 @@ type ServerMessage =
   | ResumeDoneMessage
   | ResumeErrorMessage
   | SessionCreatedMessage
+  | HookEventMessage
   | ErrorServerMessage;
 
 // ---------------------------------------------------------------------------
@@ -105,8 +106,11 @@ function send(ws: WebSocket, msg: ServerMessage): void {
  * Attach a WebSocketServer to the given HTTP server, mounted at path /ws.
  * Handles watch/unwatch messages from clients and streams new session rows
  * back in real time using chokidar file watching.
+ *
+ * Returns the `WebSocketServer` instance so other modules (e.g. the API
+ * router) can broadcast messages to all connected clients.
  */
-export function setupWebSocket(server: Server, claudeHome: string): void {
+export function setupWebSocket(server: Server, claudeHome: string): WebSocketServer {
   const wss = new WebSocketServer({
     server,
     path: '/ws',
@@ -343,4 +347,6 @@ export function setupWebSocket(server: Server, claudeHome: string): void {
       killResume();
     });
   });
+
+  return wss;
 }

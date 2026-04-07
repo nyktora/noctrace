@@ -21,10 +21,16 @@ const server = createServer(app);
 app.use(express.json());
 
 // ---------------------------------------------------------------------------
+// WebSocket (set up before API router so wss can be passed to the router)
+// ---------------------------------------------------------------------------
+
+const wss = setupWebSocket(server, claudeHome);
+
+// ---------------------------------------------------------------------------
 // REST API
 // ---------------------------------------------------------------------------
 
-app.use('/api', buildApiRouter(claudeHome));
+app.use('/api', buildApiRouter(claudeHome, wss));
 
 /** Health check endpoint */
 app.get('/api/health', (_req, res) => {
@@ -47,12 +53,6 @@ if (process.env['NODE_ENV'] === 'production') {
     res.sendFile('index.html', { root: clientDir });
   });
 }
-
-// ---------------------------------------------------------------------------
-// WebSocket
-// ---------------------------------------------------------------------------
-
-setupWebSocket(server, claudeHome);
 
 // ---------------------------------------------------------------------------
 // Start

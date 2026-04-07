@@ -105,3 +105,32 @@ export interface DriftAnalysis {
   totalTokens: number;       // sum of all turns
   estimatedSavings: number;  // tokens that could be saved with session rotation (0 if drift < 2)
 }
+
+/**
+ * A Claude Code hook event received from the hooks endpoint.
+ * Fields mirror the payload shape emitted by Claude Code's hook system.
+ * `received_at` is added by noctrace on receipt.
+ */
+export interface HookEvent {
+  session_id: string;
+  hook_event_name: string;
+  tool_name?: string;
+  tool_input?: unknown;
+  tool_response?: unknown;
+  tool_use_id?: string;
+  cwd?: string;
+  transcript_path?: string;
+  agent_id?: string;
+  agent_type?: string;
+  permission_mode?: string;
+  /** ISO timestamp added by noctrace when the event is received. */
+  received_at: string;
+}
+
+/**
+ * WebSocket message broadcasting a hook event to connected clients.
+ */
+export interface HookEventMessage {
+  type: 'hook-event';
+  event: HookEvent;
+}
