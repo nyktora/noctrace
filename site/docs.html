@@ -197,7 +197,9 @@
               React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"Option 2: install globally"),
               React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npm install -g noctrace"),"\n",React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"noctrace")),
               React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"Option 3: clone and run"),
-              React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"git clone https://github.com/nyktora/noctrace.git"),"\n",React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"cd noctrace && npm install && npm start"))
+              React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"git clone https://github.com/nyktora/noctrace.git"),"\n",React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"cd noctrace && npm install && npm start")),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"Option 4: as a Claude Code plugin"),
+              React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"claude plugin install nyktora/noctrace"))
             ),
 
             /* QUICKSTART */
@@ -217,7 +219,16 @@
 
             /* CLI OPTIONS */
             React.createElement(Sec,{id:"cli",title:"CLI options"},
-              React.createElement(P,null,"Noctrace is configured via environment variables. There are no CLI flags — pass env vars directly on the command line."),
+              React.createElement(P,null,"Noctrace supports CLI flags and environment variables. Pass env vars directly on the command line."),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"CLI flags"),
+              React.createElement(Table,{
+                headers:["Flag","Description"],
+                rows:[
+                  ["--install-hooks","Configure Claude Code to push real-time events to noctrace"],
+                  ["--uninstall-hooks","Remove noctrace hooks from Claude Code settings"],
+                ]
+              }),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"Environment variables"),
               React.createElement(Table,{
                 headers:["Env variable","Default","Description"],
                 rows:[
@@ -292,6 +303,7 @@
                   {name:"Row tinting",desc:"Rows where the context was 80%+ at execution get a red background tint. The deeper the fill, the stronger the tint. This is the most visually obvious signal — you can see the waterfall turning red as the session degrades."},
                   {name:"Re-read markers",desc:"A yellow circular-arrow icon appears next to any Read call that targets a file already read earlier in the session. This is a retrieval failure — Claude forgot it already has the file."},
                   {name:"Compaction lines",desc:"Red dashed vertical lines span the full height of the waterfall at every compaction boundary. Everything after a compaction line ran on a compressed summary, not the full context."},
+                  {name:"Context drift rate",desc:"Measures token growth rate in tokens/min. Detects accelerating context rot before health scores catch it. Displayed in the toolbar with labels: stable, rising, accelerating, critical."},
                 ].map(function(item,i){return(
                   React.createElement("div",{key:i,style:{display:"flex",border:"1px solid "+BD,background:SF}},
                     React.createElement("div",{style:{width:160,padding:"10px 14px",borderRight:"1px solid "+BD,color:TXB,fontWeight:600,fontSize:12,flexShrink:0}},item.name),
@@ -331,7 +343,7 @@
                 React.createElement("span",{style:{color:DM}},"# Example: custom port + custom Claude home"),"\n",
                 React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"PORT=3000 CLAUDE_HOME=/opt/claude npx noctrace")
               ),
-              React.createElement(P,null,"There are no config files, no settings to edit, no hooks to install. Noctrace reads ",React.createElement(InlineCode,null,"~/.claude/projects/")," directly and never writes to it.")
+              React.createElement(P,null,"There are no config files and no settings to edit. Noctrace reads ",React.createElement(InlineCode,null,"~/.claude/projects/")," directly and never writes to it. Hooks are optional — run ",React.createElement(InlineCode,null,"noctrace --install-hooks")," to enable real-time event streaming from Claude Code.")
             ),
 
             /* TROUBLESHOOT */
