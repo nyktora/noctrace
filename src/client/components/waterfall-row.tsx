@@ -3,6 +3,8 @@ import React, { useMemo } from 'react';
 import type { WaterfallRow as WaterfallRowData } from '../../shared/types.ts';
 import { ChevronIcon } from '../icons/chevron-icon.tsx';
 import { RepeatIcon } from '../icons/repeat-icon.tsx';
+import { TipIcon } from '../icons/tip-icon.tsx';
+import type { TipSeverity } from '../../shared/types.ts';
 
 /** Highlights filter matches in text with a colored span */
 function highlightMatch(text: string, filter: string): React.ReactNode {
@@ -62,6 +64,20 @@ export interface WaterfallRowProps {
 
 /** Minimum bar width as a fraction */
 const MIN_BAR_FRACTION = 0.004;
+
+/** Returns the icon color for a given tip severity level */
+function tipSeverityColor(severity: TipSeverity): string {
+  if (severity === 'critical') return '#f38ba8';
+  if (severity === 'warning') return '#f9e2af';
+  return '#94e2d5';
+}
+
+/** Returns the highest severity from a list, falling back to 'info' */
+function highestSeverity(severities: TipSeverity[]): TipSeverity {
+  if (severities.includes('critical')) return 'critical';
+  if (severities.includes('warning')) return 'warning';
+  return 'info';
+}
 
 /**
  * Single row in the waterfall timeline.
@@ -239,6 +255,22 @@ export function WaterfallRowComponent({
         >
           {highlightMatch(row.label, filterText)}
         </span>
+        {row.tips.length > 0 && (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              marginLeft: 4,
+              flexShrink: 0,
+            }}
+            title={row.tips[0].title}
+          >
+            <TipIcon
+              size={12}
+              color={tipSeverityColor(highestSeverity(row.tips.map((t) => t.severity)))}
+            />
+          </span>
+        )}
       </div>
 
       {/* Type column */}

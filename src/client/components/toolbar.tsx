@@ -6,6 +6,7 @@ import { FilterIcon } from '../icons/filter-icon.tsx';
 import { WaterfallIcon } from '../icons/waterfall-icon.tsx';
 import { WarningIcon } from '../icons/warning-icon.tsx';
 import { DriftIcon } from '../icons/drift-icon.tsx';
+import { TipIcon } from '../icons/tip-icon.tsx';
 import { formatTokens, formatDuration } from '../utils/tool-colors.ts';
 
 /**
@@ -26,17 +27,18 @@ export function Toolbar(): React.ReactElement {
     : drift.driftFactor >= 2 ? 'var(--ctp-yellow)'
     : 'var(--ctp-green)';
 
-  const { agentCount, totalTokens, sessionDuration } = useMemo(() => {
-    if (rows.length === 0) return { agentCount: 0, totalTokens: 0, sessionDuration: null as number | null };
-    let agents = 0, tokens = 0, minStart = Infinity, maxEnd = -Infinity;
+  const { agentCount, totalTokens, sessionDuration, tipCount } = useMemo(() => {
+    if (rows.length === 0) return { agentCount: 0, totalTokens: 0, sessionDuration: null as number | null, tipCount: 0 };
+    let agents = 0, tokens = 0, tips = 0, minStart = Infinity, maxEnd = -Infinity;
     for (const r of rows) {
       if (r.type === 'agent') agents++;
       tokens += r.inputTokens + r.outputTokens;
+      tips += r.tips.length;
       const end = r.endTime ?? r.startTime;
       if (end > maxEnd) maxEnd = end;
       if (r.startTime < minStart) minStart = r.startTime;
     }
-    return { agentCount: agents, totalTokens: tokens, sessionDuration: maxEnd - minStart };
+    return { agentCount: agents, totalTokens: tokens, sessionDuration: maxEnd - minStart, tipCount: tips };
   }, [rows]);
 
   return (
@@ -161,6 +163,23 @@ export function Toolbar(): React.ReactElement {
                 title={`Token drift: ${drift.driftFactor}x baseline (${Math.round(drift.baselineTokens / 1000)}k → ${Math.round(drift.currentTokens / 1000)}k per turn)`}
               >
                 {drift.driftFactor}x
+              </span>
+            </div>
+          )}
+
+          {/* Tip count badge */}
+          {tipCount > 0 && (
+            <div
+              className="flex items-center"
+              style={{ gap: 3 }}
+              title={`${tipCount} efficiency tip${tipCount === 1 ? '' : 's'} — click a row to see details`}
+            >
+              <TipIcon size={12} color="#f9e2af" />
+              <span
+                className="font-mono"
+                style={{ color: '#f9e2af', fontWeight: 600, fontSize: 11 }}
+              >
+                {tipCount}
               </span>
             </div>
           )}

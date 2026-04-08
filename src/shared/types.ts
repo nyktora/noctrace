@@ -1,6 +1,20 @@
 /** Waterfall row types */
 export type RowType = 'agent' | 'tool';
 
+/** Severity levels for efficiency tips */
+export type TipSeverity = 'info' | 'warning' | 'critical';
+
+/** An efficiency tip attached to a wasteful row */
+export interface EfficiencyTip {
+  /** Stable identifier, e.g. 'reread', 'fan-out', 'correction-loop' */
+  id: string;
+  /** Short label shown in the UI, e.g. "File re-read detected" */
+  title: string;
+  /** Full guidance text explaining the issue and how to fix it */
+  message: string;
+  severity: TipSeverity;
+}
+
 /** Possible statuses for a waterfall row */
 export type RowStatus = 'running' | 'success' | 'error';
 
@@ -29,6 +43,8 @@ export interface WaterfallRow {
   contextFillPercent: number;
   isReread: boolean;
   children: WaterfallRow[];
+  /** Efficiency tips attached to this row. Empty array when no issues detected. */
+  tips: EfficiencyTip[];
 }
 
 /**

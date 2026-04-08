@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import { parseJsonlContent, parseCompactionBoundaries } from '../shared/parser.js';
 import { computeContextHealth } from '../shared/health.js';
 import { parseAssistantTurns, computeDrift } from '../shared/drift.js';
+import { attachEfficiencyTips } from '../shared/tips.js';
 import type { WaterfallRow, ContextHealth, DriftAnalysis } from '../shared/types.js';
 
 /** Callbacks provided to watchSession. */
@@ -81,6 +82,9 @@ export function watchSession(filePath: string, callbacks: WatcherCallbacks): Wat
       const health = computeContextHealth(allRows, boundaries.length);
       const turns = parseAssistantTurns(fullContent);
       const drift = computeDrift(turns);
+
+      // Attach efficiency tips to wasteful rows (mutates allRows in place)
+      attachEfficiencyTips(allRows, boundaries);
 
       callbacks.onNewRows(allRows, health, boundaries, drift);
     } catch (err) {

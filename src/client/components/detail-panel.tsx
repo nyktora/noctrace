@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { WaterfallRow } from '../../shared/types.ts';
+import type { TipSeverity, WaterfallRow } from '../../shared/types.ts';
 import { useSessionStore } from '../store/session-store.ts';
 import { CloseIcon } from '../icons/close-icon.tsx';
 import { ErrorIcon } from '../icons/error-icon.tsx';
 import { SuccessIcon } from '../icons/success-icon.tsx';
 import { RunningIcon } from '../icons/running-icon.tsx';
+import { TipIcon } from '../icons/tip-icon.tsx';
 import { formatDuration, formatTokens, getContextHeatColor, getToolColor } from '../utils/tool-colors.ts';
 
 /** Props for DetailPanel */
@@ -27,6 +28,13 @@ function renderInput(input: Record<string, unknown>): string {
   } catch {
     return String(input);
   }
+}
+
+/** Returns the display color for a tip severity level */
+function tipSeverityColor(severity: TipSeverity): string {
+  if (severity === 'critical') return '#f38ba8';
+  if (severity === 'warning') return '#f9e2af';
+  return '#94e2d5';
 }
 
 const MIN_HEIGHT = 100;
@@ -172,6 +180,59 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
           <CloseIcon size={14} />
         </button>
       </div>
+
+      {/* Tips banner — shown above content when the row has efficiency tips */}
+      {row.tips.length > 0 && (
+        <div
+          style={{
+            borderLeft: '3px solid #f9e2af',
+            backgroundColor: '#181825',
+            padding: '8px 12px',
+            flexShrink: 0,
+            maxHeight: 120,
+            overflowY: 'auto',
+            borderBottom: '1px solid var(--ctp-surface0)',
+          }}
+        >
+          {row.tips.map((tip, idx) => (
+            <div key={tip.id}>
+              {idx > 0 && (
+                <div
+                  style={{
+                    height: 1,
+                    backgroundColor: 'var(--ctp-surface0)',
+                    margin: '6px 0',
+                  }}
+                />
+              )}
+              <div
+                className="flex items-center gap-1.5"
+                style={{ marginBottom: 2 }}
+              >
+                <TipIcon size={11} color={tipSeverityColor(tip.severity)} />
+                <span
+                  className="font-mono text-xs font-semibold"
+                  style={{ color: tipSeverityColor(tip.severity), fontSize: 11 }}
+                >
+                  {tip.title}
+                </span>
+              </div>
+              <p
+                className="font-mono text-xs"
+                style={{
+                  color: 'var(--ctp-subtext0)',
+                  fontSize: 10,
+                  lineHeight: 1.5,
+                  margin: 0,
+                  paddingLeft: 16,
+                }}
+              >
+                {tip.message}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Two-column content */}
       <div className="flex flex-1 overflow-hidden">

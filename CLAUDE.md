@@ -106,6 +106,8 @@ Follow all rules in `.claude/rules/` strictly. They cover:
 - `architecture.md` — system constraints, no-cloud policy, dependency rules
 - `testing.md` — test requirements, coverage expectations
 
+**Never add Co-Authored-By lines to commit messages.** All commits are authored by the user only.
+
 ## Build Sequence
 
 All steps complete. Order followed during implementation:

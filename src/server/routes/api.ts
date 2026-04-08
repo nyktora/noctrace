@@ -15,6 +15,7 @@ import {
 } from '../../shared/parser.js';
 import { computeContextHealth } from '../../shared/health.js';
 import { parseAssistantTurns, computeDrift } from '../../shared/drift.js';
+import { attachEfficiencyTips } from '../../shared/tips.js';
 import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage } from '../../shared/types.js';
 
 /**
@@ -360,7 +361,16 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
         }
       }
 
-      res.json({ rows, compactionBoundaries: boundaries, health, sessionId, drift });
+      // Attach efficiency tips to wasteful rows (mutates rows in place)
+      attachEfficiencyTips(rows, boundaries);
+
+      // Count total tips across all rows (including children) for the client toolbar
+      function countTips(r: typeof rows): number {
+        return r.reduce((sum, row) => sum + row.tips.length + countTips(row.children), 0);
+      }
+      const tipCount = countTips(rows);
+
+      res.json({ rows, compactionBoundaries: boundaries, health, sessionId, drift, tipCount });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: message });

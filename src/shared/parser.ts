@@ -410,6 +410,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       contextFillPercent: p.contextFillPercent,
       isReread: p.isReread,
       children: [],
+      tips: [],
     });
   }
 
@@ -444,6 +445,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       contextFillPercent: ctxFill,
       isReread,
       children: [],
+      tips: [],
     });
   }
 
@@ -633,6 +635,7 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
         contextFillPercent,
         isReread,
         children: [],
+        tips: [],
       });
     }
   }
