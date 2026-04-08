@@ -108,6 +108,8 @@ Follow all rules in `.claude/rules/` strictly. They cover:
 
 **Never add Co-Authored-By lines to commit messages.** All commits are authored by the user only.
 
+**Always run `/document-release` before any version bump or release.** Update all docs, CHANGELOG, and site content first, then release.
+
 ## Build Sequence
 
 All steps complete. Order followed during implementation:
