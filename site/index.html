@@ -50,6 +50,8 @@
       <li>Token tracking — monitor cumulative token usage across the session</li>
       <li>Sub-agent visibility — collapsible agent groups with nested tool calls</li>
       <li>Real-time streaming — live updates via WebSocket as your session progresses</li>
+      <li>Efficiency tips — 8 waste patterns flagged with an amber lightbulb indicator</li>
+      <li>Security tips — 13 security patterns flagged with a red shield indicator</li>
     </ul>
     <h2>Install</h2>
     <p><code>npx noctrace</code></p>
@@ -208,7 +210,7 @@
         React.createElement("nav",{style:{position:"sticky",top:0,zIndex:100,background:BG+"ee",backdropFilter:"blur(8px)",borderBottom:"1px solid "+BD,height:44,display:"flex",alignItems:"center",padding:"0 24px",fontSize:12}},
           React.createElement("div",{style:{display:"flex",alignItems:"center",gap:6}},React.createElement(Logo,null),React.createElement("span",{style:{color:MV,fontWeight:700,fontSize:13}},"noctrace")),
           React.createElement("span",{style:{color:DM,margin:"0 10px"}},"/"),
-          React.createElement("span",{style:{fontSize:10,color:DM,border:"1px solid "+BD,padding:"1px 6px",borderRadius:2}},"v0.4.0"),
+          React.createElement("span",{style:{fontSize:10,color:DM,border:"1px solid "+BD,padding:"1px 6px",borderRadius:2}},"v0.5.0"),
           React.createElement("div",{style:{flex:1}}),
           React.createElement("div",{style:{display:"flex",gap:20,alignItems:"center"}},
             React.createElement("a",{href:"#rot",style:{color:DM,fontSize:11,textDecoration:"none"}},"context rot"),
@@ -379,6 +381,8 @@
               {f:"drift-rate",d:"Measures token growth rate in tokens/min. Detects accelerating context rot before health scores catch it. Labels: stable, rising, accelerating, critical."},
               {f:"session-export",d:"Share button exports your session as a standalone HTML file. Works offline, no server needed. Dark themed with full waterfall data."},
               {f:"hooks",tag:"optional",tagC:MV,d:"Optional real-time event streaming from Claude Code. Run noctrace --install-hooks to push PostToolUse, SubagentStart/Stop, and compaction events directly to the dashboard."},
+              {f:"efficiency-tips",tag:"new",tagC:YL,d:"8 waste patterns detected per session: re-reads, fan-out, correction loops, repeated commands, token spikes, high fill, no delegation, post-compaction re-reads. Amber lightbulb in the toolbar."},
+              {f:"security-tips",tag:"new",tagC:RD,d:"13 security patterns scanned: secrets in tool calls, dangerous commands, exfiltration attempts, prompt injection, and more. Red shield in the toolbar when issues are found."},
             ].map(function(item,i){return(
               React.createElement("div",{key:i,style:{display:"flex",border:"1px solid "+BD,background:SF,transition:"all 0.15s"},
                 onMouseEnter:function(e){e.currentTarget.style.background=SF2;e.currentTarget.style.borderColor=BDL},

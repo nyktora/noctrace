@@ -50,6 +50,8 @@
         <li>Sub-agent visibility with collapsible groups</li>
         <li>Real-time WebSocket streaming</li>
         <li>Zoom, pan, and filtering</li>
+        <li>Efficiency tips — 8 waste patterns with amber lightbulb indicator</li>
+        <li>Security tips — 13 security patterns with red shield indicator</li>
       </ul>
       <p><a href="https://github.com/nyktora/noctrace">View on GitHub</a> | <a href="./">Back to home</a></p>
     </div>
@@ -95,6 +97,7 @@
       {id:"health",label:"Context health"},
       {id:"rot",label:"Context rot detection"},
       {id:"tokens",label:"Token tracking"},
+      {id:"tips",label:"Tips engine"},
       {id:"config",label:"Configuration"},
       {id:"troubleshoot",label:"Troubleshooting"},
       {id:"compat",label:"Compatibility"},
@@ -322,11 +325,44 @@
                 rows:[
                   ["340","Under 1,000 tokens — shown as raw number"],
                   ["4.1k","1,000+ tokens — shown with k suffix"],
+                  ["114.1m","1,000,000+ tokens — shown with m suffix"],
                   ["Yellow text","Total exceeds 5,000 tokens — expensive call highlighted"],
                   ["Detail: 2.8k in / 95 out","Click a row to see the input/output token split"],
                 ]
               }),
               React.createElement(P,null,"Token data comes from the ",React.createElement(InlineCode,null,"message.usage")," field on assistant records in the JSONL log. Not all records include usage data — rows without it show a dash.")
+            ),
+
+            /* TIPS ENGINE */
+            React.createElement(Sec,{id:"tips",title:"Tips engine"},
+              React.createElement(P,null,"Noctrace analyzes each session for efficiency waste and security issues, surfacing findings as tip indicators in the toolbar. An amber lightbulb marks efficiency tips; a red shield marks security tips. Click either icon to see the full list."),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:8,fontWeight:600}},"Efficiency tips (8 patterns)"),
+              React.createElement(Table,{
+                headers:["Pattern","What it detects"],
+                rows:[
+                  ["Re-reads","Files read more than once in the same session — retrieval failures"],
+                  ["Fan-out","Spawning many parallel agents without meaningful aggregation"],
+                  ["Correction loops","Edit/Write calls immediately followed by another Edit to the same file"],
+                  ["Repeated commands","Same Bash command run multiple times without meaningful change"],
+                  ["Token spikes","Single tool calls consuming a disproportionate share of session tokens"],
+                  ["High fill","Context window above 80% for a sustained stretch of the session"],
+                  ["No delegation","Long sessions with no sub-agent use despite high tool-call volume"],
+                  ["Post-compaction re-reads","Files read again immediately after a compaction boundary"],
+                ]
+              }),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:8,fontWeight:600}},"Security tips (13 patterns)"),
+              React.createElement(Table,{
+                headers:["Pattern","What it detects"],
+                rows:[
+                  ["Secret exposure","API keys, tokens, or passwords appearing in tool inputs or outputs"],
+                  ["Dangerous commands","rm -rf, chmod 777, curl | sh, and similar high-risk Bash patterns"],
+                  ["Exfiltration","Outbound network calls that could send data to remote hosts"],
+                  ["Prompt injection","Attempts to override instructions via tool output content"],
+                  ["Autocompact thrash","3+ compaction events in a session — repeated context loss"],
+                  ["...and 8 more","See the security panel in the toolbar for the full list"],
+                ]
+              }),
+              React.createElement(P,null,"All tip analysis happens locally in the browser. No data leaves your machine.")
             ),
 
             /* CONFIG */

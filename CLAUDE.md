@@ -135,6 +135,11 @@ All steps complete. Order followed during implementation:
 20. ✅ Session export (standalone offline HTML via Share button)
 21. ✅ Security hardening (WebSocket origin validation, vite CVE fixes, pinned Actions, CODEOWNERS)
 22. ✅ Claude Code plugin packaging (.claude-plugin/, hooks/, .mcp.json, MCP wrapper)
+23. ✅ Efficiency tips (8 waste patterns with amber lightbulb indicators)
+24. ✅ Security tips (13 security patterns with red shield indicators)
+25. ✅ Markdown detail panel rendering (zero deps, XSS-safe)
+26. ✅ Session title parsing from JSONL
+27. ✅ Token format m suffix (114.1m not 114085.8k)
 ### Remaining polish:
 - Loading state spinners
 - Duration threshold filtering

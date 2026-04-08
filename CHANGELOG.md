@@ -2,6 +2,43 @@
 
 All notable changes to noctrace will be documented in this file.
 
+## [0.5.0] - 2026-04-08
+
+### Added
+- Security tips engine: 13 patterns detect secrets in output, dangerous commands (rm -rf, DROP TABLE), curl-pipe-bash, data exfiltration, shell profile modifications, hidden unicode, prompt injection, force push, sensitive file access, permission weakening, sudo usage, and binary downloads
+- Red shield icon distinguishes security tips from efficiency tips in waterfall rows, detail panel, and toolbar badge
+- Autocompact thrash detection: flags sessions with 3+ compactions as critical health signal with actionable tip
+- Markdown rendering in detail panel: tool input/output rendered as rich markdown when content has markdown patterns (zero deps, XSS-safe)
+- Session title parsing: shows display names in session picker when available in JSONL
+- Claude Code plugin packaging: install via `claude plugin install nyktora/noctrace` with auto-registered hooks and MCP server wrapper
+
+### Changed
+- Token counts now show `m` suffix for millions (e.g., 114.1m instead of 114085.8k)
+- Removed misleading token counts from detail panel INPUT/OUTPUT headers
+
+### Fixed
+- ESM .js import extensions for Node.js compatibility
+- Express 5 catch-all route (`{*path}` instead of `*`)
+- Server port retry (moved app/server/wss inside startServer(), added WSS error handler)
+
+## [0.4.2] - 2026-04-08
+
+### Added
+- Efficiency tips: 8 waste patterns detected from JSONL data with contextual guidance (re-reads, search fan-out, correction loops, repeated commands, token spikes, high context fill, no delegation, post-compaction re-reads)
+- Lightbulb icon on wasteful rows with full tip text in detail panel
+- Tip count badge in toolbar
+
+## [0.4.1] - 2026-04-07
+
+### Added
+- Claude Code plugin packaging (.claude-plugin/, hooks/, .mcp.json, MCP wrapper)
+- All documentation updated for v0.4.0 features
+
+### Fixed
+- ESM .js import extensions for compiled server output
+- Express 5 catch-all route compatibility
+- Server port retry logic
+
 ## [0.4.0] - 2026-04-07
 
 ### Added

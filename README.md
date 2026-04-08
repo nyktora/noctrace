@@ -59,12 +59,15 @@ Requires Node.js 20+. That's it. No config required. Optional hooks for real-tim
 - **Zoom & pan** — mouse wheel zoom (1-50x), click-drag pan
 - **Detail panel** — click any row for full tool input/output, resizable
 - **Re-read detection** — flags duplicate file reads that waste context
+- **Efficiency tips** — 8 waste patterns detected (re-reads, fan-out, correction loops, repeated commands, token spikes, high fill, no delegation, post-compaction re-reads) with amber lightbulb indicators
+- **Security tips** — 13 patterns detect secrets, dangerous commands, exfiltration attempts, prompt injection, and more, with a red shield indicator
+- **Markdown rendering** — detail panel renders markdown in tool output with zero dependencies, XSS-safe
 - **Dark theme** — Catppuccin Mocha palette
 - **Session export** — share sessions as standalone offline HTML files
 - **Hooks integration** — optional real-time event streaming from Claude Code
 - **Context Drift Rate** — detect accelerating token growth before context rot hits
 
-![Noctrace waterfall timeline](docs/screenshots/noctrace-waterfall.png)
+![Noctrace waterfall timeline](docs/screenshots/noctrace-waterfall.gif)
 
 ### Token Drift
 
@@ -86,7 +89,7 @@ Noctrace computes a real-time health score from your session data and warns you 
 
 ### Detail Panel
 
-![Detail panel with agent inspection](docs/screenshots/noctrace-detail-panel.png)
+![Detail panel with tips](docs/screenshots/noctrace-detail-panel.gif)
 
 Click any row to inspect the full tool input and output. Two-column layout shows the request on the left and response on the right. Resizable, closes with Esc.
 
