@@ -83,7 +83,7 @@ function getRecommendations(health: ContextHealth, drift: DriftAnalysis | null):
   if (health.compactionCount >= 3) {
     recs.push({
       severity: 'critical',
-      text: `${health.compactionCount} compactions — early context is heavily lossy. Use /clear and re-state your goal from scratch, or /rewind to a known-good checkpoint.`,
+      text: `${health.compactionCount} compactions — thrash loop detected. Context refills immediately after each compaction. Use /clear and start a new session, or break your work into smaller independent tasks. Add persistent context to CLAUDE.md so it survives future compactions.`,
     });
   } else if (health.compactionCount >= 2) {
     recs.push({

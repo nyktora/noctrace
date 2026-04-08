@@ -551,6 +551,30 @@ export function extractSessionId(content: string): string | null {
 }
 
 /**
+ * Extract a human-readable session title from JSONL content.
+ * Checks top-level fields `sessionTitle`, `title`, and `displayName` on any record,
+ * and also inspects system records for a `title` field.
+ * Returns null if no title is found.
+ */
+export function extractSessionTitle(content: string): string | null {
+  const lines = content.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    let parsed: unknown;
+    try { parsed = JSON.parse(line); } catch { continue; }
+    if (!isObj(parsed)) continue;
+
+    // Check top-level title fields in priority order
+    for (const field of ['sessionTitle', 'title', 'displayName'] as const) {
+      const val = parsed[field];
+      if (typeof val === 'string' && val.trim()) return val.trim();
+    }
+  }
+  return null;
+}
+
+/**
  * Parse a sub-agent JSONL file into flat WaterfallRow objects.
  * Does not attempt agent nesting — all tool calls are returned as a flat array.
  * Never throws; malformed lines are skipped with a warning.

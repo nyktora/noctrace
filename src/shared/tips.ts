@@ -56,6 +56,7 @@ function flattenRows(rows: WaterfallRow[]): WaterfallRow[] {
  * 6. High context fill — first row where contextFillPercent >= 80
  * 7. No delegation     — 50+ total tool rows with zero agent rows
  * 8. Post-compaction re-read — isReread after a compaction boundary
+ * 9. Compaction thrash    — 3+ compaction boundaries (thrash loop)
  *
  * A row may accumulate multiple tips. Duplicate tip ids on the same row are silently skipped.
  *
@@ -244,5 +245,31 @@ export function attachEfficiencyTips(rows: WaterfallRow[], compactionBoundaries:
         "'Use subagents for any task requiring 10+ file reads.' Subagents run in separate context windows.",
       severity: 'info',
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // Rule 9: Compaction thrash (post-scan)
+  // Triggered when the session has been compacted 3+ times.
+  // Attach the tip to the row nearest (at or after) the 3rd compaction boundary.
+  // -------------------------------------------------------------------------
+  if (sortedBoundaries.length >= 3) {
+    const thirdBoundary = sortedBoundaries[2];
+    // Find the first tool row whose startTime is at or after the 3rd boundary.
+    let targetRow = flat.find((r) => r.type === 'tool' && r.startTime >= thirdBoundary);
+    // If no row comes after (session ended right at compaction), use the last tool row.
+    if (targetRow === undefined && toolRows.length > 0) {
+      targetRow = toolRows[toolRows.length - 1];
+    }
+    if (targetRow !== undefined) {
+      addTip(targetRow, {
+        id: 'compaction-thrash',
+        title: 'Compaction thrash loop',
+        message:
+          'This session has been compacted 3+ times, meaning context fills up immediately after each ' +
+          'compaction. Start a new session with /clear, or break your work into smaller tasks. ' +
+          'Add persistent context to CLAUDE.md so it survives compaction.',
+        severity: 'critical',
+      });
+    }
   }
 }

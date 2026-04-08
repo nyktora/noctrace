@@ -8,6 +8,7 @@ import { SuccessIcon } from '../icons/success-icon.tsx';
 import { RunningIcon } from '../icons/running-icon.tsx';
 import { TipIcon } from '../icons/tip-icon.tsx';
 import { formatDuration, formatTokens, getContextHeatColor, getToolColor } from '../utils/tool-colors.ts';
+import { looksLikeMarkdown, renderMarkdown } from '../utils/markdown.ts';
 
 /** Props for DetailPanel */
 export interface DetailPanelProps {
@@ -35,6 +36,66 @@ function tipSeverityColor(severity: TipSeverity): string {
   if (severity === 'critical') return '#f38ba8';
   if (severity === 'warning') return '#f9e2af';
   return '#94e2d5';
+}
+
+/** CSS injected once for markdown output styling */
+const MARKDOWN_STYLE = `
+.md-content { font-size: 11px; line-height: 1.6; color: var(--ctp-text); padding: 8px; }
+.md-content p { margin: 0 0 6px 0; }
+.md-content p:last-child { margin-bottom: 0; }
+.md-content h3 { font-size: 13px; font-weight: 700; color: var(--ctp-subtext1); margin: 10px 0 4px 0; }
+.md-content h4 { font-size: 12px; font-weight: 700; color: var(--ctp-subtext1); margin: 8px 0 3px 0; }
+.md-content h5, .md-content h6 { font-size: 11px; font-weight: 600; color: var(--ctp-subtext0); margin: 6px 0 2px 0; }
+.md-content ul { margin: 4px 0; padding-left: 18px; list-style: disc; }
+.md-content ol { margin: 4px 0; padding-left: 18px; list-style: decimal; }
+.md-content li { margin: 2px 0; }
+.md-content code { background: var(--ctp-surface0); border-radius: 3px; padding: 1px 4px; font-family: ui-monospace, monospace; font-size: 10px; }
+.md-content pre { background: var(--ctp-crust); border-radius: 4px; padding: 8px; margin: 6px 0; overflow-x: auto; }
+.md-content pre code { background: none; padding: 0; font-size: 10px; }
+.md-content a { color: var(--ctp-blue); text-decoration: underline; }
+.md-content hr { border: none; border-top: 1px solid var(--ctp-surface1); margin: 8px 0; }
+.md-content strong { font-weight: 700; }
+.md-content em { font-style: italic; }
+` as const;
+
+let markdownStyleInjected = false;
+
+function injectMarkdownStyle(): void {
+  if (markdownStyleInjected) return;
+  const el = document.createElement('style');
+  el.textContent = MARKDOWN_STYLE;
+  document.head.appendChild(el);
+  markdownStyleInjected = true;
+}
+
+interface MarkdownOrPreProps {
+  text: string;
+  errorColor?: string;
+}
+
+/** Renders text as markdown when it looks like markdown, otherwise as a plain <pre>. */
+function MarkdownOrPre({ text, errorColor }: MarkdownOrPreProps): React.ReactElement {
+  if (!errorColor && looksLikeMarkdown(text)) {
+    injectMarkdownStyle();
+    return (
+      <div
+        className="md-content overflow-auto"
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }}
+      />
+    );
+  }
+  return (
+    <pre
+      className="text-xs p-2 overflow-auto font-mono whitespace-pre-wrap break-all"
+      style={{
+        color: errorColor ?? 'var(--ctp-text)',
+        fontSize: 11,
+        lineHeight: 1.5,
+      }}
+    >
+      {text}
+    </pre>
+  );
 }
 
 const MIN_HEIGHT = 100;
@@ -250,12 +311,7 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
           >
             <span>Input</span>
           </div>
-          <pre
-            className="text-xs p-2 overflow-auto font-mono whitespace-pre-wrap break-all"
-            style={{ color: 'var(--ctp-text)', fontSize: 11, lineHeight: 1.5 }}
-          >
-            {renderInput(row.input)}
-          </pre>
+          <MarkdownOrPre text={renderInput(row.input)} />
         </div>
         <div className="flex-1 overflow-auto">
           <div
@@ -268,16 +324,10 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
           >
             <span>Output</span>
           </div>
-          <pre
-            className="text-xs p-2 font-mono whitespace-pre-wrap break-all"
-            style={{
-              color: row.status === 'error' ? 'var(--color-error)' : 'var(--ctp-text)',
-              fontSize: 11,
-              lineHeight: 1.5,
-            }}
-          >
-            {row.output ?? '(no output)'}
-          </pre>
+          <MarkdownOrPre
+            text={row.output ?? '(no output)'}
+            errorColor={row.status === 'error' ? 'var(--color-error)' : undefined}
+          />
         </div>
       </div>
     </div>

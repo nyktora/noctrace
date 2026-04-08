@@ -147,6 +147,15 @@ function SessionPickerRow({ session, isSelected, onSelect }: SessionPickerRowPro
           </span>
         ))}
       </div>
+      {session.title && (
+        <div
+          className="truncate mt-0.5"
+          style={{ fontSize: 10, color: 'var(--ctp-subtext0)' }}
+          title={session.title}
+        >
+          {session.title}
+        </div>
+      )}
       <div className="flex justify-between mt-0.5" style={{ color: 'var(--ctp-overlay0)', fontSize: 10 }}>
         <span className="flex items-center gap-1">
           <span>{session.rowCount} calls</span>

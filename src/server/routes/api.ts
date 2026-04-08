@@ -10,6 +10,7 @@ import {
   parseJsonlContent,
   parseCompactionBoundaries,
   extractSessionId,
+  extractSessionTitle,
   extractAgentIds,
   parseSubAgentContent,
 } from '../../shared/parser.js';
@@ -203,9 +204,11 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
         let permissionMode: import('../../shared/types.ts').PermissionMode = null;
         let isRemoteControlled = false;
         let isActive = false;
+        let sessionTitle: string | null = null;
+        let fileContent: string | null = null;
         try {
-          const content = await fs.readFile(filePath, 'utf8');
-          const lines = content.split('\n');
+          fileContent = await fs.readFile(filePath, 'utf8');
+          const lines = fileContent.split('\n');
           // Extract metadata from lines (scan first 50 for speed)
           const scanLimit = Math.min(lines.length, 50);
           for (let i = 0; i < scanLimit; i++) {
@@ -234,13 +237,15 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
           // Active if: live process in registry OR file modified within last 2 minutes
           // Registry covers CLI sessions; mtime covers Desktop app sessions
           isActive = runningSessions.has(id) || (Date.now() - stat.mtime.getTime() < 120_000);
+          // Extract optional session title — scans all lines, best-effort
+          sessionTitle = extractSessionTitle(fileContent);
         } catch {
           // Unreadable file — still include with null startTime
         }
 
         let driftFactor: number | null = null;
         try {
-          const content = await fs.readFile(filePath, 'utf8');
+          const content = fileContent ?? await fs.readFile(filePath, 'utf8');
           const sessionTurns = parseAssistantTurns(content);
           const sessionDrift = computeDrift(sessionTurns);
           driftFactor = sessionTurns.length >= 5 ? sessionDrift.driftFactor : null;
@@ -259,6 +264,7 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
           permissionMode,
           isRemoteControlled,
           driftFactor,
+          title: sessionTitle,
         });
       }
 

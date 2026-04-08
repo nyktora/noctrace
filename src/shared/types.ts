@@ -55,6 +55,8 @@ export interface ContextHealth {
   score: number;
   fillPercent: number;
   compactionCount: number;
+  /** True when the session has been compacted 3+ times (thrash loop pattern). */
+  compactionThrash: boolean;
   rereadRatio: number;
   errorAcceleration: number;
   toolEfficiency: number;
@@ -93,6 +95,8 @@ export interface SessionSummary {
   permissionMode: PermissionMode;
   isRemoteControlled: boolean;
   driftFactor: number | null;  // null if < 5 turns
+  /** Human-readable session title set via Claude Code UI or hooks. Null if not set. */
+  title: string | null;
 }
 
 /** Metadata about a sub-agent session file, linking it to the parent tool_use that spawned it */
