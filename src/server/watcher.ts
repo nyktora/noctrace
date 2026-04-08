@@ -8,6 +8,7 @@ import { parseJsonlContent, parseCompactionBoundaries } from '../shared/parser.j
 import { computeContextHealth } from '../shared/health.js';
 import { parseAssistantTurns, computeDrift } from '../shared/drift.js';
 import { attachEfficiencyTips } from '../shared/tips.js';
+import { attachSecurityTips } from '../shared/security-tips.js';
 import type { WaterfallRow, ContextHealth, DriftAnalysis } from '../shared/types.js';
 
 /** Callbacks provided to watchSession. */
@@ -85,6 +86,9 @@ export function watchSession(filePath: string, callbacks: WatcherCallbacks): Wat
 
       // Attach efficiency tips to wasteful rows (mutates allRows in place)
       attachEfficiencyTips(allRows, boundaries);
+
+      // Attach security tips (mutates allRows in place)
+      attachSecurityTips(allRows);
 
       callbacks.onNewRows(allRows, health, boundaries, drift);
     } catch (err) {

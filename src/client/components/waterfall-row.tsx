@@ -4,7 +4,8 @@ import type { WaterfallRow as WaterfallRowData } from '../../shared/types.ts';
 import { ChevronIcon } from '../icons/chevron-icon.tsx';
 import { RepeatIcon } from '../icons/repeat-icon.tsx';
 import { TipIcon } from '../icons/tip-icon.tsx';
-import type { TipSeverity } from '../../shared/types.ts';
+import { ShieldIcon } from '../icons/shield-icon.tsx';
+import type { EfficiencyTip, TipSeverity } from '../../shared/types.ts';
 
 /** Highlights filter matches in text with a colored span */
 function highlightMatch(text: string, filter: string): React.ReactNode {
@@ -77,6 +78,11 @@ function highestSeverity(severities: TipSeverity[]): TipSeverity {
   if (severities.includes('critical')) return 'critical';
   if (severities.includes('warning')) return 'warning';
   return 'info';
+}
+
+/** Returns true when any tip in the list is a security tip */
+function hasSecurityTip(tips: EfficiencyTip[]): boolean {
+  return tips.some((t) => t.category === 'security');
 }
 
 /**
@@ -265,10 +271,14 @@ export function WaterfallRowComponent({
             }}
             title={row.tips[0].title}
           >
-            <TipIcon
-              size={12}
-              color={tipSeverityColor(highestSeverity(row.tips.map((t) => t.severity)))}
-            />
+            {hasSecurityTip(row.tips) ? (
+              <ShieldIcon size={12} color="#f38ba8" />
+            ) : (
+              <TipIcon
+                size={12}
+                color={tipSeverityColor(highestSeverity(row.tips.map((t) => t.severity)))}
+              />
+            )}
           </span>
         )}
       </div>

@@ -47,11 +47,12 @@ export function formatDuration(ms: number | null): string {
   return `${m}m${s}s`;
 }
 
-/** Formats a token count with k suffix for large values */
+/** Formats a token count with k/m suffix for large values */
 export function formatTokens(n: number): string {
   if (n === 0) return '—';
   if (n < 1000) return String(n);
-  return `${(n / 1000).toFixed(1)}k`;
+  if (n < 1_000_000) return `${(n / 1000).toFixed(1)}k`;
+  return `${(n / 1_000_000).toFixed(1)}m`;
 }
 
 /** Formats a relative time from an ISO date string */

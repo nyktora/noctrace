@@ -17,6 +17,7 @@ import {
 import { computeContextHealth } from '../../shared/health.js';
 import { parseAssistantTurns, computeDrift } from '../../shared/drift.js';
 import { attachEfficiencyTips } from '../../shared/tips.js';
+import { attachSecurityTips } from '../../shared/security-tips.js';
 import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage } from '../../shared/types.js';
 
 /**
@@ -369,6 +370,9 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
 
       // Attach efficiency tips to wasteful rows (mutates rows in place)
       attachEfficiencyTips(rows, boundaries);
+
+      // Attach security tips (mutates rows in place)
+      attachSecurityTips(rows);
 
       // Count total tips across all rows (including children) for the client toolbar
       function countTips(r: typeof rows): number {

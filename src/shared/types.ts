@@ -13,6 +13,8 @@ export interface EfficiencyTip {
   /** Full guidance text explaining the issue and how to fix it */
   message: string;
   severity: TipSeverity;
+  /** Category of the tip. Defaults to 'efficiency' when absent. */
+  category?: 'efficiency' | 'security';
 }
 
 /** Possible statuses for a waterfall row */

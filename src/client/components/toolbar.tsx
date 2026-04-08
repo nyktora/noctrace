@@ -7,6 +7,7 @@ import { WaterfallIcon } from '../icons/waterfall-icon.tsx';
 import { WarningIcon } from '../icons/warning-icon.tsx';
 import { DriftIcon } from '../icons/drift-icon.tsx';
 import { TipIcon } from '../icons/tip-icon.tsx';
+import { ShieldIcon } from '../icons/shield-icon.tsx';
 import { formatTokens, formatDuration } from '../utils/tool-colors.ts';
 
 /**
@@ -27,18 +28,21 @@ export function Toolbar(): React.ReactElement {
     : drift.driftFactor >= 2 ? 'var(--ctp-yellow)'
     : 'var(--ctp-green)';
 
-  const { agentCount, totalTokens, sessionDuration, tipCount } = useMemo(() => {
-    if (rows.length === 0) return { agentCount: 0, totalTokens: 0, sessionDuration: null as number | null, tipCount: 0 };
-    let agents = 0, tokens = 0, tips = 0, minStart = Infinity, maxEnd = -Infinity;
+  const { agentCount, totalTokens, sessionDuration, tipCount, securityTipCount } = useMemo(() => {
+    if (rows.length === 0) return { agentCount: 0, totalTokens: 0, sessionDuration: null as number | null, tipCount: 0, securityTipCount: 0 };
+    let agents = 0, tokens = 0, tips = 0, securityTips = 0, minStart = Infinity, maxEnd = -Infinity;
     for (const r of rows) {
       if (r.type === 'agent') agents++;
       tokens += r.inputTokens + r.outputTokens;
-      tips += r.tips.length;
+      for (const t of r.tips) {
+        tips++;
+        if (t.category === 'security') securityTips++;
+      }
       const end = r.endTime ?? r.startTime;
       if (end > maxEnd) maxEnd = end;
       if (r.startTime < minStart) minStart = r.startTime;
     }
-    return { agentCount: agents, totalTokens: tokens, sessionDuration: maxEnd - minStart, tipCount: tips };
+    return { agentCount: agents, totalTokens: tokens, sessionDuration: maxEnd - minStart, tipCount: tips, securityTipCount: securityTips };
   }, [rows]);
 
   return (
@@ -167,19 +171,36 @@ export function Toolbar(): React.ReactElement {
             </div>
           )}
 
-          {/* Tip count badge */}
-          {tipCount > 0 && (
+          {/* Security tip count badge */}
+          {securityTipCount > 0 && (
             <div
               className="flex items-center"
               style={{ gap: 3 }}
-              title={`${tipCount} efficiency tip${tipCount === 1 ? '' : 's'} — click a row to see details`}
+              title={`${securityTipCount} security tip${securityTipCount === 1 ? '' : 's'} — click a row to see details`}
+            >
+              <ShieldIcon size={12} color="#f38ba8" />
+              <span
+                className="font-mono"
+                style={{ color: '#f38ba8', fontWeight: 600, fontSize: 11 }}
+              >
+                {securityTipCount}
+              </span>
+            </div>
+          )}
+
+          {/* Efficiency tip count badge */}
+          {tipCount - securityTipCount > 0 && (
+            <div
+              className="flex items-center"
+              style={{ gap: 3 }}
+              title={`${tipCount - securityTipCount} efficiency tip${tipCount - securityTipCount === 1 ? '' : 's'} — click a row to see details`}
             >
               <TipIcon size={12} color="#f9e2af" />
               <span
                 className="font-mono"
                 style={{ color: '#f9e2af', fontWeight: 600, fontSize: 11 }}
               >
-                {tipCount}
+                {tipCount - securityTipCount}
               </span>
             </div>
           )}
