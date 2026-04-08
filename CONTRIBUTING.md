@@ -18,7 +18,7 @@ The app runs at `http://localhost:5173` (Vite) with API proxied to `http://local
 Run all checks locally:
 
 ```bash
-npm test          # 119 tests must pass
+npm test          # 143 tests must pass
 npm run typecheck # no type errors
 npm run lint      # no lint errors
 npm run build     # production build must succeed
@@ -49,7 +49,7 @@ tests/          # Mirrors src/ structure, uses JSONL fixtures in tests/fixtures/
 These are non-negotiable:
 
 - **Zero cloud** — no external API calls, no analytics, no telemetry
-- **Zero config** — reads `~/.claude/` directly, no hooks to install
+- **Zero config** — reads `~/.claude/` directly; hooks are optional and never required
 - **Single process** — one Node.js process serves SPA + REST API + WebSocket
 - **No database** — JSONL files on disk are the source of truth
 - **MIT/Apache-2.0 only** — all dependencies must use permissive licenses

@@ -43,6 +43,7 @@ noctrace/
 ├── src/
 │   ├── server/          # Express + WebSocket + file watcher
 │   │   ├── index.ts     # Entry point
+│   │   ├── config.ts    # Server configuration
 │   │   ├── routes/      # REST API routes
 │   │   ├── watcher.ts   # chokidar file watcher
 │   │   └── ws.ts        # WebSocket handler
@@ -55,7 +56,15 @@ noctrace/
 │   └── shared/          # Shared types and parser
 │       ├── types.ts     # TypeScript interfaces
 │       └── parser.ts    # JSONL parsing logic
+├── bin/
+│   ├── noctrace.js      # npm bin entry point
+│   └── noctrace-mcp.js  # MCP wrapper entry point
+├── .claude-plugin/
+│   └── plugin.json      # Claude Code plugin manifest
+├── hooks/
+│   └── hooks.json       # Hook definitions
 ├── tests/               # Vitest test files
+├── .mcp.json
 ├── CLAUDE.md
 ├── PRD.md
 └── package.json
@@ -67,3 +76,6 @@ noctrace/
 - It starts the Express server and opens the browser with the `open` package.
 - Default port: 4117. Fall back to next available port if busy.
 - Print a clean startup message: `Noctrace running at http://localhost:4117`
+- `--install-hooks` flag writes Claude Code hook definitions to enable real-time hook events.
+- `--uninstall-hooks` flag removes those hook definitions.
+- `bin/noctrace-mcp.js` is the MCP wrapper entry point, exposing Noctrace as an MCP server.

@@ -16,9 +16,9 @@ Main and sub-agent logs are parsed by separate functions (`parseSessionContent` 
 ## Tech Stack
 
 - **Runtime**: Node.js 20 LTS
-- **Server**: Express 4.x + ws 8.x (WebSocket)
+- **Server**: Express 5.x + ws 8.x (WebSocket)
 - **File watching**: chokidar 4.x
-- **Client**: React 19 + Vite 6 + Tailwind CSS 4
+- **Client**: React 19 + Vite 8 + Tailwind CSS 4
 - **State**: Zustand 5.x
 - **No database** — JSONL files on disk are the source of truth
 
@@ -42,7 +42,7 @@ Main and sub-agent logs are parsed by separate functions (`parseSessionContent` 
 
 - **Zero cloud**: no external API calls, no analytics, no telemetry
 - **Zero cost at rest**: no background processes, no database, no daemon
-- **Zero config**: reads `~/.claude/` directly, no hooks to install
+- **Zero config by default**: reads `~/.claude/` directly; optional `--install-hooks` enables real-time hook events
 - **Single process**: one Node.js process serves SPA + REST API + WebSocket
 - **Stateless server**: all state comes from JSONL files on disk
 - **MIT license**: all dependencies must be MIT or Apache-2.0
@@ -126,6 +126,11 @@ All steps complete. Order followed during implementation:
 15. ✅ Agent duration bars (totalDurationMs from JSONL for real execution time)
 16. ✅ Filter text highlighting (yellow background on matched text in Name column)
 17. ✅ GitHub Pages site (`site/`) with Actions deploy workflow
+18. ✅ Hooks receiver (POST /api/hooks, --install-hooks / --uninstall-hooks CLI)
+19. ✅ Context Drift Rate metric (tokens/min growth with 3-window linear regression)
+20. ✅ Session export (standalone offline HTML via Share button)
+21. ✅ Security hardening (WebSocket origin validation, vite CVE fixes, pinned Actions, CODEOWNERS)
+22. ✅ Claude Code plugin packaging (.claude-plugin/, hooks/, .mcp.json, MCP wrapper)
 ### Remaining polish:
 - Loading state spinners
 - Duration threshold filtering

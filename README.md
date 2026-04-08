@@ -37,7 +37,13 @@ npm install -g noctrace
 noctrace
 ```
 
-Requires Node.js 20+. That's it. No config, no hooks, no API keys.
+### As a Claude Code Plugin
+
+```bash
+claude plugin install nyktora/noctrace
+```
+
+Requires Node.js 20+. That's it. No config required. Optional hooks for real-time events.
 
 ## Features
 
@@ -54,6 +60,9 @@ Requires Node.js 20+. That's it. No config, no hooks, no API keys.
 - **Detail panel** — click any row for full tool input/output, resizable
 - **Re-read detection** — flags duplicate file reads that waste context
 - **Dark theme** — Catppuccin Mocha palette
+- **Session export** — share sessions as standalone offline HTML files
+- **Hooks integration** — optional real-time event streaming from Claude Code
+- **Context Drift Rate** — detect accelerating token growth before context rot hits
 
 ![Noctrace waterfall timeline](docs/screenshots/noctrace-waterfall.png)
 
@@ -89,7 +98,7 @@ Click any row to inspect the full tool input and output. Two-column layout shows
 4. Parses tool_use/tool_result pairs into a waterfall timeline
 5. Watches active session files for real-time updates via WebSocket
 
-No hooks to install. No config files. No cloud. Everything stays local.
+No config files. No cloud. Everything stays local. Optional hooks for richer real-time data.
 
 ## Configuration
 
@@ -97,6 +106,11 @@ No hooks to install. No config files. No cloud. Everything stays local.
 |---------------------|---------|-------------|
 | `PORT` | `4117` | Server port (auto-increments if busy) |
 | `CLAUDE_HOME` | `~/.claude` | Override Claude home directory |
+
+| CLI Flag | Description |
+|----------|-------------|
+| `--install-hooks` | Configure Claude Code to push real-time events to noctrace |
+| `--uninstall-hooks` | Remove noctrace hooks from Claude Code |
 
 ## Development
 
