@@ -10,7 +10,7 @@ import fs from 'node:fs/promises';
 import { claudeDir, enableMcp } from './claude-config.js';
 
 async function run() {
-  // Check whether Claude Code is installed before touching anything
+  // Check whether Claude Code is installed
   try {
     await fs.access(claudeDir());
   } catch {
@@ -18,15 +18,31 @@ async function run() {
     return;
   }
 
-  const { alreadyConfigured } = await enableMcp({ silent: true });
+  // Check if already configured
+  const settingsFile = (await import('./claude-config.js')).settingsPath();
+  let alreadyConfigured = false;
+  try {
+    const raw = await fs.readFile(settingsFile, 'utf8');
+    const settings = JSON.parse(raw);
+    alreadyConfigured = !!settings?.mcpServers?.noctrace;
+  } catch {
+    // No settings file or invalid JSON — not configured
+  }
 
   if (alreadyConfigured) {
-    console.log('[noctrace] MCP server registration already present — skipped.');
-  } else {
-    console.log('[noctrace] Registered as a Claude Code MCP server.');
-    console.log('[noctrace] Noctrace will auto-start with your next Claude Code session.');
-    console.log('[noctrace] Run "noctrace --disable" to opt out.');
+    return; // Already set up, nothing to say
   }
+
+  // Don't auto-modify config — just tell the user how to opt in
+  console.log('');
+  console.log('  \x1b[36mnoctrace\x1b[0m installed successfully.');
+  console.log('');
+  console.log('  Auto-start with Claude Code (recommended):');
+  console.log('    \x1b[1mnoctrace --enable\x1b[0m');
+  console.log('');
+  console.log('  Or run standalone:');
+  console.log('    \x1b[1mnoctrace\x1b[0m');
+  console.log('');
 }
 
 run().catch(() => {

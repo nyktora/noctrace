@@ -55,6 +55,7 @@
     </ul>
     <h2>Install</h2>
     <p>Install globally: <code>npm install -g noctrace</code></p>
+    <p>Then opt in to auto-start: <code>noctrace --enable</code></p>
     <p>Or try without installing: <code>npx noctrace</code></p>
     <p><a href="https://github.com/nyktora/noctrace">View on GitHub</a> | <a href="https://npmjs.com/package/noctrace">View on npm</a></p>
   </div>
@@ -251,7 +252,9 @@
             React.createElement("a",{href:"https://github.com/nyktora/noctrace",style:{display:"flex",alignItems:"center",gap:6,background:SF,border:"1px solid "+BD,padding:"9px 16px",color:TX,fontSize:12,textDecoration:"none"}},React.createElement(GHI,null)," source")
           ),
           React.createElement("div",{style:{fontSize:11,color:DM,marginBottom:8,animation:"fadeUp 0.4s ease 0.45s both"}},
-            "opens automatically with every Claude Code session. or try without installing: ",
+            "then run ",
+            React.createElement("code",{style:{color:TX,background:SF2,padding:"1px 5px"}},"noctrace --enable"),
+            " to auto-start with every Claude Code session. or try without installing: ",
             React.createElement("code",{style:{color:TX,background:SF2,padding:"1px 5px"}},"npx noctrace"),
             "."
           ),
@@ -415,7 +418,7 @@
           ),
           React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",border:"1px solid "+BD}},
             [
-              {n:"01",t:"install once",c:"$ npm install -g noctrace",d:"Installs permanently. Auto-registers with Claude Code — opens on every session."},
+              {n:"01",t:"install once",c:"$ npm install -g noctrace",d:"Installs permanently. Run noctrace --enable to opt in — opens on every session."},
               {n:"02",t:"it reads your logs",c:"~/.claude/projects/*.jsonl",d:"Passively watches Claude Code session logs already on your machine."},
               {n:"03",t:"you see everything",c:"waterfall + health + rot",d:"Timing bars, token counts, context degradation — all in real time."},
             ].map(function(s,i){return(

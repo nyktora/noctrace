@@ -39,7 +39,7 @@
     <div style="max-width:900px;margin:0 auto;padding:48px 24px;color:#c9d1d9;font-family:monospace;">
       <h1>Noctrace Documentation</h1>
       <h2>Installation</h2>
-      <p>Install globally (recommended): <code>npm install -g noctrace</code> — auto-registers with Claude Code for auto-start. Or try without installing: <code>npx noctrace</code></p>
+      <p>Install globally (recommended): <code>npm install -g noctrace</code>. Then run <code>noctrace --enable</code> to register with Claude Code for auto-start. Or try without installing: <code>npx noctrace</code></p>
       <h2>What is Noctrace?</h2>
       <p>Noctrace is a Chrome DevTools Network-tab-style waterfall visualizer for Claude Code agent workflows. It reads JSONL session logs from ~/.claude/projects/ and renders them as an interactive timeline.</p>
       <h2>Features</h2>
@@ -202,8 +202,8 @@
 
               React.createElement("div",{style:{fontSize:11,color:TXB,marginBottom:6,fontWeight:700}},"Option 1 — Install globally (recommended)"),
               React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npm install -g noctrace")),
-              React.createElement(P,null,"Installs permanently. The ",React.createElement(InlineCode,null,"noctrace")," command is available everywhere. Automatically registers with Claude Code so noctrace starts with every session."),
-              React.createElement(P,null,"To stop auto-starting: ",React.createElement(InlineCode,null,"noctrace --disable"),". To re-enable: ",React.createElement(InlineCode,null,"noctrace --enable"),".",),
+              React.createElement(P,null,"Installs permanently. The ",React.createElement(InlineCode,null,"noctrace")," command is available everywhere."),
+              React.createElement(P,null,"Then run ",React.createElement(InlineCode,null,"noctrace --enable")," to register with Claude Code — noctrace will open automatically with every session. To stop auto-starting: ",React.createElement(InlineCode,null,"noctrace --disable"),".",),
 
               React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600,marginTop:24}},"Option 2 — Try it without installing"),
               React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npx noctrace")),
