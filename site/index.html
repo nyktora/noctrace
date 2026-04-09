@@ -121,19 +121,19 @@
     var GN2="#a6e3a1"; /* cost green */
 
     function DemoRow(props){
-      var r=props.row;var vis=props.visible;
+      var r=props.row;var vis=props.visible;var sel=props.selected;var onSel=props.onSelect;
 
       /* ── API Error Banner ── */
       if(r.isApiError){
-        return React.createElement("div",{style:{
+        return React.createElement("div",{onClick:function(){onSel&&onSel(r.n)},style:{
           display:"flex",alignItems:"center",height:26,
-          background:"rgba(243,139,168,0.13)",
+          background:sel?"rgba(243,139,168,0.22)":"rgba(243,139,168,0.13)",
           borderBottom:"1px solid "+RD+"30",
           borderTop:"1px solid "+RD+"30",
           opacity:vis?1:0,
           transform:vis?"translateY(0)":"translateY(6px)",
           transition:"opacity 0.3s ease, transform 0.3s ease",
-          paddingLeft:8,gap:6,
+          paddingLeft:8,gap:6,cursor:"pointer",
         }},
           React.createElement("span",{style:{fontSize:10,color:RD,fontWeight:700}},"☁"),
           React.createElement("span",{style:{fontSize:10,color:RD,fontWeight:600}},"Rate Limit"),
@@ -146,14 +146,15 @@
 
       /* ── Agent row ── */
       if(r.isAgent){
-        var rowBgA="rgba(203,166,247,0.06)";
-        return React.createElement("div",{style:{
+        var rowBgA=sel?"rgba(203,166,247,0.14)":"rgba(203,166,247,0.06)";
+        return React.createElement("div",{onClick:function(){onSel&&onSel(r.n)},style:{
           display:"flex",alignItems:"center",height:26,
           borderBottom:"1px solid "+BD+"50",
           background:rowBgA,
           opacity:vis?1:0,
           transform:vis?"translateY(0)":"translateY(6px)",
           transition:"opacity 0.3s ease, transform 0.3s ease",
+          cursor:"pointer",
         }},
           React.createElement("div",{style:{width:3,alignSelf:"stretch",background:MV,opacity:0.9,flexShrink:0}}),
           React.createElement("div",{style:{width:28,textAlign:"right",paddingRight:8,fontSize:10,color:DM,flexShrink:0}},r.n),
@@ -186,16 +187,18 @@
       /* ── Child row (sub-agent children) ── */
       var isChild=!!r.child;
       /* ── Failure row ── */
-      var rowBg=r.isFailure?"rgba(243,139,168,0.10)":isChild?"rgba(203,166,247,0.03)":degraded?(RD+(r.ctx>=86?"14":r.ctx>=82?"0c":"08")):"transparent";
+      var selBg=sel?"rgba(137,180,250,0.10)":"";
+      var rowBg=sel?selBg:r.isFailure?"rgba(243,139,168,0.10)":isChild?"rgba(203,166,247,0.03)":degraded?(RD+(r.ctx>=86?"14":r.ctx>=82?"0c":"08")):"transparent";
       var stripC=r.isFailure?RD:isChild?MV+"88":cc;
 
-      return React.createElement("div",{style:{
+      return React.createElement("div",{onClick:function(){onSel&&onSel(r.n)},style:{
         display:"flex",alignItems:"center",height:26,
         borderBottom:"1px solid "+(isChild?BD+"30":BD+"50"),
         background:rowBg,
         opacity:vis?1:0,
         transform:vis?"translateY(0)":"translateY(6px)",
         transition:"opacity 0.3s ease, transform 0.3s ease, background 0.5s ease",
+        cursor:"pointer",
       }},
         React.createElement("div",{style:{width:3,alignSelf:"stretch",background:stripC,opacity:r.isFailure?1:isChild?0.5:0.7,flexShrink:0,transition:"background 0.5s"}}),
         React.createElement("div",{style:{width:28,textAlign:"right",paddingRight:8,fontSize:10,color:isChild?DM+"88":DM,flexShrink:0}},r.n),
@@ -268,6 +271,7 @@
       var _t=useState(""),typed=_t[0],setTyped=_t[1];
       var _cp=useState(false),copied=_cp[0],setCopied=_cp[1];
       var _hs=useState(72),hScore=_hs[0],setHScore=_hs[1];
+      var _sr=useState(null),selRow=_sr[0],setSelRow=_sr[1];
       var headline="See what your AI agents are actually doing";
 
       useEffect(function(){
@@ -356,7 +360,8 @@
 
         /* ANIMATED WATERFALL WITH CONTEXT ROT */
         React.createElement("section",{style:{position:"relative",zIndex:1,maxWidth:1060,margin:"0 auto",padding:"0 24px 48px"}},
-          React.createElement("div",{style:{border:"1px solid "+BD,background:SF,overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,0.35)"}},
+          React.createElement("div",{style:{border:"1px solid "+BD,background:SF,overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,0.35)",overflowX:"auto",WebkitOverflowScrolling:"touch"}},
+            React.createElement("div",{style:{minWidth:680}},
             /* browser chrome */
             React.createElement("div",{style:{height:26,background:BG,borderBottom:"1px solid "+BD,display:"flex",alignItems:"center",padding:"0 12px",gap:6,fontSize:10,color:DM}},
               React.createElement("span",{style:{fontSize:8,opacity:0.4,letterSpacing:2}},"\u25CF \u25CF \u25CF"),
@@ -408,9 +413,37 @@
             ),
             /* rows */
             React.createElement("div",{style:{minHeight:446}},
-              demoRows.map(function(r){return React.createElement(DemoRow,{key:r.n,row:r,visible:visR.indexOf(r.n)>=0})})
-            )
-          ),
+              demoRows.map(function(r){return React.createElement(DemoRow,{key:r.n,row:r,visible:visR.indexOf(r.n)>=0,selected:selRow===r.n,onSelect:function(n){setSelRow(selRow===n?null:n)}})})
+            ),
+            /* ── Detail tooltip ── */
+            selRow&&function(){
+              var sr=demoRows.find(function(r){return r.n===selRow});
+              if(!sr)return null;
+              return React.createElement("div",{style:{
+                borderTop:"1px solid "+BD,background:SF2,padding:"10px 14px",
+                display:"flex",gap:16,fontSize:10,color:DM2,
+                transition:"all 0.2s ease",
+              }},
+                React.createElement("div",{style:{flex:1}},
+                  React.createElement("div",{style:{fontSize:11,color:TXB,fontWeight:600,marginBottom:4}},
+                    sr.isApiError?"API Error: "+sr.l:sr.isAgent?"Agent: "+sr.l:(sr.t==="MCP"||sr.t==="Bash"?sr.t+": ":"")+sr.l
+                  ),
+                  React.createElement("div",{style:{display:"flex",gap:16,flexWrap:"wrap"}},
+                    sr.t&&!sr.isApiError&&React.createElement("span",null,"Type: ",React.createElement("span",{style:{color:sr.tC||RD,fontWeight:600}},sr.t)),
+                    sr.dur&&React.createElement("span",null,"Duration: ",React.createElement("span",{style:{color:TX,fontWeight:600}},sr.dur)),
+                    sr.tk&&React.createElement("span",null,"Tokens: ",React.createElement("span",{style:{color:TX,fontWeight:600}},sr.tk)),
+                    sr.cost&&React.createElement("span",null,"Cost: ",React.createElement("span",{style:{color:GN2,fontWeight:600}},sr.cost)),
+                    React.createElement("span",null,"Context: ",React.createElement("span",{style:{color:ctxC(sr.ctx),fontWeight:600}},sr.ctx+"%")),
+                    sr.isFailure&&React.createElement("span",{style:{color:RD,fontWeight:600}},"PROCESS KILLED"),
+                    sr.isApiError&&React.createElement("span",{style:{color:RD,fontWeight:600}},"Retrying in 30s"),
+                    sr.isAgent&&React.createElement("span",null,"Children: ",React.createElement("span",{style:{color:MV,fontWeight:600}},"4 tool calls")),
+                    sr.rr&&React.createElement("span",{style:{color:YL,fontWeight:600}},"RE-READ")
+                  )
+                ),
+                React.createElement("div",{onClick:function(){setSelRow(null)},style:{cursor:"pointer",color:DM,fontSize:9,alignSelf:"flex-start",padding:"2px 6px",border:"1px solid "+BD,borderRadius:3}},"✕")
+              );
+            }()
+          )),
           /* caption */
           React.createElement("div",{style:{textAlign:"center",padding:"12px 0",fontSize:11,color:DM}},
             "Watch the rows turn ",
