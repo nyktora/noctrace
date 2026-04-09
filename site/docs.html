@@ -98,6 +98,10 @@
       {id:"rot",label:"Context rot detection"},
       {id:"tokens",label:"Token tracking"},
       {id:"tips",label:"Tips engine"},
+      {id:"latency",label:"Per-tool latency"},
+      {id:"advanced-filter",label:"Advanced filtering"},
+      {id:"loop-detection",label:"Loop detection"},
+      {id:"session-comparison",label:"Session comparison"},
       {id:"config",label:"Configuration"},
       {id:"troubleshoot",label:"Troubleshooting"},
       {id:"compat",label:"Compatibility"},
@@ -363,6 +367,68 @@
                 ]
               }),
               React.createElement(P,null,"All tip analysis happens locally in the browser. No data leaves your machine.")
+            ),
+
+            /* PER-TOOL LATENCY */
+            React.createElement(Sec,{id:"latency",title:"Per-tool latency stats"},
+              React.createElement(P,null,"Click the ",React.createElement(InlineCode,null,"Stats")," button in the toolbar to open the latency flyout panel. It shows P50, P95, and Max latency for every tool type that appeared in the session."),
+              React.createElement(Table,{
+                headers:["Column","Meaning"],
+                rows:[
+                  ["Tool","Tool type: Read, Write, Edit, Bash, Task, Grep, MCP, etc."],
+                  ["Count","Number of calls of that type in the session"],
+                  ["P50","Median latency — half of calls were faster, half slower"],
+                  ["P95","95th-percentile latency — worst-case excluding outliers"],
+                  ["Max","Single slowest call of that type in the session"],
+                ]
+              }),
+              React.createElement(P,null,React.createElement("strong",{style:{color:TXB}},"Slow-call threshold.")," Any call whose duration exceeds the threshold (default 5000ms) gets a clock icon on its waterfall row. The threshold can be adjusted in the Stats panel. Slow calls are also counted per tool type in the flyout."),
+              React.createElement(P,null,"Use latency stats to identify which tool types are bottlenecks. A P95 of 30s on Bash calls with a P50 of 2s indicates occasional runaway commands worth investigating.")
+            ),
+
+            /* ADVANCED FILTERING */
+            React.createElement(Sec,{id:"advanced-filter",title:"Advanced filtering"},
+              React.createElement(P,null,"The filter bar accepts plain text and structured filter tokens simultaneously. All structured filters are AND-ed together with each other and with any plain-text search term."),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:8,fontWeight:600}},"Structured filter syntax"),
+              React.createElement(Table,{
+                headers:["Syntax","Example","What it filters"],
+                rows:[
+                  ["type:<name>","type:bash","Rows whose tool type matches. Multiple type: tokens are OR-ed."],
+                  [">Ns or >Nms",">5s, >500ms","Rows with duration longer than the given threshold."],
+                  ["<Ns or <Nms","<100ms","Rows with duration shorter than the given threshold."],
+                  ["tokens:>N or tokens:<N","tokens:>1000, tokens:<500","Rows where total token count is above or below N."],
+                  ["error","error","Rows that ended with an error (same as status keyword)."],
+                  ["running","running","Rows currently in progress (live sessions only)."],
+                  ["success","success","Rows that completed successfully."],
+                ]
+              }),
+              React.createElement(P,null,"Plain text still works: any term that does not match a structured token is treated as a case-insensitive substring match against the row's Name column. You can combine plain text and structured tokens freely: ",React.createElement(InlineCode,null,"type:bash >5s deploy")," finds Bash calls longer than 5s whose name contains \"deploy\"."),
+              React.createElement(P,null,"Non-matching rows are dimmed to 25% opacity rather than hidden, so you keep spatial context for the overall session shape.")
+            ),
+
+            /* LOOP DETECTION */
+            React.createElement(Sec,{id:"loop-detection",title:"Loop detection"},
+              React.createElement(P,null,"Noctrace automatically detects repeated-tool loops: sequences of 3 or more consecutive tool calls that use the same tool type and the same input. When detected, a warning tip is added to the Tips panel (amber lightbulb icon in the toolbar)."),
+              React.createElement(P,null,React.createElement("strong",{style:{color:TXB}},"How it works.")," The detector compares adjacent rows in chronological order. If the tool type and normalized input match across 3+ consecutive rows, that sequence is flagged. Inputs are normalized by stripping whitespace and lowercasing before comparison."),
+              React.createElement(P,null,React.createElement("strong",{style:{color:TXB}},"Distinction from other patterns.")," Loop detection is separate from the existing correction-loop tip (which looks for Edit-then-Edit cycles on the same file) and the repeat-bash tip (which looks for identical Bash commands with gaps between them). Loop detection is stricter: it requires the calls to be consecutive."),
+              React.createElement(P,null,"A common trigger is a prompt-injection or runaway retry pattern where the agent repeatedly calls the same MCP tool or Bash command without checking the result. Seeing this tip is a signal to inspect those rows in the waterfall and consider whether the agent needs a stronger stop condition.")
+            ),
+
+            /* SESSION COMPARISON */
+            React.createElement(Sec,{id:"session-comparison",title:"Session comparison"},
+              React.createElement(P,null,"The session picker shows a Compare button on each session row. Click it to select a baseline session, then click Compare on a second session to open the split-screen comparison view."),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:8,fontWeight:600}},"What the comparison view shows"),
+              React.createElement(Table,{
+                headers:["Panel","Content"],
+                rows:[
+                  ["Health grade","A-F grade and score for each session side by side"],
+                  ["Summary metrics","Total tokens, tool calls, duration, sub-agent count — with deltas (e.g. +12k tokens, -3 agents)"],
+                  ["Tool mix","Proportional bars showing the breakdown of tool types in each session. Useful for comparing delegation patterns."],
+                  ["Context fill sparkline","Miniature chart of context fill % over the session's lifetime. Reveals different degradation trajectories at a glance."],
+                ]
+              }),
+              React.createElement(P,null,"Use session comparison to evaluate the impact of a CLAUDE.md change, a different prompting strategy, or a new tool configuration across two real sessions. The delta indicators highlight where the sessions diverged most."),
+              React.createElement(P,null,"Click ",React.createElement(InlineCode,null,"Exit comparison")," in the toolbar to return to the waterfall view for either session.")
             ),
 
             /* CONFIG */
