@@ -8,6 +8,8 @@ import { RepeatIcon } from '../icons/repeat-icon.tsx';
 import { TipIcon } from '../icons/tip-icon.tsx';
 import { ShieldIcon } from '../icons/shield-icon.tsx';
 import { ClockIcon } from '../icons/clock-icon.tsx';
+import { FailureIcon } from '../icons/failure-icon.tsx';
+import { ApiErrorIcon } from '../icons/api-error-icon.tsx';
 import type { EfficiencyTip, TipSeverity } from '../../shared/types.ts';
 import { useSessionStore } from '../store/session-store.ts';
 import {
@@ -114,6 +116,7 @@ export function WaterfallRowComponent({
   const isSlow = row.duration !== null && row.duration > slowThresholdMs;
 
   const isAgent = row.type === 'agent';
+  const isApiError = row.type === 'api-error';
   const indent = row.parentAgentId ? 24 : 0;
   const toolColor = getToolColor(row.toolName, row.status);
   const toolHex = resolveColor(toolColor);
@@ -138,9 +141,11 @@ export function WaterfallRowComponent({
   const barWidth = Math.max(durationFraction * scaledWidth, 2);
   const tokenDelta = row.tokenDelta;
 
-  // Row background — selected rows get a bright highlight
+  // Row background — selected rows get a bright highlight; failure rows get red tint
   let rowBg = 'transparent';
   if (isSelected) rowBg = 'var(--ctp-surface2)';
+  else if (isApiError) rowBg = 'rgba(243,139,168,0.12)';
+  else if (row.isFailure) rowBg = 'rgba(243,139,168,0.10)';
   else if (isDegraded) rowBg = 'rgba(243,139,168,0.08)';
 
   const typeShort = getTypeShort(row.toolName);
@@ -161,6 +166,62 @@ export function WaterfallRowComponent({
       e.preventDefault();
       onFocusNeighbor?.('up');
     }
+  }
+
+  // API error rows render as a full-width alert banner — they are point-in-time events,
+  // not tool calls, so they don't have a meaningful start/end position on the timeline.
+  if (isApiError) {
+    return (
+      <div
+        role="row"
+        tabIndex={0}
+        aria-selected={isSelected}
+        aria-label={`API Error: ${row.toolName} — ${row.label}`}
+        onClick={() => onSelect(row.id)}
+        onKeyDown={handleKeyDown}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          height: ROW_HEIGHT,
+          backgroundColor: isSelected ? 'rgba(243,139,168,0.22)' : 'rgba(243,139,168,0.12)',
+          opacity: matched ? 1 : 0.25,
+          cursor: 'pointer',
+          transition: 'background-color 80ms',
+          borderBottom: '1px solid rgba(243,139,168,0.3)',
+          borderTop: '1px solid rgba(243,139,168,0.2)',
+          gap: 8,
+          paddingLeft: 8,
+          paddingRight: 12,
+        }}
+        onMouseEnter={(e) => {
+          if (!isSelected) {
+            (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(243,139,168,0.18)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isSelected) {
+            (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(243,139,168,0.12)';
+          }
+        }}
+      >
+        <ApiErrorIcon size={12} color="var(--ctp-red)" />
+        <span
+          className="font-mono"
+          style={{ color: 'var(--ctp-red)', fontSize: 10, fontWeight: 700, flexShrink: 0 }}
+        >
+          {row.toolName}
+        </span>
+        <span
+          className="font-mono truncate"
+          style={{ color: 'var(--ctp-subtext0)', fontSize: 10, flex: 1 }}
+          title={row.label}
+        >
+          {highlightMatch(row.label, highlightText)}
+        </span>
+        {/* Full-width red accent stripe at the right edge */}
+        <div style={{ width: 3, height: '100%', backgroundColor: 'var(--ctp-red)', opacity: 0.5, flexShrink: 0 }} />
+      </div>
+    );
   }
 
   return (
@@ -184,15 +245,17 @@ export function WaterfallRowComponent({
       }}
       onMouseEnter={(e) => {
         if (!isSelected) {
-          (e.currentTarget as HTMLDivElement).style.backgroundColor = isDegraded
-            ? 'rgba(243,139,168,0.12)'
+          (e.currentTarget as HTMLDivElement).style.backgroundColor =
+            row.isFailure ? 'rgba(243,139,168,0.16)'
+            : isDegraded ? 'rgba(243,139,168,0.12)'
             : 'var(--ctp-surface0)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isSelected) {
-          (e.currentTarget as HTMLDivElement).style.backgroundColor = isDegraded
-            ? 'rgba(243,139,168,0.08)'
+          (e.currentTarget as HTMLDivElement).style.backgroundColor =
+            row.isFailure ? 'rgba(243,139,168,0.10)'
+            : isDegraded ? 'rgba(243,139,168,0.08)'
             : 'transparent';
         }
       }}
@@ -262,10 +325,18 @@ export function WaterfallRowComponent({
             <ChevronIcon size={12} color="var(--ctp-overlay0)" />
           </button>
         )}
+        {row.isFailure && (
+          <span
+            style={{ display: 'inline-flex', alignItems: 'center', marginRight: 4, flexShrink: 0 }}
+            title="Tool execution failure (crash, timeout, or permission denied)"
+          >
+            <FailureIcon size={11} color="var(--ctp-red)" />
+          </span>
+        )}
         <span
           className="font-mono truncate text-xs"
           style={{
-            color: isAgent ? 'var(--ctp-text)' : 'var(--ctp-subtext0)',
+            color: row.isFailure ? 'var(--ctp-red)' : isAgent ? 'var(--ctp-text)' : 'var(--ctp-subtext0)',
             fontWeight: isAgent ? 600 : 400,
             fontSize: 11,
           }}
@@ -273,6 +344,28 @@ export function WaterfallRowComponent({
         >
           {highlightMatch(row.label, highlightText)}
         </span>
+        {isAgent && row.agentType && (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              marginLeft: 4,
+              flexShrink: 0,
+              fontSize: 9,
+              fontFamily: 'ui-monospace, monospace',
+              fontWeight: 500,
+              padding: '1px 4px',
+              borderRadius: 3,
+              backgroundColor: 'rgba(137,180,250,0.12)',
+              color: 'var(--ctp-blue)',
+              border: '1px solid rgba(137,180,250,0.25)',
+              whiteSpace: 'nowrap',
+            }}
+            title={`Agent type: ${row.agentType}`}
+          >
+            {row.agentType}
+          </span>
+        )}
         {row.tips.length > 0 && (
           <span
             style={{
@@ -464,6 +557,12 @@ function getTypeShort(toolName: string): string {
   if (name === 'bash' || name === 'execute') return 'Bash';
   if (name === 'task' || name === 'agent' || name === 'dispatch_agent') return 'Task';
   if (name === 'grep' || name === 'glob' || name === 'search') return 'Grep';
+  // API error classes (from classifyStopFailure)
+  if (name === 'rate limit') return 'RateL';
+  if (name === 'billing error') return 'Bill';
+  if (name === 'auth error') return 'Auth';
+  if (name === 'overloaded') return 'Load';
+  if (name === 'server error') return 'Srv';
   if (name.startsWith('mcp__')) {
     // "mcp__claude-in-chrome__computer" → "MCP"
     return 'MCP';

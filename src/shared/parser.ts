@@ -3,6 +3,7 @@
  * Pure module: no file I/O, no side effects.
  */
 import type { WaterfallRow } from './types.js';
+import { getPricing, computeCost } from './token-cost.js';
 
 // ---------------------------------------------------------------------------
 // Raw record types (internal)
@@ -28,6 +29,7 @@ interface AssistantRecord {
   parentUuid: string | null;
   message: {
     role: 'assistant';
+    model?: string;
     content: ContentBlock[];
     usage?: {
       input_tokens: number;
@@ -105,6 +107,9 @@ interface PendingRow {
   output: string | null;
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreateTokens: number;
+  modelName: string | null;
   contextFillPercent: number;
   isReread: boolean;
   assistantUuid: string;
@@ -181,6 +186,40 @@ function isAgent(name: string): boolean {
   return name === 'Agent' || name === 'Task';
 }
 
+/**
+ * Returns true when a tool result with is_error=true represents a tool execution
+ * failure (crash, timeout, permission denied) rather than a tool that ran and
+ * returned an error value. We distinguish by looking for crash/failure keywords
+ * in the output text.
+ */
+function isToolFailure(output: string): boolean {
+  const lower = output.toLowerCase();
+  return (
+    lower.includes('process exited with') ||
+    lower.includes('timed out') ||
+    lower.includes('timeout') ||
+    lower.includes('permission denied') ||
+    lower.includes('killed') ||
+    lower.includes('segmentation fault') ||
+    lower.includes('posttoolusedfailure') ||
+    lower.includes('tool execution failed') ||
+    lower.includes('failed to execute')
+  );
+}
+
+/**
+ * Classify an API stop failure message into a short error class label.
+ * Returns e.g. "Rate Limit", "Billing Error", "Server Error", "Auth Error".
+ */
+function classifyStopFailure(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes('rate limit') || lower.includes('rate_limit') || lower.includes('429')) return 'Rate Limit';
+  if (lower.includes('billing') || lower.includes('payment') || lower.includes('credit')) return 'Billing Error';
+  if (lower.includes('auth') || lower.includes('unauthorized') || lower.includes('403') || lower.includes('401')) return 'Auth Error';
+  if (lower.includes('overloaded') || lower.includes('529')) return 'Overloaded';
+  return 'Server Error';
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -200,7 +239,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
   // Build result map: tool_use_id → result data
   // For Agent/Task tool calls, also capture totalDurationMs so the agent bar
   // can span its real lifetime instead of showing just the instant dispatch time.
-  const resultMap = new Map<string, { endTime: number; output: string; isError: boolean; totalDurationMs?: number }>();
+  const resultMap = new Map<string, { endTime: number; output: string; isError: boolean; isFailure: boolean; totalDurationMs?: number; agentType?: string }>();
   for (const rec of records) {
     if (rec.type !== 'user') continue;
     const ur = rec as UserRecord;
@@ -210,11 +249,15 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
     for (const block of c) {
       if (isObj(block) && block['type'] === 'tool_result' && typeof block['tool_use_id'] === 'string') {
         const tb = block as unknown as ToolResultBlock;
+        const output = extractContent(tb.content);
+        const isError = tb.is_error === true;
         resultMap.set(tb.tool_use_id, {
           endTime,
-          output: extractContent(tb.content),
-          isError: tb.is_error === true,
+          output,
+          isError,
+          isFailure: isError && isToolFailure(output),
           totalDurationMs: ur.toolUseResult?.totalDurationMs,
+          agentType: ur.toolUseResult?.agentType,
         });
       }
     }
@@ -316,10 +359,12 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
     const ar = rec as AssistantRecord;
     const startTime = new Date(ar.timestamp).getTime();
     const usage = ar.message.usage;
-    const inputTokens = (usage?.input_tokens ?? 0)
-      + (usage?.cache_creation_input_tokens ?? 0)
-      + (usage?.cache_read_input_tokens ?? 0);
+    const cacheReadTokens = usage?.cache_read_input_tokens ?? 0;
+    const cacheCreateTokens = usage?.cache_creation_input_tokens ?? 0;
+    const rawInputTokens = usage?.input_tokens ?? 0;
+    const inputTokens = rawInputTokens + cacheCreateTokens + cacheReadTokens;
     const outputTokens = usage?.output_tokens ?? 0;
+    const modelName = typeof ar.message.model === 'string' ? ar.message.model : null;
     const contextFillPercent = 0; // recalculated after peak detection
 
     for (const block of ar.message.content) {
@@ -351,6 +396,9 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
         output: res ? res.output : null,
         inputTokens,
         outputTokens,
+        cacheReadTokens,
+        cacheCreateTokens,
+        modelName,
         contextFillPercent,
         isReread,
         assistantUuid: ar.uuid,
@@ -392,6 +440,12 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
   // First pass: create rows from top-level assistant records
   const rowById = new Map<string, WaterfallRow>();
   for (const p of pending) {
+    const pricing = getPricing(p.modelName);
+    const rawInput = Math.max(0, p.inputTokens - p.cacheReadTokens - p.cacheCreateTokens);
+    const estimatedCost = p.inputTokens > 0 || p.outputTokens > 0
+      ? computeCost(pricing, rawInput, p.outputTokens, p.cacheReadTokens, p.cacheCreateTokens)
+      : null;
+    const res = resultMap.get(p.id);
     rowById.set(p.id, {
       id: p.id,
       type: isAgent(p.toolName) ? 'agent' : 'tool',
@@ -409,8 +463,12 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       tokenDelta: 0,
       contextFillPercent: p.contextFillPercent,
       isReread: p.isReread,
+      isFailure: res?.isFailure ?? false,
       children: [],
       tips: [],
+      modelName: p.modelName,
+      estimatedCost,
+      agentType: res?.agentType ?? null,
     });
   }
 
@@ -444,8 +502,12 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       tokenDelta: 0,
       contextFillPercent: ctxFill,
       isReread,
+      isFailure: res ? (res.isError && isToolFailure(res.output)) : false,
       children: [],
       tips: [],
+      modelName: null,
+      estimatedCost: null,
+      agentType: null,
     });
   }
 
@@ -520,6 +582,53 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
   }
   computeDeltas(top);
 
+  // Detect API stop failures from system records (rate limit, billing, auth, server errors).
+  // These appear as system records with subtype 'stop_failure' or similar.
+  // We insert them as top-level 'api-error' rows at their point in time.
+  for (const rec of records) {
+    if (rec.type !== 'system') continue;
+    const sr = rec as SystemRecord;
+    const subtype = sr.subtype ?? '';
+    const isStopFailure =
+      subtype === 'stop_failure' ||
+      subtype === 'api_error' ||
+      subtype === 'request_failed';
+    if (!isStopFailure) continue;
+    const ts = new Date(sr.timestamp).getTime();
+    // Try to extract an error message from the record's top-level fields.
+    const raw = rec as unknown as Record<string, unknown>;
+    const errorMsg =
+      (typeof raw['error'] === 'string' ? raw['error'] : null) ||
+      (typeof raw['message'] === 'string' ? raw['message'] : null) ||
+      subtype;
+    const errorClass = classifyStopFailure(errorMsg);
+    const rowId = `api-error-${sr.uuid}`;
+    top.push({
+      id: rowId,
+      type: 'api-error',
+      toolName: errorClass,
+      label: errorMsg,
+      startTime: ts,
+      endTime: ts,
+      duration: 0,
+      status: 'error',
+      parentAgentId: null,
+      input: {},
+      output: errorMsg,
+      inputTokens: 0,
+      outputTokens: 0,
+      tokenDelta: 0,
+      contextFillPercent: 0,
+      isReread: false,
+      isFailure: false,
+      children: [],
+      tips: [],
+      modelName: null,
+      estimatedCost: null,
+      agentType: null,
+    });
+  }
+
   return top;
 }
 
@@ -588,7 +697,7 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
   }
 
   // Build result map: tool_use_id → result data
-  const resultMap = new Map<string, { endTime: number; output: string; isError: boolean }>();
+  const resultMap = new Map<string, { endTime: number; output: string; isError: boolean; isFailure: boolean }>();
   for (const rec of records) {
     if (rec.type !== 'user') continue;
     const c = (rec as UserRecord).message.content;
@@ -597,10 +706,13 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
     for (const block of c) {
       if (isObj(block) && block['type'] === 'tool_result' && typeof block['tool_use_id'] === 'string') {
         const tb = block as unknown as ToolResultBlock;
+        const output = extractContent(tb.content);
+        const isError = tb.is_error === true;
         resultMap.set(tb.tool_use_id, {
           endTime,
-          output: extractContent(tb.content),
-          isError: tb.is_error === true,
+          output,
+          isError,
+          isFailure: isError && isToolFailure(output),
         });
       }
     }
@@ -627,11 +739,15 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
     const ar = rec as AssistantRecord;
     const startTime = new Date(ar.timestamp).getTime();
     const usage = ar.message.usage;
-    const inputTokens = (usage?.input_tokens ?? 0)
-      + (usage?.cache_creation_input_tokens ?? 0)
-      + (usage?.cache_read_input_tokens ?? 0);
+    const cacheReadTokens = usage?.cache_read_input_tokens ?? 0;
+    const cacheCreateTokens = usage?.cache_creation_input_tokens ?? 0;
+    const rawInputTokens = usage?.input_tokens ?? 0;
+    const inputTokens = rawInputTokens + cacheCreateTokens + cacheReadTokens;
     const outputTokens = usage?.output_tokens ?? 0;
+    const modelName = typeof ar.message.model === 'string' ? ar.message.model : null;
     const contextFillPercent = (inputTokens / effectiveWindow) * 100;
+    const pricing = getPricing(modelName);
+    const rawInput = Math.max(0, rawInputTokens);
 
     for (const block of ar.message.content) {
       if (!isToolUse(block)) continue;
@@ -639,6 +755,10 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
         ? (block.input['file_path'] as string) : null;
       const isReread = fp !== null && seenPaths.has(fp);
       if (fp !== null) seenPaths.add(fp);
+
+      const estimatedCost = inputTokens > 0 || outputTokens > 0
+        ? computeCost(pricing, rawInput, outputTokens, cacheReadTokens, cacheCreateTokens)
+        : null;
 
       const res = resultMap.get(block.id);
       rows.push({
@@ -658,10 +778,57 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
         tokenDelta: 0,
         contextFillPercent,
         isReread,
+        isFailure: res?.isFailure ?? false,
         children: [],
         tips: [],
+        modelName,
+        estimatedCost,
+        agentType: null,
       });
     }
+  }
+
+  // Detect API stop failures within sub-agent content
+  for (const rec of records) {
+    if (rec.type !== 'system') continue;
+    const sr = rec as SystemRecord;
+    const subtype = sr.subtype ?? '';
+    const isStopFailure =
+      subtype === 'stop_failure' ||
+      subtype === 'api_error' ||
+      subtype === 'request_failed';
+    if (!isStopFailure) continue;
+    const ts = new Date(sr.timestamp).getTime();
+    const raw = rec as unknown as Record<string, unknown>;
+    const errorMsg =
+      (typeof raw['error'] === 'string' ? raw['error'] : null) ||
+      (typeof raw['message'] === 'string' ? raw['message'] : null) ||
+      subtype;
+    const errorClass = classifyStopFailure(errorMsg);
+    rows.push({
+      id: `api-error-${sr.uuid}`,
+      type: 'api-error',
+      toolName: errorClass,
+      label: errorMsg,
+      startTime: ts,
+      endTime: ts,
+      duration: 0,
+      status: 'error',
+      parentAgentId: null,
+      input: {},
+      output: errorMsg,
+      inputTokens: 0,
+      outputTokens: 0,
+      tokenDelta: 0,
+      contextFillPercent: 0,
+      isReread: false,
+      isFailure: false,
+      children: [],
+      tips: [],
+      modelName: null,
+      estimatedCost: null,
+      agentType: null,
+    });
   }
 
   // Compute per-row token delta for sub-agent rows
@@ -673,6 +840,88 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
   }
 
   return rows;
+}
+
+/**
+ * Parse instruction-loading records from JSONL content.
+ * Looks for system records with subtype containing "instructions" or similar patterns,
+ * as well as user records with isMeta=true that describe loaded CLAUDE.md files.
+ * Returns a deduplicated list of InstructionFile entries. Never throws.
+ */
+export function parseInstructionsLoaded(content: string): import('./types.js').InstructionFile[] {
+  const lines = content.split('\n');
+  const seen = new Set<string>();
+  const result: import('./types.js').InstructionFile[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    let parsed: unknown;
+    try { parsed = JSON.parse(line); } catch { continue; }
+    if (!isObj(parsed)) continue;
+
+    const recordType = parsed['type'];
+    const subtype = typeof parsed['subtype'] === 'string' ? parsed['subtype'] : null;
+
+    // Match system records that describe loaded instruction files
+    if (recordType === 'system') {
+      // Claude Code may emit system records with subtype: "instructions_loaded",
+      // "claude_md_loaded", "context_loaded", or similar
+      const isInstructionRecord =
+        subtype !== null && (
+          subtype.includes('instruction') ||
+          subtype.includes('claude_md') ||
+          subtype.includes('context_load') ||
+          subtype.includes('system_prompt')
+        );
+
+      if (isInstructionRecord) {
+        const filePath = typeof parsed['filePath'] === 'string' ? parsed['filePath']
+          : typeof parsed['file_path'] === 'string' ? parsed['file_path']
+          : typeof parsed['path'] === 'string' ? parsed['path']
+          : null;
+        if (!filePath || seen.has(filePath)) continue;
+        seen.add(filePath);
+
+        const loadReason = typeof parsed['reason'] === 'string' ? parsed['reason']
+          : typeof parsed['load_reason'] === 'string' ? parsed['load_reason']
+          : subtype ?? 'session_start';
+        const estimatedTokens = typeof parsed['tokens'] === 'number' ? parsed['tokens']
+          : typeof parsed['token_count'] === 'number' ? parsed['token_count']
+          : null;
+        const parentFilePath = typeof parsed['parentFilePath'] === 'string' ? parsed['parentFilePath']
+          : typeof parsed['parent_file_path'] === 'string' ? parsed['parent_file_path']
+          : null;
+
+        result.push({ filePath, loadReason, estimatedTokens, parentFilePath });
+        continue;
+      }
+    }
+
+    // Match user records with isMeta=true that list loaded context files
+    if (recordType === 'user' && parsed['isMeta'] === true) {
+      const metaContent = parsed['content'];
+      const contentStr = typeof metaContent === 'string' ? metaContent : '';
+      if (!contentStr) continue;
+
+      // Look for patterns like "Loaded CLAUDE.md from /path/to/CLAUDE.md"
+      // or "Instructions loaded: /path/to/CLAUDE.md"
+      const filePathMatches = contentStr.matchAll(/(?:loaded|reading|including)[:\s]+([^\s,\n]+\.md)/gi);
+      for (const match of filePathMatches) {
+        const filePath = match[1];
+        if (!filePath || seen.has(filePath)) continue;
+        seen.add(filePath);
+        result.push({
+          filePath,
+          loadReason: 'session_start',
+          estimatedTokens: null,
+          parentFilePath: null,
+        });
+      }
+    }
+  }
+
+  return result;
 }
 
 /**

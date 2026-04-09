@@ -1,8 +1,10 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 
 import { useSessionStore } from '../store/session-store.ts';
 import { HealthBadge } from './health-badge.tsx';
 import { SessionStats } from './session-stats.tsx';
+import { TeamsPanel } from './teams-panel.tsx';
+import { ContextStartup } from './context-startup.tsx';
 import { FilterIcon } from '../icons/filter-icon.tsx';
 import { WaterfallIcon } from '../icons/waterfall-icon.tsx';
 import { WarningIcon } from '../icons/warning-icon.tsx';
@@ -10,7 +12,10 @@ import { DriftIcon } from '../icons/drift-icon.tsx';
 import { TipIcon } from '../icons/tip-icon.tsx';
 import { ShieldIcon } from '../icons/shield-icon.tsx';
 import { StatsIcon } from '../icons/stats-icon.tsx';
+import { TeamIcon } from '../icons/team-icon.tsx';
+import { ContextIcon } from '../icons/context-icon.tsx';
 import { formatTokens, formatDuration } from '../utils/tool-colors.ts';
+import { formatCost } from '../../shared/token-cost.ts';
 
 /**
  * Top toolbar with logo, filter bar, auto-scroll toggle, and health badge.
@@ -25,6 +30,11 @@ export function Toolbar(): React.ReactElement {
   const drift = useSessionStore((s) => s.drift);
   const showSessionStats = useSessionStore((s) => s.showSessionStats);
   const toggleSessionStats = useSessionStore((s) => s.toggleSessionStats);
+  const teams = useSessionStore((s) => s.teams);
+  const instructionsLoaded = useSessionStore((s) => s.instructionsLoaded);
+
+  const [showTeams, setShowTeams] = useState(false);
+  const [showContextStartup, setShowContextStartup] = useState(false);
 
   const handleCloseStats = useCallback(() => {
     if (showSessionStats) toggleSessionStats();
@@ -36,12 +46,13 @@ export function Toolbar(): React.ReactElement {
     : drift.driftFactor >= 2 ? 'var(--ctp-yellow)'
     : 'var(--ctp-green)';
 
-  const { agentCount, totalTokens, sessionDuration, tipCount, securityTipCount } = useMemo(() => {
-    if (rows.length === 0) return { agentCount: 0, totalTokens: 0, sessionDuration: null as number | null, tipCount: 0, securityTipCount: 0 };
-    let agents = 0, tokens = 0, tips = 0, securityTips = 0, minStart = Infinity, maxEnd = -Infinity;
+  const { agentCount, totalTokens, sessionDuration, tipCount, securityTipCount, totalCost } = useMemo(() => {
+    if (rows.length === 0) return { agentCount: 0, totalTokens: 0, sessionDuration: null as number | null, tipCount: 0, securityTipCount: 0, totalCost: null as number | null };
+    let agents = 0, tokens = 0, tips = 0, securityTips = 0, cost = 0, hasCost = false, minStart = Infinity, maxEnd = -Infinity;
     for (const r of rows) {
       if (r.type === 'agent') agents++;
       tokens += r.inputTokens + r.outputTokens;
+      if (r.estimatedCost !== null) { cost += r.estimatedCost; hasCost = true; }
       for (const t of r.tips) {
         tips++;
         if (t.category === 'security') securityTips++;
@@ -50,7 +61,7 @@ export function Toolbar(): React.ReactElement {
       if (end > maxEnd) maxEnd = end;
       if (r.startTime < minStart) minStart = r.startTime;
     }
-    return { agentCount: agents, totalTokens: tokens, sessionDuration: maxEnd - minStart, tipCount: tips, securityTipCount: securityTips };
+    return { agentCount: agents, totalTokens: tokens, sessionDuration: maxEnd - minStart, tipCount: tips, securityTipCount: securityTips, totalCost: hasCost ? cost : null };
   }, [rows]);
 
   return (
@@ -128,6 +139,34 @@ export function Toolbar(): React.ReactElement {
       >
         Auto
       </button>
+
+      {/* Teams badge — only shown when teams exist */}
+      {teams.length > 0 && (
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => { setShowTeams((v) => !v); setShowContextStartup(false); }}
+            title={`${teams.length} Agent Team${teams.length === 1 ? '' : 's'} detected`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              background: showTeams ? 'var(--ctp-surface1)' : 'none',
+              border: '1px solid var(--ctp-surface1)',
+              borderRadius: 6,
+              cursor: 'pointer',
+              padding: '2px 6px',
+              color: showTeams ? 'var(--ctp-blue)' : 'var(--ctp-overlay0)',
+              fontSize: 10,
+              fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+            }}
+          >
+            <TeamIcon size={12} color={showTeams ? 'var(--ctp-blue)' : 'var(--ctp-overlay0)'} />
+            <span>Teams: {teams.length}</span>
+          </button>
+          {showTeams && <TeamsPanel onClose={() => setShowTeams(false)} />}
+        </div>
+      )}
 
       {/* Compact stats pill — wrapped in relative container for flyout positioning */}
       {rows.length > 0 && (
@@ -237,6 +276,17 @@ export function Toolbar(): React.ReactElement {
             </span>
           )}
 
+          {/* Session total cost */}
+          {totalCost !== null && (
+            <span
+              className="font-mono"
+              style={{ color: 'var(--ctp-green)', fontWeight: 600 }}
+              title="Estimated session cost (based on public Claude API pricing)"
+            >
+              {formatCost(totalCost)}
+            </span>
+          )}
+
           {/* Stats button */}
           <button
             type="button"
@@ -254,10 +304,33 @@ export function Toolbar(): React.ReactElement {
           >
             <StatsIcon size={12} color={showSessionStats ? 'var(--ctp-blue)' : 'var(--ctp-overlay0)'} />
           </button>
+
+          {/* Context Startup button — only shown when instruction files were detected */}
+          {instructionsLoaded.length > 0 && (
+            <button
+              type="button"
+              onClick={() => { setShowContextStartup((v) => !v); setShowTeams(false); }}
+              title={`${instructionsLoaded.length} instruction file${instructionsLoaded.length === 1 ? '' : 's'} loaded at session start`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                color: showContextStartup ? 'var(--ctp-teal)' : 'var(--ctp-overlay0)',
+              }}
+            >
+              <ContextIcon size={12} color={showContextStartup ? 'var(--ctp-teal)' : 'var(--ctp-overlay0)'} />
+            </button>
+          )}
         </div>
 
         {/* Session stats flyout panel */}
         {showSessionStats && <SessionStats onClose={handleCloseStats} />}
+
+        {/* Context Startup flyout panel */}
+        {showContextStartup && <ContextStartup onClose={() => setShowContextStartup(false)} />}
         </div>
       )}
     </div>

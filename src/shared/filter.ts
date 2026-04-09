@@ -170,7 +170,7 @@ function rowMatchesDirect(row: WaterfallRow, parsed: ParsedFilter): boolean {
   // Type filter (OR among typeFilters)
   if (parsed.typeFilters.length > 0) {
     const rowTypeLower = row.toolName.toLowerCase();
-    const rowKind = row.type; // 'agent' | 'tool'
+    const rowKind = row.type; // 'agent' | 'tool' | 'api-error'
     const matched = parsed.typeFilters.some(
       (tf) => rowTypeLower === tf || rowTypeLower.includes(tf) || rowKind === tf,
     );

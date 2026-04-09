@@ -1,0 +1,5 @@
+{"type":"system","sessionId":"sess-apierr","timestamp":"2026-03-30T13:00:00.000Z","uuid":"sys-init-a","parentUuid":null,"subtype":"init"}
+{"type":"user","sessionId":"sess-apierr","timestamp":"2026-03-30T13:00:01.000Z","uuid":"user-a1","parentUuid":null,"message":{"role":"user","content":"Analyze the codebase"},"isMeta":false}
+{"type":"assistant","sessionId":"sess-apierr","timestamp":"2026-03-30T13:00:02.000Z","uuid":"asst-a1","parentUuid":"user-a1","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-a1","name":"Read","input":{"file_path":"/src/index.ts"}}],"usage":{"input_tokens":5000,"output_tokens":80}}}
+{"type":"user","sessionId":"sess-apierr","timestamp":"2026-03-30T13:00:04.000Z","uuid":"user-a2","parentUuid":"asst-a1","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-a1","content":"export const x = 1;"}]},"isMeta":true}
+{"type":"system","sessionId":"sess-apierr","timestamp":"2026-03-30T13:00:10.000Z","uuid":"sys-stop-a","parentUuid":"asst-a1","subtype":"stop_failure","error":"Rate limit exceeded: too many requests per minute"}

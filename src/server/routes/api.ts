@@ -13,12 +13,13 @@ import {
   extractSessionTitle,
   extractAgentIds,
   parseSubAgentContent,
+  parseInstructionsLoaded,
 } from '../../shared/parser.js';
 import { computeContextHealth } from '../../shared/health.js';
 import { parseAssistantTurns, computeDrift } from '../../shared/drift.js';
 import { attachEfficiencyTips } from '../../shared/tips.js';
 import { attachSecurityTips } from '../../shared/security-tips.js';
-import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage, SessionRegisteredMessage, SessionUnregisteredMessage } from '../../shared/types.js';
+import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage, SessionRegisteredMessage, SessionUnregisteredMessage, AgentTeam, TeamMember } from '../../shared/types.js';
 
 /**
  * Read ~/.claude/sessions/*.json and return a Set of sessionIds
@@ -73,6 +74,8 @@ function assertWithinBase(resolved: string, base: string): void {
 export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router {
   const router = Router();
   const projectsDir = path.join(claudeHome, 'projects');
+  const teamsDir = path.join(claudeHome, 'teams');
+  const tasksDir = path.join(claudeHome, 'tasks');
 
   /**
    * In-memory registry of MCP-registered session paths.
@@ -169,6 +172,80 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
       projects.sort((a, b) => b.lastModified.localeCompare(a.lastModified));
 
       res.json(projects);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /api/teams
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Scan ~/.claude/teams/ and return an array of AgentTeam objects.
+   * Returns an empty array if the teams directory doesn't exist.
+   * Each team includes its members (from config.json) and taskCount.
+   */
+  router.get('/teams', async (_req, res) => {
+    try {
+      let teamDirs: string[];
+      try {
+        teamDirs = await fs.readdir(teamsDir);
+      } catch {
+        // Teams directory doesn't exist — this is normal when the feature is unused
+        res.json([]);
+        return;
+      }
+
+      const teams: AgentTeam[] = [];
+
+      for (const teamName of teamDirs) {
+        const teamPath = path.join(teamsDir, teamName);
+        let stat;
+        try {
+          stat = await fs.stat(teamPath);
+        } catch {
+          continue;
+        }
+        if (!stat.isDirectory()) continue;
+
+        // Read team config.json
+        const configPath = path.join(teamPath, 'config.json');
+        let members: TeamMember[] = [];
+        try {
+          const configRaw = await fs.readFile(configPath, 'utf8');
+          const config = JSON.parse(configRaw) as Record<string, unknown>;
+          const rawMembers = Array.isArray(config['members']) ? config['members'] : [];
+          for (const m of rawMembers) {
+            if (typeof m !== 'object' || m === null) continue;
+            const member = m as Record<string, unknown>;
+            members.push({
+              name: typeof member['name'] === 'string' ? member['name'] : 'Unknown',
+              agentId: typeof member['agent_id'] === 'string' ? member['agent_id']
+                : typeof member['agentId'] === 'string' ? member['agentId'] : '',
+              agentType: typeof member['agent_type'] === 'string' ? member['agent_type']
+                : typeof member['agentType'] === 'string' ? member['agentType'] : '',
+            });
+          }
+        } catch {
+          // config.json missing or malformed — include team with empty members
+        }
+
+        // Count task files in ~/.claude/tasks/{team-name}/
+        let taskCount = 0;
+        const teamTasksDir = path.join(tasksDir, teamName);
+        try {
+          const taskFiles = await fs.readdir(teamTasksDir);
+          taskCount = taskFiles.length;
+        } catch {
+          // Task directory doesn't exist — taskCount stays 0
+        }
+
+        teams.push({ name: teamName, members, taskCount });
+      }
+
+      res.json(teams);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: message });
@@ -330,6 +407,7 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
       const sessionId = extractSessionId(content) ?? id;
       const turns = parseAssistantTurns(content);
       const drift = computeDrift(turns);
+      const instructionsLoaded = parseInstructionsLoaded(content);
 
       // Load sub-agent JSONL files and attach as children to matching agent rows
       const subagentsDir = path.join(projectsDir, slug, id, 'subagents');
@@ -397,7 +475,7 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
       }
       const tipCount = countTips(rows);
 
-      res.json({ rows, compactionBoundaries: boundaries, health, sessionId, drift, tipCount });
+      res.json({ rows, compactionBoundaries: boundaries, health, sessionId, drift, tipCount, instructionsLoaded });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: message });

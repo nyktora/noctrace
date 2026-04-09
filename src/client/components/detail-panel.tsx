@@ -9,6 +9,7 @@ import { RunningIcon } from '../icons/running-icon.tsx';
 import { TipIcon } from '../icons/tip-icon.tsx';
 import { ShieldIcon } from '../icons/shield-icon.tsx';
 import { formatDuration, formatTokens, getContextHeatColor, getToolColor } from '../utils/tool-colors.ts';
+import { formatCost } from '../../shared/token-cost.ts';
 import { looksLikeMarkdown, renderMarkdown } from '../utils/markdown.ts';
 
 /** Props for DetailPanel */
@@ -217,6 +218,30 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
               title={`${row.tokenDelta} tokens added to context`}
             >
               Δ {formatTokens(row.tokenDelta)}
+            </span>
+          )}
+          {/* Cost badge */}
+          {row.estimatedCost !== null && (
+            <span
+              style={{ color: 'var(--ctp-green)' }}
+              title={`Estimated cost (${row.modelName ?? 'sonnet'} pricing)`}
+            >
+              {formatCost(row.estimatedCost)}
+            </span>
+          )}
+          {/* Model name chip */}
+          {row.modelName && (
+            <span
+              className="px-1.5 py-0.5 rounded"
+              style={{
+                backgroundColor: 'var(--ctp-surface0)',
+                color: 'var(--ctp-overlay1)',
+                fontSize: 9,
+                border: '1px solid var(--ctp-surface1)',
+              }}
+              title={row.modelName}
+            >
+              {row.modelName.replace(/^claude-/, '').replace(/-\d{8}$/, '')}
             </span>
           )}
           {/* Context badge */}

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { ContextHealth, DriftAnalysis, ProjectSummary, SessionSummary, WaterfallRow } from '../../shared/types.ts';
+import type { AgentTeam, ContextHealth, DriftAnalysis, InstructionFile, ProjectSummary, SessionSummary, WaterfallRow } from '../../shared/types.ts';
 
 /** A single message in a resume conversation */
 export interface ResumeMessage {
@@ -17,6 +17,8 @@ export interface SessionStore {
   health: ContextHealth | null;
   compactionBoundaries: number[];
   drift: DriftAnalysis | null;
+  instructionsLoaded: InstructionFile[];
+  teams: AgentTeam[];
 
   // MCP mode — populated when MCP processes register sessions
   registeredSessions: string[];
@@ -56,6 +58,8 @@ export interface SessionStore {
   fetchSession: (slug: string, id: string) => Promise<void>;
   /** Fetch the list of MCP-registered session paths and update mcpMode. */
   fetchRegisteredSessions: () => Promise<void>;
+  /** Fetch Agent Teams from the server. */
+  fetchTeams: () => Promise<void>;
   selectRow: (id: string | null) => void;
   toggleAgent: (id: string) => void;
   setFilter: (text: string) => void;
@@ -83,6 +87,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   health: null,
   compactionBoundaries: [],
   drift: null,
+  instructionsLoaded: [],
+  teams: [],
 
   registeredSessions: [],
   mcpMode: false,
@@ -118,11 +124,23 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     set({ registeredSessions: sessions, mcpMode: sessions.length > 0 });
   },
 
+  fetchTeams: async () => {
+    try {
+      const res = await fetch('/api/teams');
+      if (!res.ok) return;
+      const teams = (await res.json()) as AgentTeam[];
+      set({ teams });
+    } catch {
+      // Teams fetch is best-effort — don't crash on network errors
+    }
+  },
+
   fetchProjects: async () => {
-    // Always fetch registered sessions alongside projects so MCP mode state is current
+    // Always fetch registered sessions and teams alongside projects
     const [projectsRes] = await Promise.all([
       fetch('/api/projects'),
       get().fetchRegisteredSessions(),
+      get().fetchTeams(),
     ]);
     if (!projectsRes.ok) return;
     const allProjects = (await projectsRes.json()) as ProjectSummary[];
@@ -176,12 +194,14 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       health: ContextHealth;
       compactionBoundaries: number[];
       drift: DriftAnalysis;
+      instructionsLoaded?: InstructionFile[];
     };
     set({
       rows: data.rows,
       health: data.health,
       compactionBoundaries: data.compactionBoundaries ?? [],
       drift: data.drift ?? null,
+      instructionsLoaded: data.instructionsLoaded ?? [],
       selectedSessionId: id,
       selectedRowId: null,
       expandedAgents: new Set<string>(),

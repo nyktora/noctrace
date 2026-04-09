@@ -538,3 +538,77 @@ describe('running tool calls (no result yet)', () => {
     expect(rows[0].duration).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Feature: isFailure — tool execution failure detection
+// ---------------------------------------------------------------------------
+
+describe('tool failure detection (isFailure)', () => {
+  const content = loadFixture('session-with-failure.jsonl');
+  const rows = parseJsonlContent(content);
+
+  it('extracts 2 rows from the fixture', () => {
+    expect(rows).toHaveLength(2);
+  });
+
+  it('Bash row with OOM kill output has isFailure=true', () => {
+    const bash = rows.find((r) => r.toolName === 'Bash');
+    expect(bash).toBeDefined();
+    expect(bash?.isFailure).toBe(true);
+    expect(bash?.status).toBe('error');
+  });
+
+  it('Read row with plain error (no crash keywords) has isFailure=false', () => {
+    const read = rows.find((r) => r.toolName === 'Read');
+    expect(read).toBeDefined();
+    expect(read?.isFailure).toBe(false);
+    expect(read?.status).toBe('error');
+  });
+
+  it('normal success rows have isFailure=false', () => {
+    const content2 = loadFixture('simple-session.jsonl');
+    const rows2 = parseJsonlContent(content2);
+    for (const row of rows2) {
+      expect(row.isFailure).toBe(false);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Feature: api-error rows — stop_failure system record detection
+// ---------------------------------------------------------------------------
+
+describe('API error row detection (stop_failure)', () => {
+  const content = loadFixture('session-with-api-error.jsonl');
+  const rows = parseJsonlContent(content);
+
+  it('produces both a tool row and an api-error row', () => {
+    const toolRows = rows.filter((r) => r.type === 'tool');
+    const apiErrorRows = rows.filter((r) => r.type === 'api-error');
+    expect(toolRows.length).toBeGreaterThan(0);
+    expect(apiErrorRows).toHaveLength(1);
+  });
+
+  it('api-error row has correct toolName classified from error message', () => {
+    const apiErr = rows.find((r) => r.type === 'api-error');
+    expect(apiErr).toBeDefined();
+    expect(apiErr?.toolName).toBe('Rate Limit');
+  });
+
+  it('api-error row has status=error and isFailure=false', () => {
+    const apiErr = rows.find((r) => r.type === 'api-error');
+    expect(apiErr?.status).toBe('error');
+    expect(apiErr?.isFailure).toBe(false);
+  });
+
+  it('api-error row label contains the original error message', () => {
+    const apiErr = rows.find((r) => r.type === 'api-error');
+    expect(apiErr?.label).toContain('Rate limit exceeded');
+  });
+
+  it('regular sessions produce no api-error rows', () => {
+    const simpleContent = loadFixture('simple-session.jsonl');
+    const simpleRows = parseJsonlContent(simpleContent);
+    expect(simpleRows.filter((r) => r.type === 'api-error')).toHaveLength(0);
+  });
+});
