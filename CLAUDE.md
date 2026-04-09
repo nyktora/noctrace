@@ -29,6 +29,7 @@ Main and sub-agent logs are parsed by separate functions (`parseSessionContent` 
 - `npm test` — runs Vitest test suite
 - `npm run lint` — runs ESLint
 - `npm run typecheck` — runs TypeScript compiler in check mode
+- `npm run test:smoke` — builds and runs production smoke tests (verifies `npx noctrace` works)
 
 ## Code Style
 
@@ -109,6 +110,10 @@ Follow all rules in `.claude/rules/` strictly. They cover:
 **Never add Co-Authored-By lines to commit messages.** All commits are authored by the user only.
 
 **Always run `/document-release` before any version bump or release.** Update all docs, CHANGELOG, and site content first, then release.
+
+## Pre-release Checklist
+
+Before any version bump or release, run `npm run test:smoke` to verify the production entry point serves the SPA correctly. This catches environment configuration bugs (such as missing `NODE_ENV=production`, broken static file paths, or catch-all route regressions) that unit tests and dev-mode testing cannot detect.
 
 ## Build Sequence
 
