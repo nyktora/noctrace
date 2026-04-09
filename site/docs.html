@@ -39,7 +39,7 @@
     <div style="max-width:900px;margin:0 auto;padding:48px 24px;color:#c9d1d9;font-family:monospace;">
       <h1>Noctrace Documentation</h1>
       <h2>Installation</h2>
-      <p>Run <code>npx noctrace</code> to start. No install required. Or install globally: <code>npm install -g noctrace</code></p>
+      <p>Install globally (recommended): <code>npm install -g noctrace</code> — auto-registers with Claude Code for auto-start. Or try without installing: <code>npx noctrace</code></p>
       <h2>What is Noctrace?</h2>
       <p>Noctrace is a Chrome DevTools Network-tab-style waterfall visualizer for Claude Code agent workflows. It reads JSONL session logs from ~/.claude/projects/ and renders them as an interactive timeline.</p>
       <h2>Features</h2>
@@ -180,8 +180,8 @@
             )}),
             React.createElement("div",{style:{marginTop:20,paddingLeft:12}},
               React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:4,background:SF,border:"1px solid "+BD,padding:"4px 8px",fontSize:10,color:DM,cursor:"pointer"},
-                onClick:function(){navigator.clipboard.writeText("npx noctrace")}},
-                React.createElement("span",{style:{color:GN}},"$")," npx noctrace"
+                onClick:function(){navigator.clipboard.writeText("npm install -g noctrace")}},
+                React.createElement("span",{style:{color:GN}},"$")," npm i -g noctrace"
               )
             )
           ),
@@ -199,14 +199,20 @@
             /* INSTALL */
             React.createElement(Sec,{id:"install",title:"Installation"},
               React.createElement(P,null,"Noctrace requires ",React.createElement(InlineCode,null,"Node.js 20+")," and an existing Claude Code installation (session logs at ",React.createElement(InlineCode,null,"~/.claude/"),")."),
-              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"Option 1: run directly (recommended)"),
+
+              React.createElement("div",{style:{fontSize:11,color:TXB,marginBottom:6,fontWeight:700}},"Option 1 — Install globally (recommended)"),
+              React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npm install -g noctrace")),
+              React.createElement(P,null,"Installs permanently. The ",React.createElement(InlineCode,null,"noctrace")," command is available everywhere. Automatically registers with Claude Code so noctrace starts with every session."),
+              React.createElement(P,null,"To stop auto-starting: ",React.createElement(InlineCode,null,"noctrace --disable"),". To re-enable: ",React.createElement(InlineCode,null,"noctrace --enable"),".",),
+
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600,marginTop:24}},"Option 2 — Try it without installing"),
               React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npx noctrace")),
-              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"Option 2: install globally"),
-              React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npm install -g noctrace"),"\n",React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"noctrace")),
-              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"Option 3: clone and run"),
-              React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"git clone https://github.com/nyktora/noctrace.git"),"\n",React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"cd noctrace && npm install && npm start")),
-              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"Option 4: as a Claude Code plugin"),
-              React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"claude plugin install nyktora/noctrace"))
+              React.createElement(P,null,"Downloads temporarily, runs once, opens the dashboard. Nothing persists after you close it. Good for trying noctrace before committing."),
+
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600,marginTop:24}},"Option 3 — Auto-start with Claude Code (after npx or manual setup)"),
+              React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npx noctrace --enable")),
+              React.createElement(P,null,"Registers noctrace as an MCP server in Claude Code's settings. The next time you start Claude Code, noctrace launches automatically and opens the dashboard."),
+              React.createElement(P,null,"To remove: ",React.createElement(InlineCode,null,"npx noctrace --disable"),".")
             ),
 
             /* QUICKSTART */
@@ -229,10 +235,13 @@
               React.createElement(P,null,"Noctrace supports CLI flags and environment variables. Pass env vars directly on the command line."),
               React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"CLI flags"),
               React.createElement(Table,{
-                headers:["Flag","Description"],
+                headers:["Command","Description"],
                 rows:[
-                  ["--install-hooks","Configure Claude Code to push real-time events to noctrace"],
-                  ["--uninstall-hooks","Remove noctrace hooks from Claude Code settings"],
+                  ["noctrace","Start the server and open the dashboard in the browser"],
+                  ["noctrace --enable","Register with Claude Code for auto-start on every session"],
+                  ["noctrace --disable","Unregister from Claude Code — stop auto-starting"],
+                  ["noctrace --install-hooks","Enable real-time hook events (optional — for live streaming)"],
+                  ["noctrace --uninstall-hooks","Remove hook event listeners from Claude Code settings"],
                 ]
               }),
               React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:6,fontWeight:600}},"Environment variables"),

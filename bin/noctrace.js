@@ -2,6 +2,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import { enableMcp, disableMcp } from './claude-config.js';
 
 const NOCTRACE_PORT = 4117;
 const NOCTRACE_BASE_URL = `http://localhost:${NOCTRACE_PORT}`;
@@ -175,6 +176,36 @@ if (args.includes('--install-hooks')) {
 if (args.includes('--uninstall-hooks')) {
   await uninstallHooks();
   process.exit(0);
+}
+
+if (args.includes('--enable')) {
+  const { alreadyConfigured } = await enableMcp();
+  if (alreadyConfigured) {
+    console.log('[noctrace] MCP server entry updated.');
+  } else {
+    console.log('[noctrace] ✓ Noctrace will auto-start with your next Claude Code session.');
+    console.log('[noctrace]   Run "noctrace --disable" to remove.');
+  }
+  process.exit(0);
+}
+
+if (args.includes('--disable')) {
+  const { wasConfigured } = await disableMcp();
+  if (wasConfigured) {
+    console.log('[noctrace] ✓ Noctrace removed from Claude Code.');
+  } else {
+    console.log('[noctrace] Noctrace is not configured in Claude Code.');
+  }
+  process.exit(0);
+}
+
+if (args.includes('--mcp')) {
+  // MCP mode: boot the Express server and speak JSON-RPC over stdio.
+  // stdout is the JSON-RPC channel — all logging must go to stderr.
+  process.stderr.write('[noctrace-mcp] Starting MCP server...\n');
+  await import('./noctrace-mcp.js');
+  // noctrace-mcp.js takes over from here (runs main() internally)
+  process.exit(0); // unreachable — mcp keeps process alive via readline
 }
 
 // Default: start the server and open the browser

@@ -44,7 +44,9 @@
     "build": "vite build && tsc -p tsconfig.server.json",
     "test": "vitest run",
     "lint": "eslint src/",
-    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit"
+    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
+    "postinstall": "node bin/postinstall.js",
+    "preuninstall": "node bin/preuninstall.js"
   },
   "dependencies": {
     "chokidar": "4.0.3",

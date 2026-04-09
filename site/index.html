@@ -54,7 +54,8 @@
       <li>Security tips — 13 security patterns flagged with a red shield indicator</li>
     </ul>
     <h2>Install</h2>
-    <p><code>npx noctrace</code></p>
+    <p>Install globally: <code>npm install -g noctrace</code></p>
+    <p>Or try without installing: <code>npx noctrace</code></p>
     <p><a href="https://github.com/nyktora/noctrace">View on GitHub</a> | <a href="https://npmjs.com/package/noctrace">View on npm</a></p>
   </div>
 </noscript>
@@ -194,7 +195,7 @@
         });
       },[]);
 
-      function doCopy(){navigator.clipboard.writeText("npx noctrace");setCopied(true);setTimeout(function(){setCopied(false)},2000)}
+      function doCopy(){navigator.clipboard.writeText("npm install -g noctrace");setCopied(true);setTimeout(function(){setCopied(false)},2000)}
 
       return React.createElement("div",{style:{background:BG,color:TX,minHeight:"100vh",fontFamily:"'JetBrains Mono','IBM Plex Mono','Menlo','Consolas',monospace",fontSize:13,overflowX:"hidden"}},
         React.createElement("style",null,"\
@@ -244,12 +245,17 @@
               onMouseEnter:function(e){e.currentTarget.style.borderColor=GND;e.currentTarget.style.boxShadow="0 0 20px rgba(63,185,80,0.06)"},
               onMouseLeave:function(e){e.currentTarget.style.borderColor=BD;e.currentTarget.style.boxShadow="none"}},
               React.createElement("span",{style:{color:GN}},"$"),
-              React.createElement("code",{style:{color:TXM,fontWeight:600,fontSize:14}},"npx noctrace"),
+              React.createElement("code",{style:{color:TXM,fontWeight:600,fontSize:14}},"npm install -g noctrace"),
               React.createElement("span",{style:{color:copied?GN:DM,fontSize:10,marginLeft:8}},copied?"copied!":"click to copy")
             ),
             React.createElement("a",{href:"https://github.com/nyktora/noctrace",style:{display:"flex",alignItems:"center",gap:6,background:SF,border:"1px solid "+BD,padding:"9px 16px",color:TX,fontSize:12,textDecoration:"none"}},React.createElement(GHI,null)," source")
           ),
-          React.createElement("div",{style:{fontSize:11,color:DM,marginBottom:40,animation:"fadeUp 0.4s ease 0.45s both"}},
+          React.createElement("div",{style:{fontSize:11,color:DM,marginBottom:8,animation:"fadeUp 0.4s ease 0.45s both"}},
+            "opens automatically with every Claude Code session. or try without installing: ",
+            React.createElement("code",{style:{color:TX,background:SF2,padding:"1px 5px"}},"npx noctrace"),
+            "."
+          ),
+          React.createElement("div",{style:{fontSize:11,color:DM,marginBottom:40,animation:"fadeUp 0.4s ease 0.5s both"}},
             "zero config. reads ",
             React.createElement("code",{style:{color:TX,background:SF2,padding:"1px 5px"}},"~/.claude/"),
             " passively. no hooks. no cloud."
@@ -409,7 +415,7 @@
           ),
           React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",border:"1px solid "+BD}},
             [
-              {n:"01",t:"run it",c:"$ npx noctrace",d:"One command. Zero config. Opens localhost:4117."},
+              {n:"01",t:"install once",c:"$ npm install -g noctrace",d:"Installs permanently. Auto-registers with Claude Code — opens on every session."},
               {n:"02",t:"it reads your logs",c:"~/.claude/projects/*.jsonl",d:"Passively watches Claude Code session logs already on your machine."},
               {n:"03",t:"you see everything",c:"waterfall + health + rot",d:"Timing bars, token counts, context degradation — all in real time."},
             ].map(function(s,i){return(
