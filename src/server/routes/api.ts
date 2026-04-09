@@ -473,15 +473,24 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
         return;
       }
 
+      // Normalize and validate that the path is within the Claude projects directory
+      const resolvedPath = path.resolve(sessionPath);
+      try {
+        assertWithinBase(resolvedPath, projectsDir);
+      } catch {
+        res.status(400).json({ error: 'sessionPath must be within the Claude projects directory' });
+        return;
+      }
+
       // Verify the file exists (best-effort — it may appear shortly after the MCP starts)
       try {
-        await fs.access(sessionPath);
+        await fs.access(resolvedPath);
       } catch {
         // File not yet created — register anyway; the watcher will pick it up
       }
 
-      registeredSessionPaths.add(sessionPath);
-      broadcast({ type: 'session-registered', sessionPath });
+      registeredSessionPaths.add(resolvedPath);
+      broadcast({ type: 'session-registered', sessionPath: resolvedPath });
 
       res.json({ ok: true });
     } catch (err) {
@@ -509,8 +518,9 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
         return;
       }
 
-      registeredSessionPaths.delete(sessionPath);
-      broadcast({ type: 'session-unregistered', sessionPath });
+      const resolvedPath = path.resolve(sessionPath);
+      registeredSessionPaths.delete(resolvedPath);
+      broadcast({ type: 'session-unregistered', sessionPath: resolvedPath });
 
       res.json({ ok: true });
     } catch (err) {
@@ -528,7 +538,21 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
    * An empty array means standalone mode (show all sessions from disk).
    * A non-empty array means MCP mode (show only registered sessions).
    */
-  router.get('/sessions/registered', (_req, res) => {
+  router.get('/sessions/registered', async (_req, res) => {
+    // Prune phantom sessions whose JSONL has not been modified in the last 5 minutes.
+    // Active sessions are written to frequently; stale ones left by SIGKILL won't be.
+    const STALE_THRESHOLD_MS = 5 * 60 * 1000;
+    for (const registeredPath of registeredSessionPaths) {
+      try {
+        const stat = await fs.stat(registeredPath);
+        if (Date.now() - stat.mtime.getTime() > STALE_THRESHOLD_MS) {
+          registeredSessionPaths.delete(registeredPath);
+        }
+      } catch {
+        // File no longer exists — remove the phantom entry
+        registeredSessionPaths.delete(registeredPath);
+      }
+    }
     res.json({ sessions: Array.from(registeredSessionPaths) });
   });
 

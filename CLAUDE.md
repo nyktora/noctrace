@@ -44,7 +44,7 @@ Main and sub-agent logs are parsed by separate functions (`parseSessionContent` 
 - **Zero cost at rest**: no background processes, no database, no daemon
 - **Zero config by default**: reads `~/.claude/` directly; optional `--install-hooks` enables real-time hook events
 - **Single process**: one Node.js process serves SPA + REST API + WebSocket
-- **Stateless server**: all state comes from JSONL files on disk
+- **Stateless server**: all persistent state comes from JSONL files on disk; the session registry (`GET/POST /api/sessions/register|unregister`) is in-memory only and resets on server restart
 - **MIT license**: all dependencies must be MIT or Apache-2.0
 
 ## Context Preservation (STRICT)
@@ -144,6 +144,7 @@ All steps complete. Order followed during implementation:
 29. ✅ Per-tool latency stats (Session Stats flyout: P50/P95/Max per tool type, slow-call threshold with clock icon)
 30. ✅ Advanced filtering (structured syntax: type:bash, >5s, <100ms, tokens:>1k, success; multiple type: filters OR-ed, others AND-ed)
 31. ✅ Session comparison (split-screen: health grades, summary metrics, tool mix bars, context fill trajectory sparklines)
+32. ✅ MCP session registry (POST /api/sessions/register, POST /api/sessions/unregister, GET /api/sessions/registered; "MCP mode — N active sessions" indicator in session picker; standalone mode unchanged)
 ### Remaining polish:
 - Loading state spinners
 - README with demo GIF

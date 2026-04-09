@@ -9,6 +9,7 @@ All notable changes to noctrace will be documented in this file.
 - Session Stats flyout panel shows P50/P95/Max latency per tool type across the session. Calls that exceed a configurable slow-call threshold (default 5s) are highlighted with a clock icon in the waterfall.
 - Noctrace now detects loop behavior: 3 or more consecutive identical tool calls (same tool name and same input) attach a warning tip to the row, helping you spot runaway repetition early.
 - You can now compare two sessions side-by-side using the Compare button that appears on hover in the session picker. The split-screen view shows health grades, summary metrics (duration, tokens, calls, error rate), tool mix bars, and context fill trajectory sparklines for both sessions.
+- MCP session registry: when running via Claude Code integration, sessions register themselves with noctrace on start and unregister on exit. The session picker shows a "MCP mode — N active sessions" indicator and displays only currently registered sessions. Multiple Claude Code sessions share one noctrace dashboard. Standalone mode (`npx noctrace`) is unchanged — it scans all of `~/.claude/projects/` as before. API: `POST /api/sessions/register`, `POST /api/sessions/unregister`, `GET /api/sessions/registered`.
 
 ## [0.5.0] - 2026-04-08
 

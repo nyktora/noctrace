@@ -69,6 +69,7 @@ Requires Node.js 20+. That's it. No config required. Optional hooks for real-tim
 - **Session export** — share sessions as standalone offline HTML files
 - **Hooks integration** — optional real-time event streaming from Claude Code
 - **Context Drift Rate** — detect accelerating token growth before context rot hits
+- **MCP session registry** — when integrated with Claude Code, sessions self-register on start and unregister on exit; dashboard shows only active sessions with a live count indicator
 
 ![Noctrace waterfall timeline](docs/screenshots/noctrace-waterfall.gif)
 
@@ -97,6 +98,14 @@ Noctrace computes a real-time health score from your session data and warns you 
 Click any row to inspect the full tool input and output. Two-column layout shows the request on the left and response on the right. Resizable, closes with Esc.
 
 ## How it works
+
+Noctrace has two modes depending on how you start it:
+
+**Standalone mode** (`npx noctrace`) — scans all of `~/.claude/projects/` and shows every session. Good for reviewing past work or running alongside a session you've already started.
+
+**MCP mode** (via Claude Code integration) — sessions register and unregister themselves automatically. The session picker shows only currently active sessions and a "MCP mode — N active sessions" indicator. Multiple Claude Code sessions share one noctrace dashboard without interference.
+
+In both modes:
 
 1. Starts a local server on `http://localhost:4117` (auto-finds next available port)
 2. Opens your browser

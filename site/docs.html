@@ -52,6 +52,7 @@
         <li>Zoom, pan, and filtering</li>
         <li>Efficiency tips — 8 waste patterns with amber lightbulb indicator</li>
         <li>Security tips — 13 security patterns with red shield indicator</li>
+        <li>MCP session registry — sessions self-register on start and unregister on exit; dashboard shows only active sessions with a live count</li>
       </ul>
       <p><a href="https://github.com/nyktora/noctrace">View on GitHub</a> | <a href="./">Back to home</a></p>
     </div>
@@ -102,6 +103,7 @@
       {id:"advanced-filter",label:"Advanced filtering"},
       {id:"loop-detection",label:"Loop detection"},
       {id:"session-comparison",label:"Session comparison"},
+      {id:"mcp-registry",label:"MCP session registry"},
       {id:"config",label:"Configuration"},
       {id:"troubleshoot",label:"Troubleshooting"},
       {id:"compat",label:"Compatibility"},
@@ -438,6 +440,33 @@
               }),
               React.createElement(P,null,"Use session comparison to evaluate the impact of a CLAUDE.md change, a different prompting strategy, or a new tool configuration across two real sessions. The delta indicators highlight where the sessions diverged most."),
               React.createElement(P,null,"Click ",React.createElement(InlineCode,null,"Exit comparison")," in the toolbar to return to the waterfall view for either session.")
+            ),
+
+            /* MCP SESSION REGISTRY */
+            React.createElement(Sec,{id:"mcp-registry",title:"MCP session registry"},
+              React.createElement(P,null,"Noctrace supports two modes depending on how it is launched:"),
+              React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:2,marginBottom:16}},
+                [
+                  {name:"Standalone mode",desc:"Run npx noctrace directly. Scans all of ~/.claude/projects/ and shows every session — past and present. This is the default when you run noctrace from the terminal yourself."},
+                  {name:"MCP mode",desc:"Launched automatically by Claude Code via the MCP integration. Sessions register themselves on start and unregister on exit. The session picker shows only currently active sessions and a \"MCP mode — N active sessions\" indicator. Multiple Claude Code sessions share one noctrace dashboard without interfering with each other."},
+                ].map(function(item,i){return(
+                  React.createElement("div",{key:i,style:{display:"flex",border:"1px solid "+BD,background:SF}},
+                    React.createElement("div",{style:{width:160,padding:"10px 14px",borderRight:"1px solid "+BD,color:TXB,fontWeight:600,fontSize:12,flexShrink:0}},item.name),
+                    React.createElement("div",{style:{padding:"10px 14px",fontSize:12,color:TX,lineHeight:1.7}},item.desc)
+                  )
+                )})
+              ),
+              React.createElement(P,null,React.createElement("strong",{style:{color:TXB}},"How registration works.")," When a Claude Code session starts with noctrace enabled, the MCP server calls ",React.createElement(InlineCode,null,"POST /api/sessions/register")," with the session ID and project path. Noctrace records it in memory and begins watching that session file. When the session ends, the MCP server calls ",React.createElement(InlineCode,null,"POST /api/sessions/unregister"),". The registry resets when noctrace restarts."),
+              React.createElement(P,null,React.createElement("strong",{style:{color:TXB}},"API endpoints.")),
+              React.createElement(Table,{
+                headers:["Endpoint","Method","Description"],
+                rows:[
+                  ["POST /api/sessions/register","POST","Register a session. Body: { sessionId, projectPath }"],
+                  ["POST /api/sessions/unregister","POST","Unregister a session. Body: { sessionId }"],
+                  ["GET /api/sessions/registered","GET","Return the list of currently registered session IDs"],
+                ]
+              }),
+              React.createElement(P,null,"In standalone mode these endpoints are still available but the session picker ignores them — it always scans the full ",React.createElement(InlineCode,null,"~/.claude/projects/")," directory. Switching between modes requires restarting noctrace.")
             ),
 
             /* CONFIG */

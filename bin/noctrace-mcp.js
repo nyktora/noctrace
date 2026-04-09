@@ -251,13 +251,7 @@ function handleMessage(line) {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  const sessionPath = await discoverSessionPath();
-
-  if (sessionPath) {
-    process.stderr.write(`[noctrace-mcp] Session: ${sessionPath}\n`);
-  } else {
-    process.stderr.write('[noctrace-mcp] Could not discover session path — proceeding without registration\n');
-  }
+  let sessionPath = await discoverSessionPath();
 
   // Check if noctrace is already running; if not, start it (first MCP process wins).
   // Use a retry loop to handle the race where two MCP processes start simultaneously.
@@ -267,14 +261,19 @@ async function main() {
     try {
       await startNoctraceServer();
     } catch (err) {
-      // Another process may have started the server between our check and here.
-      // Verify it's now reachable before giving up.
-      const nowRunning = await isServerRunning();
-      if (!nowRunning) {
+      if (err.code === 'EADDRINUSE') {
+        // Another process won the race — verify it's reachable before continuing.
+        const nowRunning = await isServerRunning();
+        if (!nowRunning) {
+          process.stderr.write('[noctrace-mcp] Fatal: port in use but server is not responding\n');
+          process.exit(1);
+        }
+        process.stderr.write('[noctrace-mcp] Server started by peer process — continuing\n');
+      } else {
+        // A real startup error (e.g. missing dist/, permission denied) — surface it.
         process.stderr.write(`[noctrace-mcp] Fatal: could not start server: ${err.message}\n`);
         process.exit(1);
       }
-      process.stderr.write('[noctrace-mcp] Server started by peer process — continuing\n');
     }
 
     // Open the browser — only the first MCP process to start the server does this
@@ -284,6 +283,20 @@ async function main() {
     } catch {
       // Non-fatal — user can navigate manually
     }
+  }
+
+  // Retry session discovery once — Claude Code may still be creating the session file
+  // when the MCP server starts. Wait 1 second and prefer the newer result.
+  await new Promise((r) => setTimeout(r, 1000));
+  const retryPath = await discoverSessionPath();
+  if (retryPath && retryPath !== sessionPath) {
+    sessionPath = retryPath;
+  }
+
+  if (sessionPath) {
+    process.stderr.write(`[noctrace-mcp] Session: ${sessionPath}\n`);
+  } else {
+    process.stderr.write('[noctrace-mcp] Could not discover session path — proceeding without registration\n');
   }
 
   // Register this session with the running noctrace server
