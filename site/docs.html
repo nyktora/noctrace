@@ -53,6 +53,12 @@
         <li>Efficiency tips — 8 waste patterns with amber lightbulb indicator</li>
         <li>Security tips — 13 security patterns with red shield indicator</li>
         <li>MCP session registry — sessions self-register on start and unregister on exit; dashboard shows only active sessions with a live count</li>
+        <li>Per-tool token cost — estimated USD cost on every row and session total in toolbar; Claude public pricing with per-model detection</li>
+        <li>Agent type labels — subagent rows show the named agent type as a blue badge chip</li>
+        <li>Tool failure rows — crashes, timeouts, and kills render as distinct red-tinted rows with a lightning bolt icon</li>
+        <li>API error markers — rate limit, billing, and auth failures appear as full-width red alert banners on the timeline</li>
+        <li>Agent Teams panel — detects running Agent Teams at ~/.claude/teams/, shows members and task counts in a flyout (GET /api/teams)</li>
+        <li>Context Startup flyout — shows which instruction files loaded at session start with estimated token counts</li>
       </ul>
       <p><a href="https://github.com/nyktora/noctrace">View on GitHub</a> | <a href="./">Back to home</a></p>
     </div>
@@ -104,6 +110,12 @@
       {id:"loop-detection",label:"Loop detection"},
       {id:"session-comparison",label:"Session comparison"},
       {id:"mcp-registry",label:"MCP session registry"},
+      {id:"token-cost",label:"Token cost"},
+      {id:"agent-type-labels",label:"Agent type labels"},
+      {id:"tool-failure-rows",label:"Tool failure rows"},
+      {id:"api-error-markers",label:"API error markers"},
+      {id:"agent-teams",label:"Agent Teams panel"},
+      {id:"context-startup",label:"Context Startup"},
       {id:"config",label:"Configuration"},
       {id:"troubleshoot",label:"Troubleshooting"},
       {id:"compat",label:"Compatibility"},
@@ -467,6 +479,93 @@
                 ]
               }),
               React.createElement(P,null,"In standalone mode these endpoints are still available but the session picker ignores them — it always scans the full ",React.createElement(InlineCode,null,"~/.claude/projects/")," directory. Switching between modes requires restarting noctrace.")
+            ),
+
+            /* TOKEN COST */
+            React.createElement(Sec,{id:"token-cost",title:"Token cost"},
+              React.createElement(P,null,"Noctrace estimates the USD cost of every tool call and shows the session total in the toolbar. Cost appears on each waterfall row and in the detail panel alongside the token split."),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:8,fontWeight:600}},"How pricing works"),
+              React.createElement(P,null,"Cost is calculated from the input and output token counts on each row using Claude's public pricing. The model is detected automatically from the JSONL session records (Sonnet, Opus, or Haiku rates apply). The calculation lives in ",React.createElement(InlineCode,null,"src/shared/token-cost.ts")," and runs entirely in the browser — no external requests are made."),
+              React.createElement(Table,{
+                headers:["Where cost appears","What it shows"],
+                rows:[
+                  ["Waterfall row","Estimated cost for that single tool call"],
+                  ["Toolbar","Running session total, updated as new rows arrive"],
+                  ["Detail panel","Cost alongside the input/output token split"],
+                ]
+              }),
+              React.createElement(P,null,"Cost figures are estimates. They reflect the tokens reported in the JSONL log at Claude's published per-token rates at the time of the noctrace release. Actual billing may differ if Anthropic adjusts pricing or if discounts apply to your account.")
+            ),
+
+            /* AGENT TYPE LABELS */
+            React.createElement(Sec,{id:"agent-type-labels",title:"Agent type labels"},
+              React.createElement(P,null,"When Claude Code spawns a named sub-agent — such as ",React.createElement(InlineCode,null,"Explore"),", ",React.createElement(InlineCode,null,"core:deep-researcher"),", or ",React.createElement(InlineCode,null,"senior-software-engineer")," — noctrace now surfaces that name as a blue badge chip on the agent's waterfall row."),
+              React.createElement(P,null,"Previously, sub-agent rows displayed only an opaque agent ID. The type label gives you an immediate read on what each agent was supposed to do before you expand it to see the tool calls inside."),
+              React.createElement(P,null,"The label is parsed from the ",React.createElement(InlineCode,null,"subagent_type")," field in the JSONL log. If the field is absent (older logs or unnamed agents), the row falls back to showing the agent ID as before.")
+            ),
+
+            /* TOOL FAILURE ROWS */
+            React.createElement(Sec,{id:"tool-failure-rows",title:"Tool failure rows"},
+              React.createElement(P,null,"Tool failures — crashes, timeouts, and killed processes — are now visually distinct from ordinary error results. Where an error result means the tool ran and returned an error response, a failure means the tool invocation itself did not complete."),
+              React.createElement(Table,{
+                headers:["Condition","Visual treatment"],
+                rows:[
+                  ["Tool crash or exception","Red-tinted row background, lightning bolt icon in the Name column"],
+                  ["Timeout (tool did not respond)","Same red tint + lightning bolt; duration shows the timeout threshold"],
+                  ["Killed process","Same treatment; name column notes the kill signal when available"],
+                  ["Ordinary error result","Standard row style with error color on the status; no lightning bolt"],
+                ]
+              }),
+              React.createElement(P,null,"The ",React.createElement(InlineCode,null,"isFailure")," flag on the ",React.createElement(InlineCode,null,"WaterfallRow")," type drives this rendering. Failures are also counted separately from errors in the session stats flyout, so you can distinguish tool-level crashes from agent-level logic errors.")
+            ),
+
+            /* API ERROR MARKERS */
+            React.createElement(Sec,{id:"api-error-markers",title:"API error markers"},
+              React.createElement(P,null,"Certain classes of errors are not the result of a tool call at all — they come from the Claude API itself. Noctrace renders these as full-width red alert banners spanning the timeline, making them impossible to miss."),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:8,fontWeight:600}},"Error classes that trigger a banner"),
+              React.createElement(Table,{
+                headers:["Error class","What it means"],
+                rows:[
+                  ["Rate limit","The API rejected the request because too many requests were sent in a time window"],
+                  ["Billing error","The account has exceeded its quota or has a payment issue"],
+                  ["Auth failure","An invalid or expired API key was used"],
+                ]
+              }),
+              React.createElement(P,null,"These errors use the new ",React.createElement(InlineCode,null,"api-error")," row type in the waterfall data model. They are parsed from ",React.createElement(InlineCode,null,"type:\"error\"")," records in the JSONL log that carry an API-level error code rather than a tool result. Because they represent interruptions in the session rather than tool outcomes, they appear as banners rather than rows with timing bars.")
+            ),
+
+            /* AGENT TEAMS */
+            React.createElement(Sec,{id:"agent-teams",title:"Agent Teams panel"},
+              React.createElement(P,null,"When Claude Code Agent Teams are running, noctrace detects them and surfaces team membership and task progress in a dedicated flyout panel."),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:8,fontWeight:600}},"How detection works"),
+              React.createElement(P,null,"Noctrace watches for team state files at ",React.createElement(InlineCode,null,"~/.claude/teams/"),". When team files are present, the Teams button appears in the toolbar. Click it to open the flyout."),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:8,fontWeight:600}},"What the panel shows"),
+              React.createElement(Table,{
+                headers:["Column","Meaning"],
+                rows:[
+                  ["Team name","The team identifier from the team config"],
+                  ["Members","Named agents belonging to this team"],
+                  ["Tasks","Total tasks assigned to the team and count completed"],
+                ]
+              }),
+              React.createElement(P,null,React.createElement("strong",{style:{color:TXB}},"API endpoint.")," The team data is served by ",React.createElement(InlineCode,null,"GET /api/teams"),". It returns a JSON array of team objects, each with ",React.createElement(InlineCode,null,"name"),", ",React.createElement(InlineCode,null,"members")," (array), and ",React.createElement(InlineCode,null,"taskCount")," / ",React.createElement(InlineCode,null,"completedCount")," fields. The panel polls this endpoint on open; it does not stream live updates.")
+            ),
+
+            /* CONTEXT STARTUP */
+            React.createElement(Sec,{id:"context-startup",title:"Context Startup"},
+              React.createElement(P,null,"The Context Startup flyout answers a common question: why does my session start at 20% context fill before I've done anything? The answer is instruction files — CLAUDE.md files and other system prompts that Claude Code loads before the first tool call."),
+              React.createElement(P,null,"Click the Context Startup button in the toolbar (visible on sessions that have system records) to see the breakdown."),
+              React.createElement("div",{style:{fontSize:11,color:DM2,marginBottom:8,fontWeight:600}},"What the flyout shows"),
+              React.createElement(Table,{
+                headers:["Column","Meaning"],
+                rows:[
+                  ["File","Path to the instruction file (CLAUDE.md, .claude/rules/*.md, etc.)"],
+                  ["Est. tokens","Estimated token count consumed by this file at session start"],
+                  ["% of startup","This file's share of the total startup context"],
+                ]
+              }),
+              React.createElement(P,null,"Token counts are estimated from the character length of the file content recorded in the JSONL system record using Claude's approximate tokenization ratio. They are not pulled from API usage fields and will not match billing data exactly."),
+              React.createElement(P,null,"Use this panel to identify bloated instruction files. A CLAUDE.md that consumes 15k tokens before any work begins means every session starts with 7-8% of a 200k context window already spent.")
             ),
 
             /* CONFIG */

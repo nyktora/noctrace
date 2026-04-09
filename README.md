@@ -70,6 +70,12 @@ Requires Node.js 20+. That's it. No config required. Optional hooks for real-tim
 - **Hooks integration** — optional real-time event streaming from Claude Code
 - **Context Drift Rate** — detect accelerating token growth before context rot hits
 - **MCP session registry** — when integrated with Claude Code, sessions self-register on start and unregister on exit; dashboard shows only active sessions with a live count indicator
+- **Per-tool token cost** — estimated USD cost on every waterfall row and session total in the toolbar; uses Claude's public pricing with per-model detection (Sonnet, Opus, Haiku)
+- **Agent type labels** — subagent rows show the named agent type (e.g., "Explore", "core:deep-researcher") as a blue badge chip
+- **Tool failure rows** — tool crashes, timeouts, and kills render as distinct red-tinted rows with a lightning bolt icon, separate from normal error results
+- **API error markers** — rate limit, billing, and auth failures appear as full-width red alert banners on the timeline
+- **Agent Teams panel** — detects running Agent Teams at `~/.claude/teams/`, shows members and task counts in a flyout (`GET /api/teams`)
+- **Context Startup flyout** — shows which instruction files (CLAUDE.md and others) loaded at session start with estimated token counts, parsed from JSONL system records
 
 ![Noctrace waterfall timeline](docs/screenshots/noctrace-waterfall.gif)
 

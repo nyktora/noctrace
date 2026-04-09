@@ -145,6 +145,12 @@ All steps complete. Order followed during implementation:
 30. ✅ Advanced filtering (structured syntax: type:bash, >5s, <100ms, tokens:>1k, success; multiple type: filters OR-ed, others AND-ed)
 31. ✅ Session comparison (split-screen: health grades, summary metrics, tool mix bars, context fill trajectory sparklines)
 32. ✅ MCP session registry (POST /api/sessions/register, POST /api/sessions/unregister, GET /api/sessions/registered; "MCP mode — N active sessions" indicator in session picker; standalone mode unchanged)
+33. ✅ Per-tool token cost (estimated USD per row + session total in toolbar; `src/shared/token-cost.ts`; Claude public pricing, per-model detection)
+34. ✅ Agent type labels (subagent rows show named type as blue badge chip, e.g., "Explore", "core:deep-researcher")
+35. ✅ Tool failure rows (crashes/timeouts/kills get red-tinted rows + lightning bolt icon; `isFailure` flag on WaterfallRow, distinct from error results)
+36. ✅ API error markers (rate limits, billing errors, auth failures render as full-width red alert banners; new `api-error` row type)
+37. ✅ Agent Teams panel (detects `~/.claude/teams/`, shows members + task counts in flyout; new `GET /api/teams` endpoint)
+38. ✅ Context Startup flyout (which instruction files loaded at session start with estimated token counts; parsed from JSONL system records)
 ### Remaining polish:
 - Loading state spinners
 - README with demo GIF

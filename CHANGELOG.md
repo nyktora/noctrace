@@ -5,6 +5,12 @@ All notable changes to noctrace will be documented in this file.
 ## [0.6.0] - 2026-04-08
 
 ### Added
+- You can now see the estimated USD cost of every tool call directly on its waterfall row, and the session total in the toolbar. Pricing uses Claude's public rates and is detected per-model (Sonnet, Opus, Haiku). New module: `src/shared/token-cost.ts`
+- Subagent rows now show the agent's named type (e.g., "Explore", "core:deep-researcher") as a blue badge chip, replacing the opaque agent ID that appeared before
+- Tool crashes, timeouts, and killed processes now render as distinct red-tinted rows with a lightning bolt icon, separated from normal error results. The `isFailure` flag on `WaterfallRow` drives this treatment
+- Rate limit errors, billing errors, and auth failures now appear as full-width red alert banners on the timeline instead of ordinary rows. These use the new `api-error` row type
+- Agent Teams panel: Noctrace detects running Agent Teams at `~/.claude/teams/` and shows a flyout with each team's members and task counts. New endpoint: `GET /api/teams`
+- Context Startup flyout shows which CLAUDE.md and instruction files loaded at session start, each with an estimated token count. Parsed from JSONL system records
 - You can now filter rows using structured syntax: `type:bash`, `>5s`, `<100ms`, `tokens:>1k`, `success` — combine with plain text search and existing `error`/`running` keywords. Multiple `type:` filters are OR-ed; all other filters AND together.
 - Session Stats flyout panel shows P50/P95/Max latency per tool type across the session. Calls that exceed a configurable slow-call threshold (default 5s) are highlighted with a clock icon in the waterfall.
 - Noctrace now detects loop behavior: 3 or more consecutive identical tool calls (same tool name and same input) attach a warning tip to the row, helping you spot runaway repetition early.

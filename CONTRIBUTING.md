@@ -18,7 +18,7 @@ The app runs at `http://localhost:5173` (Vite) with API proxied to `http://local
 Run all checks locally:
 
 ```bash
-npm test          # 218 tests must pass
+npm test          # 227 tests must pass
 npm run typecheck # no type errors
 npm run lint      # no lint errors
 npm run build     # production build must succeed

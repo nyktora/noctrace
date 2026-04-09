@@ -53,6 +53,12 @@
       <li>Efficiency tips — 8 waste patterns flagged with an amber lightbulb indicator</li>
       <li>Security tips — 13 security patterns flagged with a red shield indicator</li>
       <li>MCP session registry — sessions register/unregister themselves; dashboard shows only active sessions with a live count indicator</li>
+      <li>Per-tool token cost — estimated USD cost on every row and session total in the toolbar; Claude public pricing with per-model detection</li>
+      <li>Agent type labels — subagent rows show the named agent type as a blue badge chip</li>
+      <li>Tool failure rows — crashes, timeouts, and kills render as distinct red-tinted rows with a lightning bolt icon</li>
+      <li>API error markers — rate limit, billing, and auth failures appear as full-width red alert banners on the timeline</li>
+      <li>Agent Teams panel — detects running Agent Teams at ~/.claude/teams/, shows members and task counts in a flyout</li>
+      <li>Context Startup flyout — shows which instruction files loaded at session start with estimated token counts</li>
     </ul>
     <h2>Install</h2>
     <p>Install globally: <code>npm install -g noctrace</code></p>
@@ -397,6 +403,12 @@
               {f:"advanced-filtering",tag:"new",tagC:BL,d:"Structured filter syntax alongside text search: type:bash, >5s, <100ms, tokens:>1k. All structured filters AND together. Type plain text to still search by name."},
               {f:"loop-detection",tag:"new",tagC:PH,d:"3+ consecutive identical tool calls (same tool + same input) automatically trigger a warning tip. Distinct from correction-loop and repeat-bash patterns in the efficiency engine."},
               {f:"session-comparison",tag:"new",tagC:MV,d:"Split-screen view comparing two sessions side by side. Health grades, summary metric deltas, tool mix proportion bars, and context fill trajectory sparklines. Exit button returns to the waterfall."},
+              {f:"per-tool-cost",tag:"new",tagC:TL,d:"Estimated USD cost appears on every waterfall row. Session total shown in the toolbar. Pricing uses Claude's public rates with automatic per-model detection (Sonnet, Opus, Haiku). Powered by src/shared/token-cost.ts."},
+              {f:"agent-type-labels",tag:"new",tagC:BL,d:"Subagent rows now show the agent's named type — Explore, core:deep-researcher, senior-software-engineer, etc. — as a blue badge chip instead of an opaque agent ID."},
+              {f:"tool-failure-rows",tag:"new",tagC:RD,d:"Tool crashes, timeouts, and killed processes render as distinct red-tinted rows with a lightning bolt icon. Separate from ordinary error results — isFailure flag on WaterfallRow drives the visual treatment."},
+              {f:"api-error-markers",tag:"new",tagC:RD,d:"Rate limit errors, billing errors, and auth failures appear as full-width red alert banners spanning the timeline, not just another row. Makes API-level failures immediately visible at a glance."},
+              {f:"agent-teams",tag:"new",tagC:PH,d:"Detects running Agent Teams at ~/.claude/teams/ and shows a flyout with each team's members and task counts. New GET /api/teams endpoint. Useful for multi-agent workflows using the Claude Teams feature."},
+              {f:"context-startup",tag:"new",tagC:YL,d:"Context Startup flyout lists which CLAUDE.md and instruction files loaded at session start, each with an estimated token count. Parsed from JSONL system records so you can see exactly what filled your context before the first tool call."},
             ].map(function(item,i){return(
               React.createElement("div",{key:i,style:{display:"flex",border:"1px solid "+BD,background:SF,transition:"all 0.15s"},
                 onMouseEnter:function(e){e.currentTarget.style.background=SF2;e.currentTarget.style.borderColor=BDL},
