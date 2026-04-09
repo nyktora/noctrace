@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import type { ProjectSummary, SessionSummary } from '../../shared/types.ts';
 import { useSessionStore } from '../store/session-store.ts';
 import { formatRelativeTime } from '../utils/tool-colors.ts';
+import { CompareIcon } from '../icons/compare-icon.tsx';
 
 /**
  * Detect if a slug is a git worktree path.
@@ -97,77 +98,117 @@ export interface SessionPickerRowProps {
   session: SessionSummary;
   isSelected: boolean;
   onSelect: (id: string) => void;
+  /** When set, renders the Compare button for this row */
+  onCompare?: (id: string) => void;
 }
 
 /** Single session row in the picker list */
-function SessionPickerRow({ session, isSelected, onSelect }: SessionPickerRowProps): React.ReactElement {
+function SessionPickerRow({ session, isSelected, onSelect, onCompare }: SessionPickerRowProps): React.ReactElement {
   const sessionTime = formatSessionTime(session.startTime);
   const relTime = formatRelativeTime(session.lastModified);
 
   const badges = buildSessionBadges(session);
 
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(session.id)}
-      className="w-full text-left py-1.5 text-xs transition-colors"
+    <div
+      className="relative group"
       style={{
-        paddingLeft: 16,
-        paddingRight: 12,
         backgroundColor: isSelected ? 'var(--ctp-surface1)' : 'transparent',
-        color: isSelected ? 'var(--ctp-text)' : 'var(--ctp-subtext0)',
         borderLeft: isSelected ? '2px solid var(--ctp-mauve)' : '2px solid transparent',
         opacity: session.isActive ? 1 : 0.5,
       }}
     >
-      <div className="flex items-center gap-1.5">
-        <span
-          className="font-mono truncate"
-          style={{ fontSize: 11 }}
-          title={`${session.id}\n${session.startTime ?? ''}`}
-        >
-          {sessionTime || session.id.slice(0, 8) + '…'}
-        </span>
-        {badges.map((b) => (
+      <button
+        type="button"
+        onClick={() => onSelect(session.id)}
+        className="w-full text-left py-1.5 text-xs transition-colors"
+        style={{
+          paddingLeft: 16,
+          paddingRight: onCompare ? 28 : 12,
+          color: isSelected ? 'var(--ctp-text)' : 'var(--ctp-subtext0)',
+        }}
+      >
+        <div className="flex items-center gap-1.5">
           <span
-            key={b.label}
-            title={b.tooltip}
-            className="shrink-0 font-mono"
-            style={{
-              fontSize: 8,
-              fontWeight: 700,
-              padding: '0px 3px',
-              borderRadius: 3,
-              backgroundColor: b.bgColor,
-              color: b.textColor,
-              lineHeight: '14px',
-            }}
+            className="font-mono truncate"
+            style={{ fontSize: 11 }}
+            title={`${session.id}\n${session.startTime ?? ''}`}
           >
-            {b.label}
+            {sessionTime || session.id.slice(0, 8) + '…'}
           </span>
-        ))}
-      </div>
-      {session.title && (
-        <div
-          className="truncate mt-0.5"
-          style={{ fontSize: 10, color: 'var(--ctp-subtext0)' }}
-          title={session.title}
-        >
-          {session.title}
-        </div>
-      )}
-      <div className="flex justify-between mt-0.5" style={{ color: 'var(--ctp-overlay0)', fontSize: 10 }}>
-        <span className="flex items-center gap-1">
-          <span>{session.rowCount} calls</span>
-          {session.driftFactor !== null && session.driftFactor !== undefined && session.driftFactor >= 2 && (
-            <span style={{ color: session.driftFactor >= 5 ? 'var(--ctp-red)' : session.driftFactor >= 3 ? 'var(--ctp-peach)' : 'var(--ctp-yellow)' }}>
-              {session.driftFactor}x
+          {badges.map((b) => (
+            <span
+              key={b.label}
+              title={b.tooltip}
+              className="shrink-0 font-mono"
+              style={{
+                fontSize: 8,
+                fontWeight: 700,
+                padding: '0px 3px',
+                borderRadius: 3,
+                backgroundColor: b.bgColor,
+                color: b.textColor,
+                lineHeight: '14px',
+              }}
+            >
+              {b.label}
             </span>
-          )}
-        </span>
-        <span>{relTime}</span>
-      </div>
-    </button>
+          ))}
+        </div>
+        {session.title && (
+          <div
+            className="truncate mt-0.5"
+            style={{ fontSize: 10, color: 'var(--ctp-subtext0)' }}
+            title={session.title}
+          >
+            {session.title}
+          </div>
+        )}
+        <div className="flex justify-between mt-0.5" style={{ color: 'var(--ctp-overlay0)', fontSize: 10 }}>
+          <span className="flex items-center gap-1">
+            <span>{session.rowCount} calls</span>
+            {session.driftFactor !== null && session.driftFactor !== undefined && session.driftFactor >= 2 && (
+              <span style={{ color: session.driftFactor >= 5 ? 'var(--ctp-red)' : session.driftFactor >= 3 ? 'var(--ctp-peach)' : 'var(--ctp-yellow)' }}>
+                {session.driftFactor}x
+              </span>
+            )}
+          </span>
+          <span>{relTime}</span>
+        </div>
+      </button>
+      {/* Compare button — only visible on hover when a primary session is already selected */}
+      {onCompare && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onCompare(session.id); }}
+          title="Compare with current session"
+          className="absolute right-1.5 top-1/2"
+          style={{
+            transform: 'translateY(-50%)',
+            padding: 3,
+            borderRadius: 3,
+            border: 'none',
+            background: 'none',
+            color: 'var(--ctp-overlay0)',
+            cursor: 'pointer',
+            opacity: 0,
+            transition: 'opacity 150ms, color 150ms',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--ctp-mauve)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.opacity = '0';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--ctp-overlay0)';
+          }}
+          onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+          onBlur={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0'; }}
+        >
+          <CompareIcon size={12} />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -222,6 +263,7 @@ export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.Re
   const fetchProjects = useSessionStore((s) => s.fetchProjects);
   const fetchSessions = useSessionStore((s) => s.fetchSessions);
   const fetchSession = useSessionStore((s) => s.fetchSession);
+  const enterCompareMode = useSessionStore((s) => s.enterCompareMode);
   const [showEmpty, setShowEmpty] = useState(false);
 
   useEffect(() => {
@@ -236,6 +278,11 @@ export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.Re
     if (!selectedProjectSlug) return;
     void fetchSession(selectedProjectSlug, id);
     onSessionSelect?.();
+  }
+
+  function handleCompare(id: string): void {
+    if (!selectedProjectSlug) return;
+    void enterCompareMode(selectedProjectSlug, id);
   }
 
   const sortedSessions = [...sessions].sort((a, b) => {
@@ -287,6 +334,11 @@ export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.Re
                     session={session}
                     isSelected={session.id === selectedSessionId}
                     onSelect={handleSessionSelect}
+                    onCompare={
+                      selectedSessionId !== null && session.id !== selectedSessionId
+                        ? handleCompare
+                        : undefined
+                    }
                   />
                 ))}
               </div>

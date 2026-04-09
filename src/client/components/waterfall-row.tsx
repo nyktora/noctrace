@@ -1,38 +1,43 @@
 import React, { useMemo } from 'react';
 
 import type { WaterfallRow as WaterfallRowData } from '../../shared/types.ts';
+import type { ParsedFilter } from '../../shared/filter.ts';
+import { rowMatchesFilter } from '../../shared/filter.ts';
 import { ChevronIcon } from '../icons/chevron-icon.tsx';
 import { RepeatIcon } from '../icons/repeat-icon.tsx';
 import { TipIcon } from '../icons/tip-icon.tsx';
 import { ShieldIcon } from '../icons/shield-icon.tsx';
+import { ClockIcon } from '../icons/clock-icon.tsx';
 import type { EfficiencyTip, TipSeverity } from '../../shared/types.ts';
-
-/** Highlights filter matches in text with a colored span */
-function highlightMatch(text: string, filter: string): React.ReactNode {
-  if (!filter || filter.length < 2) return text;
-  const lower = filter.toLowerCase();
-  // Skip special keyword filters
-  if (lower === 'error' || lower === 'agent' || lower === 'running') return text;
-  const idx = text.toLowerCase().indexOf(lower);
-  if (idx === -1) return text;
-  return (
-    <>
-      {text.slice(0, idx)}
-      <span style={{ backgroundColor: 'var(--ctp-yellow)', color: 'var(--ctp-base)', borderRadius: 2, padding: '0 1px' }}>
-        {text.slice(idx, idx + filter.length)}
-      </span>
-      {text.slice(idx + filter.length)}
-    </>
-  );
-}
+import { useSessionStore } from '../store/session-store.ts';
 import {
   formatDuration,
   formatTokens,
   getContextHeatColor,
   getToolColor,
   resolveColor,
-  rowMatchesFilter,
 } from '../utils/tool-colors.ts';
+
+/**
+ * Highlights free-text token matches in text with a colored span.
+ * Accepts the joined textTokens string from ParsedFilter — never the raw filter string —
+ * so structured prefixes like type:bash are never highlighted.
+ */
+function highlightMatch(text: string, highlightText: string): React.ReactNode {
+  if (!highlightText || highlightText.length < 2) return text;
+  const lower = highlightText.toLowerCase();
+  const idx = text.toLowerCase().indexOf(lower);
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <span style={{ backgroundColor: 'var(--ctp-yellow)', color: 'var(--ctp-base)', borderRadius: 2, padding: '0 1px' }}>
+        {text.slice(idx, idx + highlightText.length)}
+      </span>
+      {text.slice(idx + highlightText.length)}
+    </>
+  );
+}
 
 /** Column widths in pixels */
 export const COL_NUM = 30;
@@ -54,7 +59,8 @@ export interface WaterfallRowProps {
   totalDuration: number;
   isSelected: boolean;
   isExpanded: boolean;
-  filterText: string;
+  /** Pre-parsed filter — call parseFilterString once at the parent (Waterfall) level. */
+  parsedFilter: ParsedFilter;
   waterfallWidth: number;
   zoomLevel: number;
   panOffset: number;
@@ -96,7 +102,7 @@ export function WaterfallRowComponent({
   totalDuration,
   isSelected,
   isExpanded,
-  filterText,
+  parsedFilter,
   waterfallWidth,
   zoomLevel,
   panOffset,
@@ -104,13 +110,19 @@ export function WaterfallRowComponent({
   onToggle,
   onFocusNeighbor,
 }: WaterfallRowProps): React.ReactElement {
+  const slowThresholdMs = useSessionStore((s) => s.slowThresholdMs);
+  const isSlow = row.duration !== null && row.duration > slowThresholdMs;
+
   const isAgent = row.type === 'agent';
   const indent = row.parentAgentId ? 24 : 0;
   const toolColor = getToolColor(row.toolName, row.status);
   const toolHex = resolveColor(toolColor);
   const heatColor = getContextHeatColor(row.contextFillPercent);
   const isDegraded = row.contextFillPercent >= 80;
-  const matched = rowMatchesFilter(row, filterText);
+  const matched = rowMatchesFilter(row, parsedFilter);
+
+  // Join text tokens for highlighting (never use the raw filter string)
+  const highlightText = parsedFilter.textTokens.join(' ');
 
   // Bar positioning
   const effectiveDuration = totalDuration > 0 ? totalDuration : 1;
@@ -259,7 +271,7 @@ export function WaterfallRowComponent({
           }}
           title={row.label}
         >
-          {highlightMatch(row.label, filterText)}
+          {highlightMatch(row.label, highlightText)}
         </span>
         {row.tips.length > 0 && (
           <span
@@ -318,15 +330,24 @@ export function WaterfallRowComponent({
           alignItems: 'center',
           justifyContent: 'flex-end',
           paddingRight: 6,
+          gap: 3,
           borderRight: '1px solid rgba(69,71,90,0.5)',
         }}
       >
         <span
           className="font-mono text-xs"
-          style={{ color: 'var(--ctp-subtext0)', fontSize: 10 }}
+          style={{ color: isSlow ? 'var(--ctp-peach)' : 'var(--ctp-subtext0)', fontSize: 10 }}
         >
           {formatDuration(row.duration)}
         </span>
+        {isSlow && (
+          <span
+            title={`Slow call: exceeded ${slowThresholdMs}ms threshold`}
+            style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
+          >
+            <ClockIcon size={9} color="var(--ctp-peach)" />
+          </span>
+        )}
       </div>
 
       {/* Tokens column */}

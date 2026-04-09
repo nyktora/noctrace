@@ -9,6 +9,7 @@ import { SessionPicker } from './components/session-picker.tsx';
 import { Waterfall } from './components/waterfall.tsx';
 import { DetailPanel } from './components/detail-panel.tsx';
 import { ResumeBar } from './components/resume-bar.tsx';
+import { SessionCompare } from './components/session-compare.tsx';
 import { MenuIcon } from './icons/menu-icon.tsx';
 import { CloseIcon } from './icons/close-icon.tsx';
 
@@ -34,6 +35,7 @@ export function App(): React.ReactElement {
 
   const selectedRowId = useSessionStore((s) => s.selectedRowId);
   const rows = useSessionStore((s) => s.rows);
+  const compareMode = useSessionStore((s) => s.compareMode);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -133,15 +135,21 @@ export function App(): React.ReactElement {
             <MenuIcon size={14} />
           </button>
 
-          {/* Waterfall + detail panel */}
+          {/* Waterfall + detail panel (or comparison view) */}
           <div className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-              <Waterfall />
-            </div>
-            {detailRow && (
-              <DetailPanel row={detailRow} />
+            {compareMode ? (
+              <SessionCompare />
+            ) : (
+              <>
+                <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+                  <Waterfall />
+                </div>
+                {detailRow && (
+                  <DetailPanel row={detailRow} />
+                )}
+                <ResumeBar />
+              </>
             )}
-            <ResumeBar />
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WaterfallRow } from '../../shared/types.ts';
+import { parseFilterString } from '../../shared/filter.ts';
 import { useSessionStore } from '../store/session-store.ts';
 import { HealthBar } from './health-bar.tsx';
 import { WaterfallRowComponent, COL_CTX, COL_NAME, COL_NUM, COL_TIME, COL_TOKENS, COL_TYPE, ROW_HEIGHT } from './waterfall-row.tsx';
@@ -56,6 +57,8 @@ export function Waterfall(): React.ReactElement {
   const compactionBoundaries = useSessionStore((s) => s.compactionBoundaries);
   const expandedAgents = useSessionStore((s) => s.expandedAgents);
   const filterText = useSessionStore((s) => s.filterText);
+  // Parse once per filter change so per-row matching is O(1) after parsing
+  const parsedFilter = useMemo(() => parseFilterString(filterText), [filterText]);
   const selectedRowId = useSessionStore((s) => s.selectedRowId);
   const selectRow = useSessionStore((s) => s.selectRow);
   const toggleAgent = useSessionStore((s) => s.toggleAgent);
@@ -366,7 +369,7 @@ export function Waterfall(): React.ReactElement {
               totalDuration={totalDuration}
               isSelected={row.id === selectedRowId}
               isExpanded={expandedAgents.has(row.id)}
-              filterText={filterText}
+              parsedFilter={parsedFilter}
               waterfallWidth={waterfallWidth}
               zoomLevel={zoomLevel}
               panOffset={panOffset}

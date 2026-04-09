@@ -30,9 +30,21 @@ export interface SessionStore {
   zoomLevel: number;
   panOffset: number;
 
+  // Session stats
+  slowThresholdMs: number;
+  showSessionStats: boolean;
+
   // Resume
   resumeStatus: 'idle' | 'running' | 'done' | 'error';
   resumeMessages: ResumeMessage[];
+
+  // Compare mode
+  compareMode: boolean;
+  compareSessionId: string | null;
+  compareRows: WaterfallRow[];
+  compareHealth: ContextHealth | null;
+  compareDrift: DriftAnalysis | null;
+  compareCompactionBoundaries: number[];
 
   // Actions
   fetchProjects: () => Promise<void>;
@@ -45,10 +57,16 @@ export interface SessionStore {
   setZoom: (level: number) => void;
   setPan: (offset: number) => void;
   addRows: (rows: WaterfallRow[], health: ContextHealth, boundaries: number[], drift: DriftAnalysis) => void;
+  setSlowThreshold: (ms: number) => void;
+  toggleSessionStats: () => void;
   setResumeStatus: (status: 'idle' | 'running' | 'done' | 'error') => void;
   addResumeUserMessage: (text: string) => void;
   appendResumeOutput: (text: string) => void;
   clearResume: () => void;
+  /** Enter compare mode by fetching a second session without overwriting primary data. */
+  enterCompareMode: (slug: string, sessionId: string) => Promise<void>;
+  /** Exit compare mode and clear all compare state. */
+  exitCompareMode: () => void;
 }
 
 /** Global session store powered by Zustand */
@@ -70,8 +88,18 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   zoomLevel: 1,
   panOffset: 0,
 
+  slowThresholdMs: 5000,
+  showSessionStats: false,
+
   resumeStatus: 'idle',
   resumeMessages: [],
+
+  compareMode: false,
+  compareSessionId: null,
+  compareRows: [],
+  compareHealth: null,
+  compareDrift: null,
+  compareCompactionBoundaries: [],
 
   fetchProjects: async () => {
     const res = await fetch('/api/projects');
@@ -122,6 +150,9 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     set({ expandedAgents: next });
   },
 
+  setSlowThreshold: (ms) => set({ slowThresholdMs: ms }),
+  toggleSessionStats: () => set((s) => ({ showSessionStats: !s.showSessionStats })),
+
   setFilter: (text) => set({ filterText: text }),
   setAutoScroll: (on) => set({ autoScroll: on }),
   setZoom: (level) => set({ zoomLevel: level }),
@@ -145,6 +176,37 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }),
 
   clearResume: () => set({ resumeStatus: 'idle', resumeMessages: [] }),
+
+  enterCompareMode: async (slug: string, sessionId: string) => {
+    const res = await fetch(`/api/session/${encodeURIComponent(slug)}/${encodeURIComponent(sessionId)}`);
+    if (!res.ok) return;
+    const data = (await res.json()) as {
+      rows: WaterfallRow[];
+      health: ContextHealth;
+      compactionBoundaries: number[];
+      drift: DriftAnalysis;
+    };
+    // Store comparison data without touching primary session fields
+    set({
+      compareMode: true,
+      compareSessionId: sessionId,
+      compareRows: data.rows,
+      compareHealth: data.health ?? null,
+      compareDrift: data.drift ?? null,
+      compareCompactionBoundaries: data.compactionBoundaries ?? [],
+    });
+  },
+
+  exitCompareMode: () => {
+    set({
+      compareMode: false,
+      compareSessionId: null,
+      compareRows: [],
+      compareHealth: null,
+      compareDrift: null,
+      compareCompactionBoundaries: [],
+    });
+  },
 
   addRows: (rows, health, boundaries, drift) => {
     const existing = get().rows;

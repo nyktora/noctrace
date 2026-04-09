@@ -48,15 +48,16 @@ function flattenRows(rows: WaterfallRow[]): WaterfallRow[] {
  * Analyze rows and attach efficiency tips to wasteful ones. Mutates rows in place.
  *
  * Detection rules:
- * 1. Re-read           — row.isReread is true
- * 2. Search fan-out    — 5+ consecutive search/read tools with no write between them
- * 3. Correction loop   — 3+ edits to the same file_path
- * 4. Repeated Bash     — same command string run 2+ times
- * 5. Large token spike — row.tokenDelta > 10 000
- * 6. High context fill — first row where contextFillPercent >= 80
- * 7. No delegation     — 50+ total tool rows with zero agent rows
+ * 1. Re-read              — row.isReread is true
+ * 2. Search fan-out       — 5+ consecutive search/read tools with no write between them
+ * 3. Correction loop      — 3+ edits to the same file_path
+ * 4. Repeated Bash        — same command string run 2+ times
+ * 5. Large token spike    — row.tokenDelta > 10 000
+ * 6. High context fill    — first row where contextFillPercent >= 80
+ * 7. No delegation        — 50+ total tool rows with zero agent rows
  * 8. Post-compaction re-read — isReread after a compaction boundary
  * 9. Compaction thrash    — 3+ compaction boundaries (thrash loop)
+ * 10. Identical tool loop — 3+ consecutive calls with the same toolName + input key
  *
  * A row may accumulate multiple tips. Duplicate tip ids on the same row are silently skipped.
  *
@@ -91,6 +92,13 @@ export function attachEfficiencyTips(rows: WaterfallRow[], compactionBoundaries:
 
   /** Whether we have already attached the high-fill tip. */
   let highFillAttached = false;
+
+  /**
+   * State for Rule 10: Identical tool loop.
+   * Tracks the key of the last tool call and the consecutive run length.
+   */
+  let lastToolKey: string | null = null;
+  let identicalToolStreak = 0;
 
   /** Total tool rows (type === 'tool') across the session. */
   let toolRowCount = 0;
@@ -230,6 +238,29 @@ export function attachEfficiencyTips(rows: WaterfallRow[], compactionBoundaries:
           'Waiting until 95% means auto-compaction with less control over what\'s preserved.',
         severity: 'critical',
       });
+    }
+
+    // ------------------------------------------------------------------
+    // Rule 10: Identical tool loop
+    // Track 3+ consecutive tool calls with the same toolName + input key.
+    // Use first 200 chars of stringified input to avoid perf issues on
+    // large inputs while still catching the common stuck-loop pattern.
+    // ------------------------------------------------------------------
+    const inputKey = row.toolName + ':' + JSON.stringify(row.input).slice(0, 200);
+    if (inputKey === lastToolKey) {
+      identicalToolStreak++;
+      if (identicalToolStreak >= 3) {
+        addTip(row, {
+          id: 'identical-loop',
+          title: 'Identical tool loop',
+          message:
+            'Same tool called with identical input 3 times consecutively — the agent may be stuck in a loop.',
+          severity: 'warning',
+        });
+      }
+    } else {
+      lastToolKey = inputKey;
+      identicalToolStreak = 1;
     }
   }
 

@@ -140,9 +140,12 @@ All steps complete. Order followed during implementation:
 25. ✅ Markdown detail panel rendering (zero deps, XSS-safe)
 26. ✅ Session title parsing from JSONL
 27. ✅ Token format m suffix (114.1m not 114085.8k)
+28. ✅ Enhanced loop detection (Rule 10: 3+ consecutive identical tool calls → warning tip)
+29. ✅ Per-tool latency stats (Session Stats flyout: P50/P95/Max per tool type, slow-call threshold with clock icon)
+30. ✅ Advanced filtering (structured syntax: type:bash, >5s, <100ms, tokens:>1k, success; multiple type: filters OR-ed, others AND-ed)
+31. ✅ Session comparison (split-screen: health grades, summary metrics, tool mix bars, context fill trajectory sparklines)
 ### Remaining polish:
 - Loading state spinners
-- Duration threshold filtering
 - README with demo GIF
 
 ## gstack

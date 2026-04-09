@@ -1,13 +1,15 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 
 import { useSessionStore } from '../store/session-store.ts';
 import { HealthBadge } from './health-badge.tsx';
+import { SessionStats } from './session-stats.tsx';
 import { FilterIcon } from '../icons/filter-icon.tsx';
 import { WaterfallIcon } from '../icons/waterfall-icon.tsx';
 import { WarningIcon } from '../icons/warning-icon.tsx';
 import { DriftIcon } from '../icons/drift-icon.tsx';
 import { TipIcon } from '../icons/tip-icon.tsx';
 import { ShieldIcon } from '../icons/shield-icon.tsx';
+import { StatsIcon } from '../icons/stats-icon.tsx';
 import { formatTokens, formatDuration } from '../utils/tool-colors.ts';
 
 /**
@@ -21,6 +23,12 @@ export function Toolbar(): React.ReactElement {
   const health = useSessionStore((s) => s.health);
   const rows = useSessionStore((s) => s.rows);
   const drift = useSessionStore((s) => s.drift);
+  const showSessionStats = useSessionStore((s) => s.showSessionStats);
+  const toggleSessionStats = useSessionStore((s) => s.toggleSessionStats);
+
+  const handleCloseStats = useCallback(() => {
+    if (showSessionStats) toggleSessionStats();
+  }, [showSessionStats, toggleSessionStats]);
 
   const driftColor = !drift ? 'var(--ctp-overlay0)'
     : drift.driftFactor >= 5 ? 'var(--ctp-red)'
@@ -81,7 +89,7 @@ export function Toolbar(): React.ReactElement {
           type="text"
           value={filterText}
           onChange={(e) => setFilter(e.target.value)}
-          placeholder="Filter (tool name, label, error, agent…)"
+          placeholder="Filter (type:bash >5s tokens:>1k error)"
           className="w-full text-xs font-mono pl-7 pr-3 py-1 rounded"
           style={{
             backgroundColor: 'var(--ctp-surface0)',
@@ -121,10 +129,11 @@ export function Toolbar(): React.ReactElement {
         Auto
       </button>
 
-      {/* Compact stats pill */}
+      {/* Compact stats pill — wrapped in relative container for flyout positioning */}
       {rows.length > 0 && (
+        <div className="relative shrink-0">
         <div
-          className="flex items-center shrink-0"
+          className="flex items-center"
           style={{
             backgroundColor: 'var(--ctp-crust)',
             border: '1px solid var(--ctp-surface0)',
@@ -227,6 +236,28 @@ export function Toolbar(): React.ReactElement {
               {formatDuration(sessionDuration)}
             </span>
           )}
+
+          {/* Stats button */}
+          <button
+            type="button"
+            onClick={toggleSessionStats}
+            title="Session latency stats"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              color: showSessionStats ? 'var(--ctp-blue)' : 'var(--ctp-overlay0)',
+            }}
+          >
+            <StatsIcon size={12} color={showSessionStats ? 'var(--ctp-blue)' : 'var(--ctp-overlay0)'} />
+          </button>
+        </div>
+
+        {/* Session stats flyout panel */}
+        {showSessionStats && <SessionStats onClose={handleCloseStats} />}
         </div>
       )}
     </div>

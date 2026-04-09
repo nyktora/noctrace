@@ -1,4 +1,5 @@
-import type { WaterfallRow } from '../../shared/types.ts';
+export type { ParsedFilter } from '../../shared/filter.ts';
+export { parseFilterString, rowMatchesFilter } from '../../shared/filter.ts';
 
 /** Maps tool names to their CSS color variables */
 export function getToolColor(toolName: string, status?: string): string {
@@ -80,15 +81,3 @@ export function getContextHeatColor(pct: number): string {
   return '#f38ba8'; // red
 }
 
-/** Checks if a row matches the filter text */
-export function rowMatchesFilter(row: WaterfallRow, filter: string): boolean {
-  if (!filter) return true;
-  const lower = filter.toLowerCase();
-  if (lower === 'error') return row.status === 'error';
-  if (lower === 'agent') return row.type === 'agent';
-  if (lower === 'running') return row.status === 'running';
-  return (
-    row.toolName.toLowerCase().includes(lower) ||
-    row.label.toLowerCase().includes(lower)
-  );
-}

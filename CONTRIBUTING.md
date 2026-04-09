@@ -18,7 +18,7 @@ The app runs at `http://localhost:5173` (Vite) with API proxied to `http://local
 Run all checks locally:
 
 ```bash
-npm test          # 143 tests must pass
+npm test          # 218 tests must pass
 npm run typecheck # no type errors
 npm run lint      # no lint errors
 npm run build     # production build must succeed
@@ -28,7 +28,7 @@ npm run build     # production build must succeed
 
 ```
 src/
-├── shared/     # JSONL parser, types, health scoring (most critical — highest test coverage)
+├── shared/     # JSONL parser, types, health scoring, tips, filtering, latency stats, session compare (most critical — highest test coverage)
 ├── server/     # Express, WebSocket, file watcher, REST API
 └── client/     # React SPA, components, store, icons
 tests/          # Mirrors src/ structure, uses JSONL fixtures in tests/fixtures/

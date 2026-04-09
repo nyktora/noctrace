@@ -54,7 +54,10 @@ Requires Node.js 20+. That's it. No config required. Optional hooks for real-tim
 - **Token drift detection** — tracks how per-turn token cost drifts from baseline, warns when sessions burn excessive quota
 - **Context Health grade** — A-F letter grade from 5 signals with actionable recommendations
 - **Compact stats pill** — toolbar shows agent count, health grade, drift factor, total tokens, and session duration at a glance
-- **Filter with highlighting** — search by tool name, label, or keywords (`error`, `agent`, `running`) with yellow match highlighting
+- **Advanced filtering** — structured filter syntax: `type:bash`, `>5s`, `<100ms`, `tokens:>1k`, `error`, `running`, `success` — combinable with plain text search
+- **Per-tool latency stats** — Session Stats flyout shows P50/P95/Max latency per tool type; calls exceeding a configurable threshold (default 5s) are flagged with a clock icon
+- **Loop detection** — flags 3+ consecutive identical tool calls (same tool + same input) as a warning tip on the row
+- **Session comparison** — split-screen view comparing two sessions side-by-side: health grades, summary metrics, tool mix bars, and context fill trajectory sparklines
 - **Virtual scrolling** — handles sessions with thousands of tool calls
 - **Zoom & pan** — mouse wheel zoom (1-50x), click-drag pan
 - **Detail panel** — click any row for full tool input/output, resizable
