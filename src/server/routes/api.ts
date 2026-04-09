@@ -18,7 +18,7 @@ import { computeContextHealth } from '../../shared/health.js';
 import { parseAssistantTurns, computeDrift } from '../../shared/drift.js';
 import { attachEfficiencyTips } from '../../shared/tips.js';
 import { attachSecurityTips } from '../../shared/security-tips.js';
-import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage } from '../../shared/types.js';
+import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage, SessionRegisteredMessage, SessionUnregisteredMessage } from '../../shared/types.js';
 
 /**
  * Read ~/.claude/sessions/*.json and return a Set of sessionIds
@@ -73,6 +73,23 @@ function assertWithinBase(resolved: string, base: string): void {
 export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router {
   const router = Router();
   const projectsDir = path.join(claudeHome, 'projects');
+
+  /**
+   * In-memory registry of MCP-registered session paths.
+   * Populated by POST /api/sessions/register; cleared on unregister or server restart.
+   * When non-empty the client operates in "MCP mode" and shows only these sessions.
+   */
+  const registeredSessionPaths = new Set<string>();
+
+  /** Broadcast a message to all connected WebSocket clients. */
+  function broadcast(msg: SessionRegisteredMessage | SessionUnregisteredMessage): void {
+    const payload = JSON.stringify(msg);
+    for (const client of wss.clients) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(payload);
+      }
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // GET /api/projects
@@ -430,6 +447,89 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
       const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: message });
     }
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /api/sessions/register
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Register an MCP-managed session path so noctrace can display it.
+   * Body: { sessionPath: string } — absolute path to a .jsonl file.
+   * Broadcasts `session-registered` to all WebSocket clients.
+   */
+  router.post('/sessions/register', async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown>;
+      const sessionPath = typeof body['sessionPath'] === 'string' ? body['sessionPath'] : null;
+
+      if (!sessionPath) {
+        res.status(400).json({ error: 'sessionPath is required' });
+        return;
+      }
+
+      if (!sessionPath.endsWith('.jsonl')) {
+        res.status(400).json({ error: 'sessionPath must be a .jsonl file' });
+        return;
+      }
+
+      // Verify the file exists (best-effort — it may appear shortly after the MCP starts)
+      try {
+        await fs.access(sessionPath);
+      } catch {
+        // File not yet created — register anyway; the watcher will pick it up
+      }
+
+      registeredSessionPaths.add(sessionPath);
+      broadcast({ type: 'session-registered', sessionPath });
+
+      res.json({ ok: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /api/sessions/unregister
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Remove a previously registered MCP session path from the registry.
+   * Body: { sessionPath: string }.
+   * Broadcasts `session-unregistered` to all WebSocket clients.
+   */
+  router.post('/sessions/unregister', (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown>;
+      const sessionPath = typeof body['sessionPath'] === 'string' ? body['sessionPath'] : null;
+
+      if (!sessionPath) {
+        res.status(400).json({ error: 'sessionPath is required' });
+        return;
+      }
+
+      registeredSessionPaths.delete(sessionPath);
+      broadcast({ type: 'session-unregistered', sessionPath });
+
+      res.json({ ok: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /api/sessions/registered
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Return the list of currently registered MCP session paths.
+   * An empty array means standalone mode (show all sessions from disk).
+   * A non-empty array means MCP mode (show only registered sessions).
+   */
+  router.get('/sessions/registered', (_req, res) => {
+    res.json({ sessions: Array.from(registeredSessionPaths) });
   });
 
   return router;

@@ -1,44 +1,199 @@
 #!/usr/bin/env node
 /**
- * Minimal MCP server wrapper for the noctrace plugin.
+ * MCP server wrapper for the noctrace plugin.
  *
- * Starts the noctrace Express server as a side effect and speaks just enough
- * MCP (JSON-RPC 2.0 over stdio) to stay alive as a Claude Code managed process.
- * Exposes a single `open_dashboard` tool so Claude can tell the user the URL.
+ * Behaviour:
+ *  1. Discovers the current Claude Code session's JSONL path from env vars.
+ *  2. Checks whether noctrace is already running on port 4117.
+ *  3. If not running, starts the Express server and opens the browser.
+ *  4. Registers this session via POST /api/sessions/register.
+ *  5. Speaks JSON-RPC 2.0 over stdio to satisfy Claude Code's MCP protocol.
+ *  6. On exit (SIGTERM / SIGINT / stdin close), unregisters the session.
+ *
+ * Session path discovery order:
+ *  a. CLAUDE_SESSION_PATH env var (direct path to the .jsonl file)
+ *  b. CLAUDE_PROJECT_DIR or PWD → compute project slug → find newest .jsonl
+ *  c. Fall back to null (register with null; file watcher will pick it up)
  */
 import { createInterface } from 'node:readline';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
 
-const VERSION = '0.4.0';
-let serverPort = null;
-let browserOpened = false;
+const VERSION = '0.5.1';
+const NOCTRACE_PORT = 4117;
+const BASE_URL = `http://localhost:${NOCTRACE_PORT}`;
 
-// Start the Express server (lazy import to avoid loading before needed)
-async function boot() {
-  process.env.NOCTRACE_NO_AUTOSTART = '1';
-  const { startServer } = await import('../dist/server/server/index.js');
-  serverPort = await startServer();
+// ---------------------------------------------------------------------------
+// Session path discovery
+// ---------------------------------------------------------------------------
 
-  // Open browser once on first start
-  if (!browserOpened) {
-    const open = (await import('open')).default;
-    await open(`http://localhost:${serverPort}`);
-    browserOpened = true;
+/**
+ * Convert an absolute filesystem path to the Claude project slug format.
+ * Slugs replace every "/" with "-" and strip any leading "-".
+ * Example: /Users/lam/dev/noctrace → -Users-lam-dev-noctrace
+ */
+function pathToSlug(absPath) {
+  return absPath.replace(/\//g, '-');
+}
+
+/**
+ * Return the path to the most recently modified .jsonl file in `dir`,
+ * or null if the directory is empty / inaccessible.
+ *
+ * @param {string} dir — absolute path to a project directory
+ * @returns {Promise<string|null>}
+ */
+async function newestJsonl(dir) {
+  let files;
+  try {
+    files = await fs.readdir(dir);
+  } catch {
+    return null;
+  }
+  const jsonlFiles = files.filter((f) => f.endsWith('.jsonl'));
+  if (jsonlFiles.length === 0) return null;
+
+  let newest = null;
+  let newestMtime = -Infinity;
+
+  for (const file of jsonlFiles) {
+    try {
+      const stat = await fs.stat(path.join(dir, file));
+      if (stat.mtimeMs > newestMtime) {
+        newestMtime = stat.mtimeMs;
+        newest = path.join(dir, file);
+      }
+    } catch {
+      // skip
+    }
+  }
+  return newest;
+}
+
+/**
+ * Discover the JSONL session path for the current Claude Code session.
+ *
+ * @returns {Promise<string|null>}
+ */
+async function discoverSessionPath() {
+  // Option a: direct env var
+  if (process.env.CLAUDE_SESSION_PATH) {
+    return process.env.CLAUDE_SESSION_PATH;
+  }
+
+  // Option b: derive from project directory
+  const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.env.PWD ?? null;
+  if (!projectDir) return null;
+
+  const claudeHome = process.env.CLAUDE_HOME ?? path.join(os.homedir(), '.claude');
+  const slug = pathToSlug(projectDir);
+  const projectSessionDir = path.join(claudeHome, 'projects', slug);
+
+  return newestJsonl(projectSessionDir);
+}
+
+// ---------------------------------------------------------------------------
+// Port / server helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Check whether noctrace is already running on the configured port.
+ * Uses the /api/health endpoint; resolves true if reachable, false otherwise.
+ *
+ * @returns {Promise<boolean>}
+ */
+async function isServerRunning() {
+  try {
+    const { default: http } = await import('node:http');
+    return await new Promise((resolve) => {
+      const req = http.get(`${BASE_URL}/api/health`, { timeout: 1500 }, (res) => {
+        resolve(res.statusCode >= 200 && res.statusCode < 500);
+      });
+      req.on('error', () => resolve(false));
+      req.on('timeout', () => { req.destroy(); resolve(false); });
+    });
+  } catch {
+    return false;
   }
 }
 
-// JSON-RPC response helper
+/**
+ * Start the noctrace Express server by importing the compiled entry point.
+ * Sets NOCTRACE_NO_AUTOSTART so the module does not start a second server
+ * instance when imported as a side-effect.
+ *
+ * @returns {Promise<void>}
+ */
+async function startNoctraceServer() {
+  process.env.NOCTRACE_NO_AUTOSTART = '1';
+  const { startServer } = await import('../dist/server/server/index.js');
+  await startServer();
+}
+
+// ---------------------------------------------------------------------------
+// Session registration
+// ---------------------------------------------------------------------------
+
+/**
+ * POST a session path to the noctrace register/unregister endpoint.
+ *
+ * @param {'register'|'unregister'} action
+ * @param {string} sessionPath
+ * @returns {Promise<void>}
+ */
+async function postSessionAction(action, sessionPath) {
+  const { default: http } = await import('node:http');
+  const body = JSON.stringify({ sessionPath });
+  return new Promise((resolve) => {
+    const req = http.request(
+      {
+        hostname: 'localhost',
+        port: NOCTRACE_PORT,
+        path: `/api/sessions/${action}`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+        timeout: 3000,
+      },
+      () => resolve(),
+    );
+    req.on('error', () => resolve());
+    req.on('timeout', () => { req.destroy(); resolve(); });
+    req.write(body);
+    req.end();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// JSON-RPC helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Write a JSON-RPC 2.0 response to stdout.
+ * All other output must go to stderr (stdout is the MCP channel).
+ *
+ * @param {unknown} id
+ * @param {unknown} result
+ */
 function respond(id, result) {
   const msg = JSON.stringify({ jsonrpc: '2.0', id, result });
   process.stdout.write(`${msg}\n`);
 }
 
-// Handle incoming JSON-RPC messages from Claude Code
+/**
+ * Handle a single JSON-RPC message from Claude Code.
+ *
+ * @param {string} line
+ */
 function handleMessage(line) {
   let msg;
   try {
     msg = JSON.parse(line);
   } catch {
-    return; // ignore malformed input
+    return;
   }
 
   const { id, method, params } = msg;
@@ -53,8 +208,7 @@ function handleMessage(line) {
   }
 
   if (method === 'notifications/initialized') {
-    // No response needed for notifications
-    return;
+    return; // no response for notifications
   }
 
   if (method === 'tools/list') {
@@ -73,15 +227,12 @@ function handleMessage(line) {
   if (method === 'tools/call') {
     const toolName = params?.name;
     if (toolName === 'open_dashboard') {
-      const url = `http://localhost:${serverPort ?? 4117}`;
-      // Open browser
-      import('open').then((m) => m.default(url)).catch(() => {});
+      import('open').then((m) => m.default(BASE_URL)).catch(() => {});
       respond(id, {
-        content: [{ type: 'text', text: `Noctrace dashboard: ${url}` }],
+        content: [{ type: 'text', text: `Noctrace dashboard: ${BASE_URL}` }],
       });
       return;
     }
-    // Unknown tool
     respond(id, {
       content: [{ type: 'text', text: `Unknown tool: ${toolName}` }],
       isError: true,
@@ -95,20 +246,74 @@ function handleMessage(line) {
   }
 }
 
+// ---------------------------------------------------------------------------
 // Main
-async function main() {
-  await boot();
+// ---------------------------------------------------------------------------
 
+async function main() {
+  const sessionPath = await discoverSessionPath();
+
+  if (sessionPath) {
+    process.stderr.write(`[noctrace-mcp] Session: ${sessionPath}\n`);
+  } else {
+    process.stderr.write('[noctrace-mcp] Could not discover session path — proceeding without registration\n');
+  }
+
+  // Check if noctrace is already running; if not, start it (first MCP process wins).
+  // Use a retry loop to handle the race where two MCP processes start simultaneously.
+  const running = await isServerRunning();
+  if (!running) {
+    process.stderr.write('[noctrace-mcp] Starting noctrace server...\n');
+    try {
+      await startNoctraceServer();
+    } catch (err) {
+      // Another process may have started the server between our check and here.
+      // Verify it's now reachable before giving up.
+      const nowRunning = await isServerRunning();
+      if (!nowRunning) {
+        process.stderr.write(`[noctrace-mcp] Fatal: could not start server: ${err.message}\n`);
+        process.exit(1);
+      }
+      process.stderr.write('[noctrace-mcp] Server started by peer process — continuing\n');
+    }
+
+    // Open the browser — only the first MCP process to start the server does this
+    try {
+      const open = (await import('open')).default;
+      await open(BASE_URL);
+    } catch {
+      // Non-fatal — user can navigate manually
+    }
+  }
+
+  // Register this session with the running noctrace server
+  if (sessionPath) {
+    await postSessionAction('register', sessionPath);
+    process.stderr.write('[noctrace-mcp] Session registered\n');
+  }
+
+  // Cleanup: unregister on process exit
+  let cleaned = false;
+  async function cleanup() {
+    if (cleaned) return;
+    cleaned = true;
+    if (sessionPath) {
+      await postSessionAction('unregister', sessionPath).catch(() => {});
+    }
+  }
+
+  process.on('SIGTERM', () => { void cleanup().then(() => process.exit(0)); });
+  process.on('SIGINT', () => { void cleanup().then(() => process.exit(0)); });
+
+  // Speak JSON-RPC over stdio for Claude Code's MCP protocol
   const rl = createInterface({ input: process.stdin });
   rl.on('line', handleMessage);
-
-  // Keep alive until stdin closes (Claude Code manages our lifecycle)
   rl.on('close', () => {
-    process.exit(0);
+    void cleanup().then(() => process.exit(0));
   });
 }
 
 main().catch((err) => {
-  console.error('[noctrace-mcp] Fatal:', err.message);
+  process.stderr.write(`[noctrace-mcp] Fatal: ${err.message}\n`);
   process.exit(1);
 });

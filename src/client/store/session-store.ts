@@ -18,6 +18,10 @@ export interface SessionStore {
   compactionBoundaries: number[];
   drift: DriftAnalysis | null;
 
+  // MCP mode — populated when MCP processes register sessions
+  registeredSessions: string[];
+  mcpMode: boolean;
+
   // UI state
   selectedProjectSlug: string | null;
   selectedSessionId: string | null;
@@ -50,6 +54,8 @@ export interface SessionStore {
   fetchProjects: () => Promise<void>;
   fetchSessions: (slug: string) => Promise<void>;
   fetchSession: (slug: string, id: string) => Promise<void>;
+  /** Fetch the list of MCP-registered session paths and update mcpMode. */
+  fetchRegisteredSessions: () => Promise<void>;
   selectRow: (id: string | null) => void;
   toggleAgent: (id: string) => void;
   setFilter: (text: string) => void;
@@ -78,6 +84,9 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   compactionBoundaries: [],
   drift: null,
 
+  registeredSessions: [],
+  mcpMode: false,
+
   selectedProjectSlug: null,
   selectedSessionId: null,
   selectedRowId: null,
@@ -101,18 +110,62 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   compareDrift: null,
   compareCompactionBoundaries: [],
 
-  fetchProjects: async () => {
-    const res = await fetch('/api/projects');
+  fetchRegisteredSessions: async () => {
+    const res = await fetch('/api/sessions/registered');
     if (!res.ok) return;
-    const data = (await res.json()) as ProjectSummary[];
-    set({ projects: data });
+    const data = (await res.json()) as { sessions: string[] };
+    const sessions = data.sessions ?? [];
+    set({ registeredSessions: sessions, mcpMode: sessions.length > 0 });
+  },
+
+  fetchProjects: async () => {
+    // Always fetch registered sessions alongside projects so MCP mode state is current
+    const [projectsRes] = await Promise.all([
+      fetch('/api/projects'),
+      get().fetchRegisteredSessions(),
+    ]);
+    if (!projectsRes.ok) return;
+    const allProjects = (await projectsRes.json()) as ProjectSummary[];
+
+    const { registeredSessions } = get();
+    const mcpMode = registeredSessions.length > 0;
+
+    if (!mcpMode) {
+      set({ projects: allProjects });
+      return;
+    }
+
+    // In MCP mode, only show projects that have at least one registered session
+    const registeredSlugs = new Set(
+      registeredSessions.map((p) => {
+        // Extract the project slug from the absolute path.
+        // Registered paths look like: /home/user/.claude/projects/<slug>/<session>.jsonl
+        const parts = p.split('/');
+        // Find the index of "projects" in the path, slug is the next segment
+        const projectsIdx = parts.lastIndexOf('projects');
+        return projectsIdx >= 0 ? parts[projectsIdx + 1] : null;
+      }).filter((s): s is string => s !== null),
+    );
+
+    set({ projects: allProjects.filter((p) => registeredSlugs.has(p.slug)) });
   },
 
   fetchSessions: async (slug: string) => {
     const res = await fetch(`/api/sessions/${encodeURIComponent(slug)}`);
     if (!res.ok) return;
-    const data = (await res.json()) as SessionSummary[];
-    set({ sessions: data, selectedProjectSlug: slug });
+    const allSessions = (await res.json()) as SessionSummary[];
+
+    const { registeredSessions, mcpMode } = get();
+
+    if (!mcpMode) {
+      set({ sessions: allSessions, selectedProjectSlug: slug });
+      return;
+    }
+
+    // In MCP mode, only show sessions whose file path is registered
+    const registeredSet = new Set(registeredSessions);
+    const filtered = allSessions.filter((s) => registeredSet.has(s.filePath));
+    set({ sessions: filtered, selectedProjectSlug: slug });
   },
 
   fetchSession: async (slug: string, id: string) => {

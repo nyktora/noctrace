@@ -31,7 +31,17 @@ interface WsSessionCreated {
   slug: string;
 }
 
-type WsIncoming = WsRowsMessage | WsResumeChunk | WsResumeDone | WsResumeError | WsSessionCreated;
+interface WsSessionRegistered {
+  type: 'session-registered';
+  sessionPath: string;
+}
+
+interface WsSessionUnregistered {
+  type: 'session-unregistered';
+  sessionPath: string;
+}
+
+type WsIncoming = WsRowsMessage | WsResumeChunk | WsResumeDone | WsResumeError | WsSessionCreated | WsSessionRegistered | WsSessionUnregistered;
 
 /**
  * Custom hook that maintains a WebSocket connection to the local Noctrace server.
@@ -50,6 +60,8 @@ export function useSessionWs(): {
   const addResumeUserMessage = useSessionStore((s) => s.addResumeUserMessage);
   const fetchSession = useSessionStore((s) => s.fetchSession);
   const fetchSessions = useSessionStore((s) => s.fetchSessions);
+  const fetchRegisteredSessions = useSessionStore((s) => s.fetchRegisteredSessions);
+  const fetchProjects = useSessionStore((s) => s.fetchProjects);
   const selectedSessionId = useSessionStore((s) => s.selectedSessionId);
   const selectedProjectSlug = useSessionStore((s) => s.selectedProjectSlug);
 
@@ -113,6 +125,29 @@ export function useSessionWs(): {
           if (currentSlug === msg.slug) {
             void useSessionStore.getState().fetchSessions(msg.slug);
           }
+        } else if (msg.type === 'session-registered') {
+          // An MCP process registered a new session — refresh the project list
+          // and registered sessions so MCP mode activates and the session appears
+          void fetchRegisteredSessions().then(() => {
+            void fetchProjects();
+            // Auto-select the newly registered session's project and session
+            const state = useSessionStore.getState();
+            const sessionPath = msg.sessionPath;
+            // Extract slug from the path: /.../projects/<slug>/<id>.jsonl
+            const parts = sessionPath.split('/');
+            const projectsIdx = parts.lastIndexOf('projects');
+            if (projectsIdx < 0) return;
+            const slug = parts[projectsIdx + 1];
+            const fileName = parts[projectsIdx + 2] ?? '';
+            const sessionId = fileName.replace(/\.jsonl$/, '');
+            if (!slug || !sessionId) return;
+            void state.fetchSessions(slug).then(() => {
+              void state.fetchSession(slug, sessionId);
+            });
+          });
+        } else if (msg.type === 'session-unregistered') {
+          // An MCP process exited — refresh the project list and registered sessions
+          void fetchRegisteredSessions().then(() => void fetchProjects());
         }
       });
 

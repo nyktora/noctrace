@@ -161,3 +161,19 @@ export interface HookEventMessage {
   type: 'hook-event';
   event: HookEvent;
 }
+
+/**
+ * WebSocket message broadcast when an MCP session registers itself.
+ */
+export interface SessionRegisteredMessage {
+  type: 'session-registered';
+  sessionPath: string;
+}
+
+/**
+ * WebSocket message broadcast when an MCP session unregisters on exit.
+ */
+export interface SessionUnregisteredMessage {
+  type: 'session-unregistered';
+  sessionPath: string;
+}

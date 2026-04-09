@@ -264,6 +264,8 @@ export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.Re
   const fetchSessions = useSessionStore((s) => s.fetchSessions);
   const fetchSession = useSessionStore((s) => s.fetchSession);
   const enterCompareMode = useSessionStore((s) => s.enterCompareMode);
+  const mcpMode = useSessionStore((s) => s.mcpMode);
+  const registeredSessions = useSessionStore((s) => s.registeredSessions);
   const [showEmpty, setShowEmpty] = useState(false);
 
   useEffect(() => {
@@ -311,6 +313,37 @@ export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.Re
       >
         Projects
       </div>
+
+      {mcpMode && (
+        <div
+          className="px-3 py-1.5 text-xs shrink-0 flex items-center gap-1.5"
+          style={{
+            backgroundColor: 'var(--ctp-surface0)',
+            borderBottom: '1px solid var(--ctp-surface1)',
+            color: 'var(--ctp-teal)',
+          }}
+          title="MCP mode: showing only sessions registered by active Claude Code processes"
+        >
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="8" cy="8" r="6" />
+            <path d="M8 5v3l2 2" />
+          </svg>
+          <span style={{ fontWeight: 600 }}>MCP mode</span>
+          <span style={{ color: 'var(--ctp-overlay1)', fontWeight: 400 }}>
+            {registeredSessions.length} active {registeredSessions.length === 1 ? 'session' : 'sessions'}
+          </span>
+        </div>
+      )}
 
       <div className="overflow-y-auto flex-1">
         {projects.length === 0 && (
