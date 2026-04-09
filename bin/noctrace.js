@@ -210,6 +210,7 @@ if (args.includes('--mcp')) {
 
 // Default: start the server and open the browser
 process.env.NOCTRACE_NO_AUTOSTART = '1';
+process.env.NODE_ENV = 'production';
 const { startServer } = await import('../dist/server/server/index.js');
 const open = (await import('open')).default;
 const port = await startServer();

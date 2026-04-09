@@ -127,6 +127,7 @@ async function isServerRunning() {
  */
 async function startNoctraceServer() {
   process.env.NOCTRACE_NO_AUTOSTART = '1';
+  process.env.NODE_ENV = 'production';
   const { startServer } = await import('../dist/server/server/index.js');
   await startServer();
 }
