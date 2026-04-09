@@ -2,7 +2,7 @@
 
 All notable changes to noctrace will be documented in this file.
 
-## [Unreleased]
+## [0.6.0] - 2026-04-08
 
 ### Added
 - You can now filter rows using structured syntax: `type:bash`, `>5s`, `<100ms`, `tokens:>1k`, `success` — combine with plain text search and existing `error`/`running` keywords. Multiple `type:` filters are OR-ed; all other filters AND together.
