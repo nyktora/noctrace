@@ -95,52 +95,133 @@
 
     /* ── DEMO DATA: tells the story of a session degrading ── */
     var demoRows=[
-      {n:1,t:"Read",tC:BL,l:"src/routes/auth.ts",dur:"8.0s",tk:"42.1k",ctx:21,bS:0,bW:3},
-      {n:2,t:"Read",tC:BL,l:"src/middleware/session.ts",dur:"6.0s",tk:"46.8k",ctx:23,bS:1,bW:2.5},
-      {n:3,t:"Edit",tC:YL,l:"src/routes/auth.ts",dur:"18.0s",tk:"52.3k",ctx:26,bS:2,bW:6},
-      {n:4,t:"Bash",tC:PH,l:"npm test -- auth",dur:"32.0s",tk:"61.7k",ctx:31,bS:4,bW:10},
-      {n:5,t:"Write",tC:"#7ee7a1",l:"src/utils/tokens.ts",dur:"22.0s",tk:"78.4k",ctx:39,bS:7,bW:7},
-      {n:6,t:"Bash",tC:PH,l:"npm run build",dur:"28.0s",tk:"94.2k",ctx:47,bS:11,bW:9},
-      {n:7,t:"Read",tC:BL,l:"src/routes/auth.ts",dur:"8.0s",tk:"112.8k",ctx:56,rr:1,bS:15,bW:3},
-      {n:8,t:"Edit",tC:YL,l:"src/middleware/session.ts",dur:"21.0s",tk:"134.6k",ctx:67,bS:18,bW:7},
-      {n:9,t:"Bash",tC:PH,l:"npm test -- session",dur:"35.0s",tk:"156.1k",ctx:78,bS:22,bW:11},
-      // ── context rot begins ──
-      {n:10,t:"MCP",tC:MV,l:"claude in chrome: navigate",dur:"603ms",tk:"168.4k",ctx:82,bS:28,bW:2},
-      {n:11,t:"MCP",tC:MV,l:"claude in chrome: computer",dur:"2.1s",tk:"172.7k",ctx:83,bS:29,bW:3},
-      {n:12,t:"MCP",tC:MV,l:"claude in chrome: computer",dur:"1.1s",tk:"178.0k",ctx:84,bS:30,bW:2.5},
-      {n:13,t:"Bash",tC:PH,l:'kill $(lsof -ti:4117)...',dur:"4.2s",tk:"184.8k",ctx:86,bS:31,bW:4},
-      {n:14,t:"MCP",tC:MV,l:"claude in chrome: navigate",dur:"933ms",tk:"190.9k",ctx:87,bS:33,bW:2},
-      {n:15,t:"MCP",tC:MV,l:"claude in chrome: computer",dur:"2.1s",tk:"196.3k",ctx:89,bS:34,bW:3},
-      {n:16,t:"MCP",tC:MV,l:"claude in chrome: computer",dur:"243ms",tk:"200.0k",ctx:91,bS:35,bW:2},
+      {n:1, t:"Read",  tC:BL, l:"src/routes/auth.ts",            dur:"8.0s",  tk:"42.1k",  cost:"$0.01", ctx:21, bS:0,  bW:3},
+      {n:2, t:"Read",  tC:BL, l:"src/middleware/session.ts",      dur:"6.0s",  tk:"46.8k",  cost:"$0.01", ctx:23, bS:1,  bW:2.5},
+      {n:3, t:"Edit",  tC:YL, l:"src/routes/auth.ts",            dur:"18.0s", tk:"52.3k",  cost:"$0.02", ctx:26, bS:2,  bW:6},
+      {n:4, t:"Bash",  tC:PH, l:"npm test -- auth",              dur:"32.0s", tk:"61.7k",  cost:"$0.02", ctx:31, bS:4,  bW:10},
+      // ── agent delegation ──
+      {n:5, t:"Agent", tC:MV, l:"senior-software-engineer",      dur:"1m14s", tk:"78.4k",  cost:"$0.04", ctx:39, bS:7,  bW:22, isAgent:1},
+      {n:6, t:"Read",  tC:BL, l:"src/utils/tokens.ts",          dur:"4.0s",  tk:"84.1k",  cost:"$0.01", ctx:42, bS:8,  bW:2, child:1},
+      {n:7, t:"Write", tC:"#a6e3a1", l:"src/utils/tokens.ts",   dur:"22.0s", tk:"94.2k",  cost:"$0.03", ctx:47, bS:11, bW:7, child:1},
+      {n:8, t:"Bash",  tC:PH, l:"npm run build",                dur:"28.0s", tk:"112.8k", cost:"$0.04", ctx:56, bS:14, bW:9, child:1},
+      {n:9, t:"Read",  tC:BL, l:"src/routes/auth.ts \u21BB",    dur:"8.0s",  tk:"134.6k", cost:"$0.05", ctx:67, bS:22, bW:3, child:1, rr:1},
+      // ── failure ──
+      {n:10,t:"Bash",  tC:PH, l:"npm test -- session",          dur:"35.0s", tk:"156.1k", cost:"$0.06", ctx:78, bS:25, bW:11, isFailure:1},
+      {n:11,t:"Edit",  tC:YL, l:"src/middleware/session.ts",    dur:"21.0s", tk:"163.7k", cost:"$0.03", ctx:82, bS:30, bW:7},
+      {n:12,t:"Bash",  tC:PH, l:"npm test -- session",          dur:"29.0s", tk:"168.4k", cost:"$0.02", ctx:83, bS:33, bW:9},
+      {n:13,t:"MCP",   tC:MV, l:"claude in chrome: nav...",     dur:"603ms", tk:"172.7k", cost:"$0.01", ctx:84, bS:36, bW:2},
+      // ── API error banner ──
+      {n:14,t:"ERR",   l:"Rate Limit",                           ctx:84, isApiError:1},
+      // ── context rot ──
+      {n:15,t:"MCP",   tC:MV, l:"claude in chrome: com...",     dur:"2.1s",  tk:"178.0k", cost:"$0.01", ctx:86, bS:37, bW:3},
+      {n:16,t:"MCP",   tC:MV, l:"claude in chrome: com...",     dur:"1.1s",  tk:"190.9k", cost:"$0.01", ctx:89, bS:38, bW:2.5},
+      {n:17,t:"MCP",   tC:MV, l:"claude in chrome: com...",     dur:"243ms", tk:"200.0k", cost:"$0.01", ctx:92, bS:39, bW:2},
     ];
+
+    var GN2="#a6e3a1"; /* cost green */
 
     function DemoRow(props){
       var r=props.row;var vis=props.visible;
+
+      /* ── API Error Banner ── */
+      if(r.isApiError){
+        return React.createElement("div",{style:{
+          display:"flex",alignItems:"center",height:26,
+          background:"rgba(243,139,168,0.13)",
+          borderBottom:"1px solid "+RD+"30",
+          borderTop:"1px solid "+RD+"30",
+          opacity:vis?1:0,
+          transform:vis?"translateY(0)":"translateY(6px)",
+          transition:"opacity 0.3s ease, transform 0.3s ease",
+          paddingLeft:8,gap:6,
+        }},
+          React.createElement("span",{style:{fontSize:10,color:RD,fontWeight:700}},"☁"),
+          React.createElement("span",{style:{fontSize:10,color:RD,fontWeight:600}},"Rate Limit"),
+          React.createElement("span",{style:{fontSize:10,color:RD+"bb"}},"\u2014 API rate limit exceeded, retrying in 30s")
+        );
+      }
+
       var degraded=r.ctx>=80;
       var cc=ctxC(r.ctx);
-      var rowBg=degraded?(RD+(r.ctx>=86?"14":r.ctx>=82?"0c":"08")):"transparent";
+
+      /* ── Agent row ── */
+      if(r.isAgent){
+        var rowBgA="rgba(203,166,247,0.06)";
+        return React.createElement("div",{style:{
+          display:"flex",alignItems:"center",height:26,
+          borderBottom:"1px solid "+BD+"50",
+          background:rowBgA,
+          opacity:vis?1:0,
+          transform:vis?"translateY(0)":"translateY(6px)",
+          transition:"opacity 0.3s ease, transform 0.3s ease",
+        }},
+          React.createElement("div",{style:{width:3,alignSelf:"stretch",background:MV,opacity:0.9,flexShrink:0}}),
+          React.createElement("div",{style:{width:28,textAlign:"right",paddingRight:8,fontSize:10,color:DM,flexShrink:0}},r.n),
+          React.createElement("div",{style:{width:190,paddingLeft:8,display:"flex",alignItems:"center",gap:4,overflow:"hidden",flexShrink:0}},
+            React.createElement("span",{style:{fontSize:9,color:MV}}),
+            React.createElement("span",{style:{fontSize:11,color:TXB,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},"Agent"),
+            React.createElement("span",{style:{fontSize:8,padding:"1px 5px",borderRadius:9,background:BL+"22",color:BL,fontWeight:700,flexShrink:0}},r.l)
+          ),
+          React.createElement("div",{style:{width:42,textAlign:"center",flexShrink:0}},
+            React.createElement("span",{style:{fontSize:9,padding:"1px 4px",borderRadius:2,background:MV+"18",color:MV,fontWeight:600}},"Agent")
+          ),
+          React.createElement("div",{style:{width:48,textAlign:"right",paddingRight:6,fontSize:10,color:DM,flexShrink:0}},r.dur),
+          React.createElement("div",{style:{width:52,textAlign:"right",paddingRight:6,fontSize:10,color:DM,flexShrink:0}},r.tk),
+          React.createElement("div",{style:{width:38,textAlign:"right",paddingRight:6,fontSize:10,color:GN2,flexShrink:0}},r.cost),
+          React.createElement("div",{style:{width:32,textAlign:"center",fontSize:10,color:cc,flexShrink:0}},r.ctx+"%"),
+          React.createElement("div",{style:{flex:1,position:"relative",height:"100%",overflow:"hidden",minWidth:0}},
+            React.createElement("div",{style:{position:"absolute",left:"33%",top:0,bottom:0,width:1,background:BD+"30"}}),
+            React.createElement("div",{style:{position:"absolute",left:"66%",top:0,bottom:0,width:1,background:BD+"30"}}),
+            React.createElement("div",{style:{
+              position:"absolute",left:r.bS+"%",
+              width:vis?r.bW+"%":"0%",height:8,
+              top:"50%",transform:"translateY(-50%)",borderRadius:2,
+              background:MV+"55",
+              transition:"width 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s",
+            }})
+          )
+        );
+      }
+
+      /* ── Child row (sub-agent children) ── */
+      var isChild=!!r.child;
+      /* ── Failure row ── */
+      var rowBg=r.isFailure?"rgba(243,139,168,0.10)":isChild?"rgba(203,166,247,0.03)":degraded?(RD+(r.ctx>=86?"14":r.ctx>=82?"0c":"08")):"transparent";
+      var stripC=r.isFailure?RD:isChild?MV+"88":cc;
+
       return React.createElement("div",{style:{
         display:"flex",alignItems:"center",height:26,
-        borderBottom:"1px solid "+BD+"50",
+        borderBottom:"1px solid "+(isChild?BD+"30":BD+"50"),
         background:rowBg,
         opacity:vis?1:0,
         transform:vis?"translateY(0)":"translateY(6px)",
         transition:"opacity 0.3s ease, transform 0.3s ease, background 0.5s ease",
       }},
-        React.createElement("div",{style:{width:3,alignSelf:"stretch",background:cc,opacity:0.7,flexShrink:0,transition:"background 0.5s"}}),
-        React.createElement("div",{style:{width:28,textAlign:"right",paddingRight:8,fontSize:10,color:DM,flexShrink:0}},r.n),
-        React.createElement("div",{style:{width:190,paddingLeft:8,display:"flex",alignItems:"center",gap:4,overflow:"hidden",flexShrink:0}},
-          React.createElement("span",{style:{fontSize:11,color:degraded?TXB:TX,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},
+        React.createElement("div",{style:{width:3,alignSelf:"stretch",background:stripC,opacity:r.isFailure?1:isChild?0.5:0.7,flexShrink:0,transition:"background 0.5s"}}),
+        React.createElement("div",{style:{width:28,textAlign:"right",paddingRight:8,fontSize:10,color:isChild?DM+"88":DM,flexShrink:0}},r.n),
+        React.createElement("div",{style:{width:190,paddingLeft:isChild?20:8,display:"flex",alignItems:"center",gap:4,overflow:"hidden",flexShrink:0}},
+          isChild&&React.createElement("span",{style:{fontSize:9,color:MV+"66",marginRight:2,flexShrink:0}},"└"),
+          r.isFailure&&React.createElement("span",{style:{fontSize:10,color:RD,flexShrink:0}},"⚡"),
+          React.createElement("span",{style:{
+            fontSize:11,
+            color:r.isFailure?RD:degraded?TXB:TX,
+            overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+            fontWeight:r.isFailure?600:400,
+          }},
             (r.t==="MCP"||r.t==="Bash"?r.t+": ":"")+r.l
           ),
           r.rr&&React.createElement(RereadIcon,null)
         ),
         React.createElement("div",{style:{width:42,textAlign:"center",flexShrink:0}},
-          React.createElement("span",{style:{fontSize:9,padding:"1px 4px",borderRadius:2,background:r.tC+"18",color:r.tC,fontWeight:600}},r.t)
+          React.createElement("span",{style:{
+            fontSize:9,padding:"1px 4px",borderRadius:2,
+            background:r.tC+"18",color:r.isFailure?RD:r.tC,fontWeight:600,
+          }},r.t)
         ),
         React.createElement("div",{style:{width:48,textAlign:"right",paddingRight:6,fontSize:10,color:DM,flexShrink:0}},r.dur),
         React.createElement("div",{style:{width:52,textAlign:"right",paddingRight:6,fontSize:10,color:degraded?YL:DM,fontWeight:degraded?600:400,flexShrink:0}},r.tk),
-        React.createElement("div",{style:{width:32,textAlign:"center",fontSize:10,color:cc,fontWeight:degraded?700:400,flexShrink:0}},r.ctx+"%"),
+        React.createElement("div",{style:{width:38,textAlign:"right",paddingRight:6,fontSize:10,color:GN2,flexShrink:0}},r.cost),
+        React.createElement("div",{style:{width:32,textAlign:"center",fontSize:10,color:r.isFailure?RD:cc,fontWeight:degraded||r.isFailure?700:400,flexShrink:0}},r.ctx+"%"),
         React.createElement("div",{style:{flex:1,position:"relative",height:"100%",overflow:"hidden",minWidth:0}},
           React.createElement("div",{style:{position:"absolute",left:"33%",top:0,bottom:0,width:1,background:BD+"30"}}),
           React.createElement("div",{style:{position:"absolute",left:"66%",top:0,bottom:0,width:1,background:BD+"30"}}),
@@ -148,7 +229,8 @@
             position:"absolute",left:r.bS+"%",
             width:vis?r.bW+"%":"0%",height:8,
             top:"50%",transform:"translateY(-50%)",borderRadius:2,
-            background:degraded?"linear-gradient(90deg,"+r.tC+"66,"+RD+"88)":r.tC+"77",
+            background:r.isFailure?"linear-gradient(90deg,"+RD+"66,"+RD+"cc)":
+              degraded?"linear-gradient(90deg,"+r.tC+"66,"+RD+"88)":r.tC+"77",
             transition:"width 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s",
           }})
         )
@@ -219,7 +301,7 @@
         React.createElement("nav",{style:{position:"sticky",top:0,zIndex:100,background:BG+"ee",backdropFilter:"blur(8px)",borderBottom:"1px solid "+BD,height:44,display:"flex",alignItems:"center",padding:"0 24px",fontSize:12}},
           React.createElement("div",{style:{display:"flex",alignItems:"center",gap:6}},React.createElement(Logo,null),React.createElement("span",{style:{color:MV,fontWeight:700,fontSize:13}},"noctrace")),
           React.createElement("span",{style:{color:DM,margin:"0 10px"}},"/"),
-          React.createElement("span",{style:{fontSize:10,color:DM,border:"1px solid "+BD,padding:"1px 6px",borderRadius:2}},"v0.6.0"),
+          React.createElement("span",{style:{fontSize:10,color:DM,border:"1px solid "+BD,padding:"1px 6px",borderRadius:2}},"v0.7.0"),
           React.createElement("div",{style:{flex:1}}),
           React.createElement("div",{style:{display:"flex",gap:20,alignItems:"center"}},
             React.createElement("a",{href:"#rot",style:{color:DM,fontSize:11,textDecoration:"none"}},"context rot"),
@@ -283,15 +365,24 @@
             /* app toolbar */
             React.createElement("div",{style:{height:30,background:SF2,borderBottom:"1px solid "+BD,display:"flex",alignItems:"center",padding:"0 10px",gap:8,fontSize:10}},
               React.createElement(Logo,null),React.createElement("span",{style:{color:MV,fontWeight:700,fontSize:11}},"noctrace"),
-              React.createElement("div",{style:{flex:1,background:BG,border:"1px solid "+BD,padding:"2px 8px",margin:"0 8px",fontSize:10,color:DM}},"Filter..."),
+              React.createElement("div",{style:{flex:1,background:BG,border:"1px solid "+BD,padding:"2px 8px",margin:"0 8px",fontSize:10,color:DM}},"Filter (type:bash >5s tokens:>1k)"),
               React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,background:BG,border:"1px solid "+BD,borderRadius:9999,padding:"2px 10px"}},
+                /* Stats button */
+                React.createElement("svg",{width:"11",height:"11",viewBox:"0 0 14 14",fill:"none",style:{flexShrink:0,cursor:"pointer"}},
+                  React.createElement("rect",{x:"1",y:"8",width:"3",height:"5",rx:"0.5",fill:DM}),
+                  React.createElement("rect",{x:"5.5",y:"5",width:"3",height:"8",rx:"0.5",fill:DM}),
+                  React.createElement("rect",{x:"10",y:"2",width:"3",height:"11",rx:"0.5",fill:DM})
+                ),
                 React.createElement(HealthRing,{score:hScore,size:24,compact:true}),
                 React.createElement("svg",{width:"10",height:"10",viewBox:"0 0 14 14",fill:"none",style:{flexShrink:0}},
                   React.createElement("path",{d:"M7 1.5L1 12.5h12L7 1.5z",stroke:YL,strokeWidth:"1.1",strokeLinejoin:"round"}),
                   React.createElement("path",{d:"M7 6v3",stroke:YL,strokeWidth:"1",strokeLinecap:"round"}),
                   React.createElement("circle",{cx:"7",cy:"11",r:".5",fill:YL})
                 ),
-                React.createElement("span",{style:{fontSize:10,color:DM2}},demoRows[visR.length>0?visR.length-1:0].tk),
+                React.createElement("span",{style:{fontSize:10,color:DM2}},
+                  (demoRows[visR.length>0?visR.length-1:0].tk||"42.1k"),
+                  React.createElement("span",{style:{color:GN2,marginLeft:4}},"· $0.42")
+                ),
                 React.createElement("span",{style:{fontSize:10,color:DM2}},"4m12s")
               )
             ),
@@ -303,6 +394,7 @@
               React.createElement("div",{style:{width:42,textAlign:"center"}},"Type"),
               React.createElement("div",{style:{width:48,textAlign:"right",paddingRight:6}},"Time"),
               React.createElement("div",{style:{width:52,textAlign:"right",paddingRight:6}},"Tokens"),
+              React.createElement("div",{style:{width:38,textAlign:"right",paddingRight:6,color:GN2}},"Cost"),
               React.createElement("div",{style:{width:32,textAlign:"center"}},
                 React.createElement("svg",{width:"9",height:"9",viewBox:"0 0 14 14",fill:"none"},
                   React.createElement("path",{d:"M7 1.5L1 12.5h12L7 1.5z",stroke:DM,strokeWidth:"1.1",strokeLinejoin:"round"}),
@@ -315,7 +407,7 @@
               )
             ),
             /* rows */
-            React.createElement("div",{style:{minHeight:420}},
+            React.createElement("div",{style:{minHeight:446}},
               demoRows.map(function(r){return React.createElement(DemoRow,{key:r.n,row:r,visible:visR.indexOf(r.n)>=0})})
             )
           ),
