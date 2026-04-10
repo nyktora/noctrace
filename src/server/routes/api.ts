@@ -253,6 +253,30 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
   });
 
   // ---------------------------------------------------------------------------
+  // GET /api/sessions/registered (MUST be before /sessions/:slug to avoid param capture)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Return the list of currently registered MCP session paths.
+   * An empty array means standalone mode (show all sessions from disk).
+   * A non-empty array means MCP mode (show only registered sessions).
+   */
+  router.get('/sessions/registered', async (_req, res) => {
+    const STALE_THRESHOLD_MS = 5 * 60 * 1000;
+    for (const registeredPath of registeredSessionPaths) {
+      try {
+        const stat = await fs.stat(registeredPath);
+        if (Date.now() - stat.mtime.getTime() > STALE_THRESHOLD_MS) {
+          registeredSessionPaths.delete(registeredPath);
+        }
+      } catch {
+        registeredSessionPaths.delete(registeredPath);
+      }
+    }
+    res.json({ sessions: Array.from(registeredSessionPaths) });
+  });
+
+  // ---------------------------------------------------------------------------
   // GET /api/sessions/:slug
   // ---------------------------------------------------------------------------
 
@@ -608,31 +632,5 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
   });
 
   // ---------------------------------------------------------------------------
-  // GET /api/sessions/registered
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Return the list of currently registered MCP session paths.
-   * An empty array means standalone mode (show all sessions from disk).
-   * A non-empty array means MCP mode (show only registered sessions).
-   */
-  router.get('/sessions/registered', async (_req, res) => {
-    // Prune phantom sessions whose JSONL has not been modified in the last 5 minutes.
-    // Active sessions are written to frequently; stale ones left by SIGKILL won't be.
-    const STALE_THRESHOLD_MS = 5 * 60 * 1000;
-    for (const registeredPath of registeredSessionPaths) {
-      try {
-        const stat = await fs.stat(registeredPath);
-        if (Date.now() - stat.mtime.getTime() > STALE_THRESHOLD_MS) {
-          registeredSessionPaths.delete(registeredPath);
-        }
-      } catch {
-        // File no longer exists — remove the phantom entry
-        registeredSessionPaths.delete(registeredPath);
-      }
-    }
-    res.json({ sessions: Array.from(registeredSessionPaths) });
-  });
-
   return router;
 }
