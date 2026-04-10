@@ -3,7 +3,6 @@ import React, { useMemo, useCallback, useState } from 'react';
 import { useSessionStore } from '../store/session-store.ts';
 import { HealthBadge } from './health-badge.tsx';
 import { SessionStats } from './session-stats.tsx';
-import { TeamsPanel } from './teams-panel.tsx';
 import { ContextStartup } from './context-startup.tsx';
 import { FilterIcon } from '../icons/filter-icon.tsx';
 import { WaterfallIcon } from '../icons/waterfall-icon.tsx';
@@ -12,7 +11,6 @@ import { DriftIcon } from '../icons/drift-icon.tsx';
 import { TipIcon } from '../icons/tip-icon.tsx';
 import { ShieldIcon } from '../icons/shield-icon.tsx';
 import { StatsIcon } from '../icons/stats-icon.tsx';
-import { TeamIcon } from '../icons/team-icon.tsx';
 import { ContextIcon } from '../icons/context-icon.tsx';
 import { formatTokens, formatDuration } from '../utils/tool-colors.ts';
 import { formatCost } from '../../shared/token-cost.ts';
@@ -30,10 +28,8 @@ export function Toolbar(): React.ReactElement {
   const drift = useSessionStore((s) => s.drift);
   const showSessionStats = useSessionStore((s) => s.showSessionStats);
   const toggleSessionStats = useSessionStore((s) => s.toggleSessionStats);
-  const teams = useSessionStore((s) => s.teams);
   const instructionsLoaded = useSessionStore((s) => s.instructionsLoaded);
 
-  const [showTeams, setShowTeams] = useState(false);
   const [showContextStartup, setShowContextStartup] = useState(false);
 
   const handleCloseStats = useCallback(() => {
@@ -139,34 +135,6 @@ export function Toolbar(): React.ReactElement {
       >
         Auto
       </button>
-
-      {/* Teams badge — only shown when teams exist */}
-      {teams.length > 0 && (
-        <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => { setShowTeams((v) => !v); setShowContextStartup(false); }}
-            title={`${teams.length} Agent Team${teams.length === 1 ? '' : 's'} detected`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              background: showTeams ? 'var(--ctp-surface1)' : 'none',
-              border: '1px solid var(--ctp-surface1)',
-              borderRadius: 6,
-              cursor: 'pointer',
-              padding: '2px 6px',
-              color: showTeams ? 'var(--ctp-blue)' : 'var(--ctp-overlay0)',
-              fontSize: 10,
-              fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-            }}
-          >
-            <TeamIcon size={12} color={showTeams ? 'var(--ctp-blue)' : 'var(--ctp-overlay0)'} />
-            <span>Teams: {teams.length}</span>
-          </button>
-          {showTeams && <TeamsPanel onClose={() => setShowTeams(false)} />}
-        </div>
-      )}
 
       {/* Compact stats pill — wrapped in relative container for flyout positioning */}
       {rows.length > 0 && (
@@ -309,7 +277,7 @@ export function Toolbar(): React.ReactElement {
           {instructionsLoaded.length > 0 && (
             <button
               type="button"
-              onClick={() => { setShowContextStartup((v) => !v); setShowTeams(false); }}
+              onClick={() => { setShowContextStartup((v) => !v); }}
               title={`${instructionsLoaded.length} instruction file${instructionsLoaded.length === 1 ? '' : 's'} loaded at session start`}
               style={{
                 display: 'flex',

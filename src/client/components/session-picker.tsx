@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 
-import type { ProjectSummary, SessionSummary } from '../../shared/types.ts';
+import type { AgentTeam, ProjectSummary, SessionSummary, TeamMember } from '../../shared/types.ts';
 import { useSessionStore } from '../store/session-store.ts';
 import { formatRelativeTime } from '../utils/tool-colors.ts';
 import { CompareIcon } from '../icons/compare-icon.tsx';
+import { TeamIcon } from '../icons/team-icon.tsx';
 
 /**
  * Detect if a slug is a git worktree path.
@@ -245,6 +246,128 @@ function ProjectRow({ project, isSelected, onSelect }: ProjectRowProps): React.R
   );
 }
 
+/** Single team member row rendered inline in the sidebar */
+function SidebarMemberRow({ member }: { member: TeamMember }): React.ReactElement {
+  const setFilter = useSessionStore((s) => s.setFilter);
+
+  return (
+    <div
+      className="flex items-center gap-2 py-1"
+      style={{ paddingLeft: 24, paddingRight: 12, fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}
+    >
+      <span
+        className="shrink-0 px-1.5 rounded"
+        style={{
+          backgroundColor: 'var(--ctp-surface1)',
+          color: 'var(--ctp-blue)',
+          fontSize: 9,
+          fontFamily: 'ui-monospace, monospace',
+          lineHeight: '16px',
+          maxWidth: 90,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+        title={member.agentType || 'unknown'}
+      >
+        {member.agentType || 'agent'}
+      </span>
+      <span
+        className="flex-1 truncate text-xs"
+        style={{ color: 'var(--ctp-subtext0)' }}
+        title={member.name}
+      >
+        {member.name}
+      </span>
+      {member.agentId && (
+        <button
+          type="button"
+          onClick={() => setFilter(member.agentId ?? '')}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--ctp-overlay0)',
+            fontSize: 9,
+            padding: 0,
+            fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+          }}
+          title={`Filter waterfall to agent ${member.agentId}`}
+        >
+          filter
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Single collapsible team row in the sidebar */
+function SidebarTeamRow({ team }: { team: AgentTeam }): React.ReactElement {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full text-left flex items-center gap-2 py-1 transition-colors"
+        style={{
+          paddingLeft: 12,
+          paddingRight: 12,
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: 'var(--ctp-subtext1)',
+          fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+        }}
+      >
+        {/* Expand chevron */}
+        <svg
+          width="8"
+          height="8"
+          viewBox="0 0 8 8"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{
+            flexShrink: 0,
+            transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+            transition: 'transform 150ms',
+            color: 'var(--ctp-overlay0)',
+          }}
+        >
+          <path d="M2 1l4 3-4 3" />
+        </svg>
+        <span className="flex-1 truncate text-xs font-semibold" style={{ fontSize: 11 }}>
+          {team.name}
+        </span>
+        <span className="shrink-0 text-xs" style={{ color: 'var(--ctp-overlay0)', fontSize: 10 }}>
+          {team.members.length}m
+          {team.taskCount > 0 ? ` · ${team.taskCount}t` : ''}
+        </span>
+      </button>
+      {expanded && (
+        <div style={{ borderBottom: '1px solid var(--ctp-surface0)' }}>
+          {team.members.length === 0 ? (
+            <div
+              className="py-1 text-xs"
+              style={{ paddingLeft: 24, color: 'var(--ctp-overlay0)', fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}
+            >
+              No members configured
+            </div>
+          ) : (
+            team.members.map((member) => (
+              <SidebarMemberRow key={member.agentId || member.name} member={member} />
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Left sidebar component for browsing projects and sessions.
  * Fetches project list on mount and sessions when a project is selected.
@@ -266,7 +389,9 @@ export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.Re
   const enterCompareMode = useSessionStore((s) => s.enterCompareMode);
   const mcpMode = useSessionStore((s) => s.mcpMode);
   const registeredSessions = useSessionStore((s) => s.registeredSessions);
+  const teams = useSessionStore((s) => s.teams);
   const [showEmpty, setShowEmpty] = useState(false);
+  const [showTeams, setShowTeams] = useState(true);
 
   useEffect(() => {
     void fetchProjects();
@@ -393,6 +518,72 @@ export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.Re
         >
           {showEmpty ? `Hide empty projects` : `Show ${emptyProjectCount} empty project${emptyProjectCount === 1 ? '' : 's'}`}
         </button>
+      )}
+
+      {/* Agent Teams section — global, not per-session */}
+      {teams.length > 0 && (
+        <div
+          className="shrink-0"
+          style={{ borderTop: '1px solid var(--ctp-surface0)' }}
+        >
+          {/* Teams header / toggle */}
+          <button
+            type="button"
+            onClick={() => setShowTeams((v) => !v)}
+            className="w-full flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--ctp-overlay0)',
+              fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+            }}
+          >
+            <TeamIcon size={11} color="var(--ctp-overlay0)" />
+            <span className="flex-1 text-left">Agent Teams</span>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 400,
+                color: 'var(--ctp-surface2)',
+                fontFamily: 'ui-monospace, monospace',
+              }}
+            >
+              {teams.length}
+            </span>
+            <svg
+              width="8"
+              height="8"
+              viewBox="0 0 8 8"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{
+                flexShrink: 0,
+                transform: showTeams ? 'rotate(90deg)' : 'rotate(0deg)',
+                transition: 'transform 150ms',
+              }}
+            >
+              <path d="M2 1l4 3-4 3" />
+            </svg>
+          </button>
+
+          {showTeams && (
+            <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+              {teams.map((team) => (
+                <SidebarTeamRow key={team.name} team={team} />
+              ))}
+              <div
+                className="px-3 py-1.5 text-xs"
+                style={{ color: 'var(--ctp-overlay0)', fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}
+              >
+                Click &quot;filter&quot; on a member to search the waterfall
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
