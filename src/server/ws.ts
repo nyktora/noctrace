@@ -6,10 +6,12 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import chokidar from 'chokidar';
+import fs from 'node:fs';
 import path from 'node:path';
 import type { IncomingMessage } from 'node:http';
 import type { Server } from 'node:http';
-import { watchSession } from './watcher.js';
+import { watchSession, watchSubAgent } from './watcher.js';
+import { extractAgentIds } from '../shared/parser.js';
 import type { WaterfallRow, ContextHealth, DriftAnalysis, HookEventMessage } from '../shared/types.js';
 
 // ---------------------------------------------------------------------------
@@ -67,6 +69,23 @@ interface SessionCreatedMessage {
   slug: string;
 }
 
+interface SubAgentUpdateMessage {
+  type: 'subagent-update';
+  /** Session ID of the parent session that owns this sub-agent. */
+  sessionId: string;
+  /** Agent ID extracted from the sub-agent JSONL filename. */
+  agentId: string;
+  /**
+   * The tool_use_id from the parent session's assistant record that dispatched this agent.
+   * This is the `id` field of the parent WaterfallRow of type 'agent'.
+   * Included so the client can match the update to the correct parent row without
+   * needing to re-parse the main JSONL or maintain a reverse lookup table.
+   */
+  toolUseId: string;
+  /** Fully parsed rows from the sub-agent JSONL file. */
+  rows: WaterfallRow[];
+}
+
 interface ErrorServerMessage {
   type: 'error';
   message: string;
@@ -78,6 +97,7 @@ type ServerMessage =
   | ResumeDoneMessage
   | ResumeErrorMessage
   | SessionCreatedMessage
+  | SubAgentUpdateMessage
   | HookEventMessage
   | ErrorServerMessage;
 
@@ -165,6 +185,8 @@ export function setupWebSocket(server: Server, claudeHome: string): WebSocketSer
 
   wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
     let stopWatcher: (() => void) | null = null;
+    /** Handles for each active sub-agent file watcher, keyed by agentId. */
+    const subAgentStoppers = new Map<string, () => void>();
     let resumeProc: ChildProcess | null = null;
 
     const stopCurrent = () => {
@@ -172,6 +194,10 @@ export function setupWebSocket(server: Server, claudeHome: string): WebSocketSer
         stopWatcher();
         stopWatcher = null;
       }
+      for (const stop of subAgentStoppers.values()) {
+        stop();
+      }
+      subAgentStoppers.clear();
     };
 
     const killResume = () => {
@@ -330,13 +356,122 @@ export function setupWebSocket(server: Server, claudeHome: string): WebSocketSer
         return;
       }
 
+      /**
+       * Build a reverse lookup map from agentId to toolUseId by reading the main JSONL.
+       * Returns an empty map if the file cannot be read.
+       */
+      const buildAgentIdToToolUseId = (): Map<string, string> => {
+        try {
+          const mainContent = fs.readFileSync(filePath, 'utf8');
+          // extractAgentIds returns Map<toolUseId, agentId> — we invert it
+          const forward = extractAgentIds(mainContent);
+          const reverse = new Map<string, string>();
+          for (const [toolUseId, agentId] of forward) {
+            reverse.set(agentId, toolUseId);
+          }
+          return reverse;
+        } catch {
+          return new Map();
+        }
+      };
+
+      /**
+       * Start a file watcher for a single sub-agent JSONL path if not already watching.
+       * Validates that the path is within the expected subagents directory.
+       * Optionally accepts a pre-computed toolUseId to avoid re-reading the main JSONL.
+       */
+      const startSubAgentWatcher = (subFilePath: string, knownToolUseId?: string): void => {
+        const resolvedSub = path.resolve(subFilePath);
+        const expectedPrefix = path.resolve(path.join(projectsBase, slug, id, 'subagents')) + path.sep;
+        if (!resolvedSub.startsWith(expectedPrefix)) return;
+
+        // Extract agentId from filename: agent-<agentId>.jsonl
+        const baseName = path.basename(subFilePath);
+        const match = baseName.match(/^agent-([a-zA-Z0-9_-]+)\.jsonl$/);
+        if (!match) return;
+        const agentId = match[1];
+
+        // Skip if already watching this agent
+        if (subAgentStoppers.has(agentId)) return;
+
+        // Resolve the toolUseId (parent row.id) for this agentId
+        const toolUseId = knownToolUseId ?? buildAgentIdToToolUseId().get(agentId) ?? agentId;
+
+        const subHandle = watchSubAgent(subFilePath, agentId, toolUseId, {
+          onUpdate: (updatedAgentId, updatedToolUseId, subRows) => {
+            send(ws, {
+              type: 'subagent-update',
+              sessionId: id,
+              agentId: updatedAgentId,
+              toolUseId: updatedToolUseId,
+              rows: subRows,
+            });
+          },
+        });
+
+        subAgentStoppers.set(agentId, subHandle.stop);
+      };
+
+      /**
+       * Read the main JSONL to extract agentId entries and start file watchers
+       * for any sub-agent JSONL files we haven't started watching yet.
+       * This supplements the directory watcher for cases where agentId appears
+       * in the main JSONL before the corresponding sub-agent file is created on disk.
+       */
+      const startSubAgentWatchersFromFile = (): void => {
+        try {
+          const mainContent = fs.readFileSync(filePath, 'utf8');
+          const agentIdMap = extractAgentIds(mainContent);
+          for (const [toolUseId, agentId] of agentIdMap) {
+            if (!/^[a-zA-Z0-9_-]+$/.test(agentId)) continue;
+            if (subAgentStoppers.has(agentId)) continue;
+            const subFilePath = path.join(projectsBase, slug, id, 'subagents', `agent-${agentId}.jsonl`);
+            startSubAgentWatcher(subFilePath, toolUseId);
+          }
+        } catch {
+          // If we can't read the main file, skip — non-critical
+        }
+      };
+
       const handle = watchSession(filePath, {
         onNewRows: (rows, health, boundaries, drift) => {
           send(ws, { type: 'rows', rows, health, boundaries, drift });
+
+          // Whenever the main session file changes, check for new sub-agent IDs
+          // (toolUseResult.agentId) and start watching any files we haven't seen yet.
+          // The directory watcher below handles newly created files; this handles
+          // the case where agentId appears in main JSONL before the file is created.
+          startSubAgentWatchersFromFile();
         },
       });
 
       stopWatcher = handle.stop;
+
+      // Also start watching the sub-agent directory using a chokidar glob watcher
+      // so that new agent files are picked up as they are created.
+      const subagentsDir = path.join(projectsBase, slug, id, 'subagents');
+      const subagentsDirResolved = path.resolve(subagentsDir);
+      const allowedPrefix = path.resolve(projectsBase) + path.sep;
+      if (subagentsDirResolved.startsWith(allowedPrefix)) {
+        const subDirWatcher = chokidar.watch(path.join(subagentsDir, '*.jsonl'), {
+          persistent: true,
+          // Fire for pre-existing files too so we pick up agents that started before the watch
+          ignoreInitial: false,
+        });
+
+        subDirWatcher.on('add', (subFilePath: string) => {
+          startSubAgentWatcher(subFilePath);
+        });
+
+        subDirWatcher.on('error', (err) => {
+          console.warn('[noctrace] subagents dir watcher error:', err instanceof Error ? err.message : String(err));
+        });
+
+        // Register a stop function for the directory watcher itself
+        subAgentStoppers.set('__dir__', () => {
+          subDirWatcher.close().catch(() => {});
+        });
+      }
     });
 
     ws.on('close', () => {

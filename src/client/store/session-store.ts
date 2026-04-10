@@ -44,6 +44,13 @@ export interface SessionStore {
   resumeStatus: 'idle' | 'running' | 'done' | 'error';
   resumeMessages: ResumeMessage[];
 
+  /**
+   * Buffer for sub-agent children updates that arrived before the parent agent row
+   * was present in the store. Keyed by toolUseId (parent row.id); flushed by addRows
+   * when the parent row appears.
+   */
+  pendingSubAgentChildren: Map<string, WaterfallRow[]>;
+
   // Compare mode
   compareMode: boolean;
   compareSessionId: string | null;
@@ -67,6 +74,13 @@ export interface SessionStore {
   setZoom: (level: number) => void;
   setPan: (offset: number) => void;
   addRows: (rows: WaterfallRow[], health: ContextHealth, boundaries: number[], drift: DriftAnalysis) => void;
+  /**
+   * Replace the children of the agent row identified by toolUseId (the parent row's id).
+   * Buffers the update if the parent row does not exist yet (race condition: sub-agent file
+   * written before parent row appears in the main session). The buffer is flushed when
+   * addRows processes the parent row.
+   */
+  updateSubAgentChildren: (toolUseId: string, agentId: string, children: WaterfallRow[]) => void;
   setSlowThreshold: (ms: number) => void;
   toggleSessionStats: () => void;
   setResumeStatus: (status: 'idle' | 'running' | 'done' | 'error') => void;
@@ -108,6 +122,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   resumeStatus: 'idle',
   resumeMessages: [],
+
+  pendingSubAgentChildren: new Map<string, WaterfallRow[]>(),
 
   compareMode: false,
   compareSessionId: null,
@@ -283,6 +299,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   addRows: (rows, health, boundaries, drift) => {
     const existing = get().rows;
+    const pending = get().pendingSubAgentChildren;
     // Merge by id — update existing, append new
     const map = new Map(existing.map((r) => [r.id, r]));
     for (const row of rows) {
@@ -292,7 +309,18 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       if (prev && prev.children.length > 0 && row.children.length === 0) {
         row.children = prev.children;
       }
+      // Flush any buffered sub-agent children for this row.
+      // The buffer is keyed by toolUseId === row.id, populated by updateSubAgentChildren
+      // when a subagent-update arrived before this row existed in the store.
+      if (pending.has(row.id) && row.children.length === 0) {
+        row.children = pending.get(row.id)!;
+      }
       map.set(row.id, row);
+    }
+    // Remove flushed entries from the pending buffer
+    const nextPending = new Map(pending);
+    for (const row of rows) {
+      if (nextPending.has(row.id)) nextPending.delete(row.id);
     }
     const agentIds = new Set<string>(get().expandedAgents);
     for (const row of rows) {
@@ -304,6 +332,33 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       compactionBoundaries: boundaries,
       drift,
       expandedAgents: agentIds,
+      pendingSubAgentChildren: nextPending,
     });
+  },
+
+  updateSubAgentChildren: (toolUseId, agentId, children) => {
+    const rows = get().rows;
+    // The toolUseId is the parent agent row's id (row.id === block.id from the assistant record).
+    // Tag each child with parentAgentId = toolUseId (matching the API route convention).
+    const taggedChildren = children.map((c) => ({ ...c, parentAgentId: toolUseId }));
+
+    // Find the parent row by its id (toolUseId)
+    const parentRow = rows.find((r) => r.id === toolUseId);
+
+    if (parentRow !== undefined) {
+      // Parent row exists — update its children immediately
+      const nextRows = rows.map((row) => {
+        if (row.id !== toolUseId) return row;
+        return { ...row, children: taggedChildren };
+      });
+      set({ rows: nextRows });
+    } else {
+      // Parent row not yet in the store (race condition: sub-agent JSONL written before
+      // the parent tool_use record appears in the main JSONL). Buffer keyed by toolUseId
+      // so addRows can flush it when the parent row arrives.
+      const nextPending = new Map(get().pendingSubAgentChildren);
+      nextPending.set(toolUseId, taggedChildren);
+      set({ pendingSubAgentChildren: nextPending });
+    }
   },
 }));

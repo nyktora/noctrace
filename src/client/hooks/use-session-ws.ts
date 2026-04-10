@@ -11,6 +11,14 @@ interface WsRowsMessage {
   drift: DriftAnalysis;
 }
 
+interface WsSubAgentUpdateMessage {
+  type: 'subagent-update';
+  sessionId: string;
+  agentId: string;
+  toolUseId: string;
+  rows: WaterfallRow[];
+}
+
 interface WsResumeChunk {
   type: 'resume-chunk';
   text: string;
@@ -41,7 +49,7 @@ interface WsSessionUnregistered {
   sessionPath: string;
 }
 
-type WsIncoming = WsRowsMessage | WsResumeChunk | WsResumeDone | WsResumeError | WsSessionCreated | WsSessionRegistered | WsSessionUnregistered;
+type WsIncoming = WsRowsMessage | WsSubAgentUpdateMessage | WsResumeChunk | WsResumeDone | WsResumeError | WsSessionCreated | WsSessionRegistered | WsSessionUnregistered;
 
 /**
  * Custom hook that maintains a WebSocket connection to the local Noctrace server.
@@ -55,6 +63,7 @@ export function useSessionWs(): {
   cancelResume: () => void;
 } {
   const addRows = useSessionStore((s) => s.addRows);
+  const updateSubAgentChildren = useSessionStore((s) => s.updateSubAgentChildren);
   const setResumeStatus = useSessionStore((s) => s.setResumeStatus);
   const appendResumeOutput = useSessionStore((s) => s.appendResumeOutput);
   const addResumeUserMessage = useSessionStore((s) => s.addResumeUserMessage);
@@ -103,6 +112,12 @@ export function useSessionWs(): {
         }
         if (msg.type === 'rows') {
           addRows(msg.rows, msg.health, msg.boundaries, msg.drift);
+        } else if (msg.type === 'subagent-update') {
+          // Only apply the update if this message is for the currently viewed session
+          const currentSessionId = useSessionStore.getState().selectedSessionId;
+          if (currentSessionId === msg.sessionId) {
+            updateSubAgentChildren(msg.toolUseId, msg.agentId, msg.rows);
+          }
         } else if (msg.type === 'resume-chunk') {
           appendResumeOutput(msg.text);
         } else if (msg.type === 'resume-done') {
