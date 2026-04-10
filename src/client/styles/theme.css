@@ -22,6 +22,7 @@
   --ctp-red: #f38ba8;
   --ctp-pink: #f5c2e7;
   --ctp-lavender: #b4befe;
+  --ctp-sky: #89dceb;
 
   /* Tool colors */
   --color-read: var(--ctp-blue);
@@ -32,6 +33,7 @@
   --color-grep: var(--ctp-teal);
   --color-error: var(--ctp-red);
   --color-running: var(--ctp-pink);
+  --color-monitor: var(--ctp-sky);
 }
 
 body {

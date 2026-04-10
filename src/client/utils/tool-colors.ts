@@ -14,6 +14,7 @@ export function getToolColor(toolName: string, status?: string): string {
   if (name === 'bash' || name === 'execute') return 'var(--color-bash)';
   if (name === 'task' || name === 'agent' || name === 'dispatch_agent') return 'var(--color-agent)';
   if (name === 'grep' || name === 'glob' || name === 'search') return 'var(--color-grep)';
+  if (name === 'monitor') return 'var(--color-monitor)';
   if (name.startsWith('mcp__')) return 'var(--ctp-teal)';
 
   return 'var(--ctp-overlay0)';
@@ -29,6 +30,7 @@ const COLOR_HEX: Record<string, string> = {
   'var(--color-grep)': '#94e2d5',
   'var(--color-error)': '#f38ba8',
   'var(--color-running)': '#f5c2e7',
+  'var(--color-monitor)': '#89dceb',
   'var(--ctp-overlay0)': '#6c7086',
   'var(--ctp-teal)': '#94e2d5',
 };

@@ -56,6 +56,8 @@ export interface WaterfallRow {
   estimatedCost: number | null;
   /** Agent type label from toolUseResult (e.g. "Explore", "core:deep-researcher"). Null when not a subagent row. */
   agentType: string | null;
+  /** Agent color from toolUseResult (e.g. "blue", "green"). Null when not present. */
+  agentColor: string | null;
 }
 
 /**

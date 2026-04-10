@@ -93,6 +93,23 @@ function hasSecurityTip(tips: EfficiencyTip[]): boolean {
   return tips.some((t) => t.category === 'security');
 }
 
+/** Maps agent color names from toolUseResult to Catppuccin CSS vars and resolved hex values */
+function agentColorVar(colorName: string | null): { bg: string; fg: string; border: string } {
+  const map: Record<string, string> = {
+    red: 'var(--ctp-red)',
+    blue: 'var(--ctp-blue)',
+    green: 'var(--ctp-green)',
+    yellow: 'var(--ctp-yellow)',
+    purple: 'var(--ctp-mauve)',
+    orange: 'var(--ctp-peach)',
+    pink: 'var(--ctp-pink)',
+    cyan: 'var(--ctp-teal)',
+  };
+  const cssVar = (colorName && map[colorName]) || 'var(--ctp-blue)';
+  const hex = resolveColor(cssVar);
+  return { bg: hex + '1f', fg: cssVar, border: hex + '40' };
+}
+
 /**
  * Single row in the waterfall timeline.
  * Renders the name, type badge, time, token count, context fill, and the colored bar.
@@ -356,9 +373,9 @@ export function WaterfallRowComponent({
               fontWeight: 500,
               padding: '1px 4px',
               borderRadius: 3,
-              backgroundColor: 'rgba(137,180,250,0.12)',
-              color: 'var(--ctp-blue)',
-              border: '1px solid rgba(137,180,250,0.25)',
+              backgroundColor: agentColorVar(row.agentColor).bg,
+              color: agentColorVar(row.agentColor).fg,
+              border: `1px solid ${agentColorVar(row.agentColor).border}`,
               whiteSpace: 'nowrap',
             }}
             title={`Agent type: ${row.agentType}`}
@@ -557,6 +574,7 @@ function getTypeShort(toolName: string): string {
   if (name === 'bash' || name === 'execute') return 'Bash';
   if (name === 'task' || name === 'agent' || name === 'dispatch_agent') return 'Task';
   if (name === 'grep' || name === 'glob' || name === 'search') return 'Grep';
+  if (name === 'monitor') return 'Mon';
   // API error classes (from classifyStopFailure)
   if (name === 'rate limit') return 'RateL';
   if (name === 'billing error') return 'Bill';

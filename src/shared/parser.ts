@@ -52,6 +52,7 @@ interface UserRecord {
   toolUseResult?: {
     agentId?: string;
     agentType?: string;
+    color?: string;
     totalToolUseCount?: number;
     totalDurationMs?: number;
   };
@@ -239,7 +240,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
   // Build result map: tool_use_id → result data
   // For Agent/Task tool calls, also capture totalDurationMs so the agent bar
   // can span its real lifetime instead of showing just the instant dispatch time.
-  const resultMap = new Map<string, { endTime: number; output: string; isError: boolean; isFailure: boolean; totalDurationMs?: number; agentType?: string }>();
+  const resultMap = new Map<string, { endTime: number; output: string; isError: boolean; isFailure: boolean; totalDurationMs?: number; agentType?: string; agentColor?: string }>();
   for (const rec of records) {
     if (rec.type !== 'user') continue;
     const ur = rec as UserRecord;
@@ -258,6 +259,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
           isFailure: isError && isToolFailure(output),
           totalDurationMs: ur.toolUseResult?.totalDurationMs,
           agentType: ur.toolUseResult?.agentType,
+          agentColor: ur.toolUseResult?.color,
         });
       }
     }
@@ -469,6 +471,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       modelName: p.modelName,
       estimatedCost,
       agentType: res?.agentType ?? null,
+      agentColor: res?.agentColor ?? null,
     });
   }
 
@@ -508,6 +511,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       modelName: null,
       estimatedCost: null,
       agentType: null,
+      agentColor: null,
     });
   }
 
@@ -626,6 +630,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       modelName: null,
       estimatedCost: null,
       agentType: null,
+      agentColor: null,
     });
   }
 
@@ -784,6 +789,7 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
         modelName,
         estimatedCost,
         agentType: null,
+        agentColor: null,
       });
     }
   }
@@ -828,6 +834,7 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
       modelName: null,
       estimatedCost: null,
       agentType: null,
+      agentColor: null,
     });
   }
 

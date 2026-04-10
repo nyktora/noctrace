@@ -9,23 +9,35 @@ const NOCTRACE_BASE_URL = `http://localhost:${NOCTRACE_PORT}`;
 const HOOKS_ENDPOINT = `${NOCTRACE_BASE_URL}/api/hooks`;
 
 /**
- * The curl command used as the hook body.
- * Reads the hook event JSON from stdin and POSTs it to noctrace.
- * `--data-raw "$(cat)"` captures all of stdin and sends it as the request body.
- */
-const HOOK_COMMAND = `curl -s -X POST ${HOOKS_ENDPOINT} -H 'Content-Type: application/json' --data-raw "$(cat)"`;
-
-/**
  * The set of Claude Code hook event names noctrace subscribes to.
  */
 const HOOK_EVENT_NAMES = [
   'PostToolUse',
+  'PostToolUseFailure',
   'SubagentStart',
   'SubagentStop',
   'Stop',
   'PreCompact',
   'PostCompact',
+  'SessionStart',
+  'SessionEnd',
+  'PermissionRequest',
+  'PermissionDenied',
+  'WorktreeCreate',
+  'WorktreeRemove',
 ];
+
+/**
+ * Check if a hook entry array contains a noctrace hook (either old command-type or new http-type).
+ */
+function hasNoctraceHook(entry) {
+  return Array.isArray(entry.hooks) &&
+    entry.hooks.some(
+      (h) =>
+        (h.type === 'command' && typeof h.command === 'string' && h.command.includes(HOOKS_ENDPOINT)) ||
+        (h.type === 'http' && h.url === HOOKS_ENDPOINT),
+    );
+}
 
 /**
  * Read and parse ~/.claude/settings.json.
@@ -51,9 +63,8 @@ async function writeSettings(settingsPath, settings) {
 
 /**
  * Install noctrace hooks into ~/.claude/settings.json.
- * For each hook event name, adds a "command" hook that POSTs the event
- * payload to the noctrace HTTP endpoint.
- * Skips events that already have a noctrace hook registered.
+ * For each hook event name, adds an HTTP hook pointing at the noctrace endpoint.
+ * Detects both old command-type and new http-type hooks to avoid duplicates.
  */
 async function installHooks() {
   const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
@@ -69,14 +80,8 @@ async function installHooks() {
 
     const existing = settings.hooks[eventName];
 
-    // Check whether a noctrace hook is already registered for this event
-    const alreadyInstalled = existing.some(
-      (entry) =>
-        Array.isArray(entry.hooks) &&
-        entry.hooks.some(
-          (h) => h.type === 'command' && typeof h.command === 'string' && h.command.includes(HOOKS_ENDPOINT),
-        ),
-    );
+    // Check whether a noctrace hook is already registered (either old command or new http format)
+    const alreadyInstalled = existing.some(hasNoctraceHook);
 
     if (alreadyInstalled) {
       skipped.push(eventName);
@@ -85,8 +90,8 @@ async function installHooks() {
 
     existing.push({
       hooks: [{
-        type: 'command',
-        command: HOOK_COMMAND,
+        type: 'http',
+        url: HOOKS_ENDPOINT,
         async: true,
       }],
     });
@@ -108,8 +113,8 @@ async function installHooks() {
 
 /**
  * Remove noctrace hooks from ~/.claude/settings.json.
- * Only removes hooks whose command string contains the noctrace endpoint —
- * other hooks for the same events are left untouched.
+ * Removes both old command-type and new http-type hooks.
+ * Iterates all hook event keys (not just HOOK_EVENT_NAMES) to clean up orphaned entries.
  */
 async function uninstallHooks() {
   const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
@@ -122,20 +127,13 @@ async function uninstallHooks() {
 
   const removed = [];
 
-  for (const eventName of HOOK_EVENT_NAMES) {
+  // Iterate ALL hook event keys (not just current HOOK_EVENT_NAMES) to clean up orphaned old entries
+  for (const eventName of Object.keys(settings.hooks)) {
     const existing = settings.hooks[eventName];
     if (!Array.isArray(existing)) continue;
 
     const before = existing.length;
-    settings.hooks[eventName] = existing.filter(
-      (entry) =>
-        !(
-          Array.isArray(entry.hooks) &&
-          entry.hooks.some(
-            (h) => h.type === 'command' && typeof h.command === 'string' && h.command.includes(HOOKS_ENDPOINT),
-          )
-        ),
-    );
+    settings.hooks[eventName] = existing.filter((entry) => !hasNoctraceHook(entry));
 
     if (settings.hooks[eventName].length < before) {
       removed.push(eventName);
