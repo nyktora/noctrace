@@ -9,11 +9,11 @@ import { computeContextHealth } from '../shared/health.js';
 import { parseAssistantTurns, computeDrift } from '../shared/drift.js';
 import { attachEfficiencyTips } from '../shared/tips.js';
 import { attachSecurityTips } from '../shared/security-tips.js';
-import type { WaterfallRow, ContextHealth, DriftAnalysis } from '../shared/types.js';
+import type { WaterfallRow, ContextHealth, DriftAnalysis, CompactionBoundary } from '../shared/types.js';
 
 /** Callbacks provided to watchSession. */
 export interface WatcherCallbacks {
-  onNewRows: (rows: WaterfallRow[], health: ContextHealth, boundaries: number[], drift: DriftAnalysis) => void;
+  onNewRows: (rows: WaterfallRow[], health: ContextHealth, boundaries: CompactionBoundary[], drift: DriftAnalysis) => void;
 }
 
 /** Callbacks provided to watchSubAgent. */
@@ -96,7 +96,8 @@ export function watchSession(filePath: string, callbacks: WatcherCallbacks): Wat
       const drift = computeDrift(turns);
 
       // Attach efficiency tips to wasteful rows (mutates allRows in place)
-      attachEfficiencyTips(allRows, boundaries);
+      // tips.ts expects number[] (timestamps), so extract from CompactionBoundary[]
+      attachEfficiencyTips(allRows, boundaries.map((b) => b.timestamp));
 
       // Attach security tips (mutates allRows in place)
       attachSecurityTips(allRows);

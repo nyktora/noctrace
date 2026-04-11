@@ -15,11 +15,13 @@ import {
   parseSubAgentContent,
   parseInstructionsLoaded,
 } from '../../shared/parser.js';
+import { parseSessionResultMetrics, parseInitContext } from '../../shared/session-metadata.js';
 import { computeContextHealth } from '../../shared/health.js';
 import { parseAssistantTurns, computeDrift } from '../../shared/drift.js';
 import { attachEfficiencyTips } from '../../shared/tips.js';
 import { attachSecurityTips } from '../../shared/security-tips.js';
-import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage, SessionRegisteredMessage, SessionUnregisteredMessage, AgentTeam, TeamMember } from '../../shared/types.js';
+import { sessionToOtlp } from '../../shared/otlp-export.js';
+import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage, SessionRegisteredMessage, SessionUnregisteredMessage, AgentTeam, TeamMember, TeamTask, SubagentStartMessage } from '../../shared/types.js';
 
 /**
  * Read ~/.claude/sessions/*.json and return a Set of sessionIds
@@ -232,17 +234,32 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
           // config.json missing or malformed — include team with empty members
         }
 
-        // Count task files in ~/.claude/tasks/{team-name}/
+        // Count task files and parse their contents from ~/.claude/tasks/{team-name}/
         let taskCount = 0;
+        const tasks: TeamTask[] = [];
         const teamTasksDir = path.join(tasksDir, teamName);
         try {
           const taskFiles = await fs.readdir(teamTasksDir);
           taskCount = taskFiles.length;
+          for (const tf of taskFiles) {
+            if (!tf.endsWith('.json')) continue;
+            try {
+              const taskRaw = await fs.readFile(path.join(teamTasksDir, tf), 'utf8');
+              const taskData = JSON.parse(taskRaw) as Record<string, unknown>;
+              tasks.push({
+                id: tf.replace(/\.json$/, ''),
+                subject: typeof taskData['subject'] === 'string' ? taskData['subject'] : tf,
+                status: typeof taskData['status'] === 'string' ? taskData['status'] : 'pending',
+                assignedTo: typeof taskData['assigned_to'] === 'string' ? taskData['assigned_to']
+                  : typeof taskData['assignedTo'] === 'string' ? taskData['assignedTo'] : null,
+              });
+            } catch { /* skip malformed task files */ }
+          }
         } catch {
           // Task directory doesn't exist — taskCount stays 0
         }
 
-        teams.push({ name: teamName, members, taskCount });
+        teams.push({ name: teamName, members, taskCount, tasks });
       }
 
       res.json(teams);
@@ -432,6 +449,8 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
       const turns = parseAssistantTurns(content);
       const drift = computeDrift(turns);
       const instructionsLoaded = parseInstructionsLoaded(content);
+      const resultMetrics = parseSessionResultMetrics(content);
+      const initContext = parseInitContext(content);
 
       // Load sub-agent JSONL files and attach as children to matching agent rows
       const subagentsDir = path.join(projectsDir, slug, id, 'subagents');
@@ -488,7 +507,8 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
       }
 
       // Attach efficiency tips to wasteful rows (mutates rows in place)
-      attachEfficiencyTips(rows, boundaries);
+      // tips.ts expects number[] (timestamps), so extract from CompactionBoundary[]
+      attachEfficiencyTips(rows, boundaries.map((b) => b.timestamp));
 
       // Attach security tips (mutates rows in place)
       attachSecurityTips(rows);
@@ -499,7 +519,47 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
       }
       const tipCount = countTips(rows);
 
-      res.json({ rows, compactionBoundaries: boundaries, health, sessionId, drift, tipCount, instructionsLoaded });
+      res.json({ rows, compactionBoundaries: boundaries, health, sessionId, drift, tipCount, instructionsLoaded, resultMetrics, initContext });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /api/session/:slug/:id/otlp
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Export a session as OTLP/HTTP JSON trace format.
+   * The response can be POSTed directly to any OTLP collector at /v1/traces.
+   */
+  router.get('/session/:slug/:id/otlp', async (req, res) => {
+    const { slug, id } = req.params;
+    const filePath = path.join(projectsDir, slug, `${id}.jsonl`);
+
+    try {
+      assertWithinBase(filePath, projectsDir);
+    } catch {
+      res.status(400).json({ error: 'Invalid path' });
+      return;
+    }
+
+    try {
+      let content: string;
+      try {
+        content = await fs.readFile(filePath, 'utf8');
+      } catch {
+        res.status(404).json({ error: `Session not found: ${slug}/${id}` });
+        return;
+      }
+
+      const rows = parseJsonlContent(content);
+      const sessionId = extractSessionId(content) ?? id;
+      const otlp = sessionToOtlp(rows, sessionId);
+
+      res.setHeader('Content-Type', 'application/json');
+      res.json(otlp);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: message });
@@ -534,6 +594,23 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
         ...(typeof body['permission_mode'] === 'string' ? { permission_mode: body['permission_mode'] } : {}),
         received_at: new Date().toISOString(),
       };
+
+      // For SubagentStart events, broadcast a separate message type
+      // so the client can show an in-progress agent row immediately
+      if (event.hook_event_name === 'SubagentStart' && event.agent_id) {
+        const subagentMsg: SubagentStartMessage = {
+          type: 'subagent-start',
+          agentId: event.agent_id,
+          agentType: event.agent_type ?? null,
+          sessionId: event.session_id,
+        };
+        const subPayload = JSON.stringify(subagentMsg);
+        for (const client of wss.clients) {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(subPayload);
+          }
+        }
+      }
 
       const message: HookEventMessage = { type: 'hook-event', event };
       const payload = JSON.stringify(message);

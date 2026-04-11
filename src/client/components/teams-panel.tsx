@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-import type { AgentTeam, TeamMember } from '../../shared/types.ts';
+import type { AgentTeam, TeamMember, TeamTask } from '../../shared/types.ts';
 import { useSessionStore } from '../store/session-store.ts';
 import { CloseIcon } from '../icons/close-icon.tsx';
 
@@ -67,6 +67,51 @@ function MemberRow({ member }: { member: TeamMember }): React.ReactElement {
   );
 }
 
+/** Color for a task status dot */
+function taskStatusColor(status: string): string {
+  if (status === 'completed') return 'var(--ctp-green)';
+  if (status === 'in_progress') return 'var(--ctp-yellow)';
+  if (status === 'failed') return 'var(--ctp-red)';
+  return 'var(--ctp-overlay0)';
+}
+
+/** Single task row in the task list */
+function TaskRow({ task }: { task: TeamTask }): React.ReactElement {
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-1 text-xs"
+      style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif', paddingLeft: 20 }}
+    >
+      {/* Status dot */}
+      <span
+        style={{
+          display: 'inline-block',
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          flexShrink: 0,
+          backgroundColor: taskStatusColor(task.status),
+        }}
+        title={task.status}
+      />
+      {/* Subject */}
+      <span
+        style={{
+          flex: 1,
+          color: 'var(--ctp-subtext1)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          fontSize: 10,
+        }}
+        title={task.assignedTo ? `Assigned to: ${task.assignedTo}` : undefined}
+      >
+        {task.subject}
+      </span>
+    </div>
+  );
+}
+
 /** Single team section */
 function TeamSection({ team }: { team: AgentTeam }): React.ReactElement {
   return (
@@ -103,6 +148,20 @@ function TeamSection({ team }: { team: AgentTeam }): React.ReactElement {
         team.members.map((member) => (
           <MemberRow key={member.agentId || member.name} member={member} />
         ))
+      )}
+      {/* Task list */}
+      {team.tasks.length > 0 && (
+        <div style={{ borderTop: '1px solid var(--ctp-surface0)' }}>
+          <div
+            className="px-3 py-1"
+            style={{ color: 'var(--ctp-overlay0)', fontSize: 9, fontFamily: 'ui-sans-serif, system-ui, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+          >
+            Tasks
+          </div>
+          {team.tasks.map((task) => (
+            <TaskRow key={task.id} task={task} />
+          ))}
+        </div>
       )}
     </div>
   );

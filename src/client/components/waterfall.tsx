@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { WaterfallRow } from '../../shared/types.ts';
+import type { CompactionBoundary, WaterfallRow } from '../../shared/types.ts';
 import { parseFilterString } from '../../shared/filter.ts';
 import { useSessionStore } from '../store/session-store.ts';
 import { HealthBar } from './health-bar.tsx';
@@ -68,6 +68,8 @@ export function Waterfall(): React.ReactElement {
   const setPan = useSessionStore((s) => s.setPan);
   const autoScroll = useSessionStore((s) => s.autoScroll);
   const setAutoScroll = useSessionStore((s) => s.setAutoScroll);
+  const nameColWidth = useSessionStore((s) => s.nameColWidth);
+  const setNameColWidth = useSessionStore((s) => s.setNameColWidth);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const waterfallColRef = useRef<HTMLDivElement>(null);
@@ -77,6 +79,11 @@ export function Waterfall(): React.ReactElement {
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const dragStartPan = useRef(0);
+
+  // Name column resize state
+  const isResizingName = useRef(false);
+  const resizeStartX = useRef(0);
+  const resizeStartWidth = useRef(200);
 
   // Measure viewport and waterfall column widths
   useEffect(() => {
@@ -213,6 +220,27 @@ export function Waterfall(): React.ReactElement {
     };
   }, [zoomLevel, waterfallWidth, setPan]);
 
+  /** Start resizing the Name column */
+  const handleNameResizeDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizingName.current = true;
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = nameColWidth;
+
+    function handleMove(ev: MouseEvent): void {
+      if (!isResizingName.current) return;
+      const delta = ev.clientX - resizeStartX.current;
+      setNameColWidth(resizeStartWidth.current + delta);
+    }
+    function handleUp(): void {
+      isResizingName.current = false;
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleUp);
+    }
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleUp);
+  }, [nameColWidth, setNameColWidth]);
+
   if (rows.length === 0) {
     return (
       <div
@@ -247,8 +275,21 @@ export function Waterfall(): React.ReactElement {
         <div style={{ width: COL_NUM, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 6, borderRight: '1px solid var(--ctp-surface0)' }}>
           #
         </div>
-        <div style={{ width: COL_NAME, flexShrink: 0, display: 'flex', alignItems: 'center', paddingLeft: 8, borderRight: '1px solid var(--ctp-surface0)' }}>
+        <div style={{ width: nameColWidth, flexShrink: 0, display: 'flex', alignItems: 'center', paddingLeft: 8, borderRight: '1px solid var(--ctp-surface0)', position: 'relative' }}>
           Name
+          {/* Resize handle */}
+          <div
+            onMouseDown={handleNameResizeDown}
+            style={{
+              position: 'absolute',
+              right: -2,
+              top: 0,
+              bottom: 0,
+              width: 5,
+              cursor: 'col-resize',
+              zIndex: 1,
+            }}
+          />
         </div>
         <div style={{ width: COL_TYPE, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid var(--ctp-surface0)' }}>
           Type
@@ -322,6 +363,7 @@ export function Waterfall(): React.ReactElement {
           totalDuration={totalDuration}
           compactionBoundaries={compactionBoundaries}
           sessionStart={sessionStart}
+          nameColWidth={nameColWidth}
         />
 
         <div style={{ height: topSpacer }} />
@@ -373,6 +415,7 @@ export function Waterfall(): React.ReactElement {
               waterfallWidth={waterfallWidth}
               zoomLevel={zoomLevel}
               panOffset={panOffset}
+              nameColWidth={nameColWidth}
               onSelect={selectRow}
               onToggle={toggleAgent}
               onFocusNeighbor={focusNeighbor}
@@ -454,8 +497,9 @@ interface GridLinesProps {
   panOffset: number;
   totalHeight: number;
   totalDuration: number;
-  compactionBoundaries: number[];
+  compactionBoundaries: CompactionBoundary[];
   sessionStart: number;
+  nameColWidth: number;
 }
 
 /** Vertical grid lines and compaction boundaries, rendered as absolute positioned divs */
@@ -467,8 +511,9 @@ function GridLines({
   totalDuration,
   compactionBoundaries,
   sessionStart,
+  nameColWidth,
 }: GridLinesProps): React.ReactElement {
-  const leftOffset = COL_NUM + COL_NAME + COL_TYPE + COL_TIME + COL_TOKENS + COL_CTX;
+  const leftOffset = COL_NUM + nameColWidth + COL_TYPE + COL_TIME + COL_TOKENS + COL_CTX;
 
   return (
     <div
@@ -502,14 +547,17 @@ function GridLines({
       })}
 
       {/* Compaction boundary lines */}
-      {compactionBoundaries.map((ts, i) => {
-        const frac = totalDuration > 0 ? (ts - sessionStart) / totalDuration : 0;
+      {compactionBoundaries.map((boundary, i) => {
+        const frac = totalDuration > 0 ? (boundary.timestamp - sessionStart) / totalDuration : 0;
         const x = frac * scaledWidth + panOffset;
         if (x < 0 || x > waterfallWidth) return null;
+        const triggerLabel = boundary.trigger === 'manual' ? 'Manual compact (/compact)'
+          : boundary.trigger === 'auto' ? 'Auto-compact' : 'Compaction';
+        const tokenLabel = boundary.preTokens != null ? ` at ${Math.round(boundary.preTokens / 1000)}k tokens` : '';
         return (
           <div
             key={i}
-            title={`Compaction at ${formatDuration(ts - sessionStart)}`}
+            title={`${triggerLabel}${tokenLabel} — ${formatDuration(boundary.timestamp - sessionStart)}`}
             style={{
               position: 'absolute',
               left: x,

@@ -12,7 +12,7 @@ import type { IncomingMessage } from 'node:http';
 import type { Server } from 'node:http';
 import { watchSession, watchSubAgent } from './watcher.js';
 import { extractAgentIds } from '../shared/parser.js';
-import type { WaterfallRow, ContextHealth, DriftAnalysis, HookEventMessage } from '../shared/types.js';
+import type { WaterfallRow, ContextHealth, DriftAnalysis, HookEventMessage, CompactionBoundary, SubagentStartMessage } from '../shared/types.js';
 
 // ---------------------------------------------------------------------------
 // Message types
@@ -45,7 +45,7 @@ interface RowsServerMessage {
   type: 'rows';
   rows: WaterfallRow[];
   health: ContextHealth;
-  boundaries: number[];
+  boundaries: CompactionBoundary[];
   drift: DriftAnalysis;
 }
 
@@ -99,6 +99,7 @@ type ServerMessage =
   | SessionCreatedMessage
   | SubAgentUpdateMessage
   | HookEventMessage
+  | SubagentStartMessage
   | ErrorServerMessage;
 
 // ---------------------------------------------------------------------------

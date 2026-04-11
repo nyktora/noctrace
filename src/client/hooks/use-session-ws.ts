@@ -1,14 +1,21 @@
 import { useEffect, useRef, useCallback } from 'react';
 
-import type { ContextHealth, DriftAnalysis, WaterfallRow } from '../../shared/types.ts';
+import type { CompactionBoundary, ContextHealth, DriftAnalysis, WaterfallRow } from '../../shared/types.ts';
 import { useSessionStore } from '../store/session-store.ts';
 
 interface WsRowsMessage {
   type: 'rows';
   rows: WaterfallRow[];
   health: ContextHealth;
-  boundaries: number[];
+  boundaries: CompactionBoundary[];
   drift: DriftAnalysis;
+}
+
+interface WsSubAgentStartMessage {
+  type: 'subagent-start';
+  agentId: string;
+  agentType: string | null;
+  sessionId: string;
 }
 
 interface WsSubAgentUpdateMessage {
@@ -49,7 +56,7 @@ interface WsSessionUnregistered {
   sessionPath: string;
 }
 
-type WsIncoming = WsRowsMessage | WsSubAgentUpdateMessage | WsResumeChunk | WsResumeDone | WsResumeError | WsSessionCreated | WsSessionRegistered | WsSessionUnregistered;
+type WsIncoming = WsRowsMessage | WsSubAgentUpdateMessage | WsSubAgentStartMessage | WsResumeChunk | WsResumeDone | WsResumeError | WsSessionCreated | WsSessionRegistered | WsSessionUnregistered;
 
 /**
  * Custom hook that maintains a WebSocket connection to the local Noctrace server.
@@ -112,6 +119,48 @@ export function useSessionWs(): {
         }
         if (msg.type === 'rows') {
           addRows(msg.rows, msg.health, msg.boundaries, msg.drift);
+        } else if (msg.type === 'subagent-start') {
+          const agentId = msg.agentId;
+          const agentType = msg.agentType;
+          // Create a placeholder running agent row visible before the JSONL file is written
+          const placeholderRow: WaterfallRow = {
+            id: `subagent-placeholder-${agentId}`,
+            type: 'agent',
+            toolName: 'Agent',
+            label: `Agent (${agentType ?? 'starting...'})`,
+            startTime: Date.now(),
+            endTime: null,
+            duration: null,
+            status: 'running',
+            parentAgentId: null,
+            input: {},
+            output: null,
+            inputTokens: 0,
+            outputTokens: 0,
+            tokenDelta: 0,
+            contextFillPercent: 0,
+            isReread: false,
+            isFailure: false,
+            children: [],
+            tips: [],
+            modelName: null,
+            estimatedCost: null,
+            agentType: agentType,
+            agentColor: null,
+            sequence: null,
+            isFastMode: false,
+            parentToolUseId: null,
+          };
+          // Add as a top-level running row — it will be replaced when
+          // the real agent row arrives from the JSONL parser.
+          // Only add if no row for this agent already exists.
+          const existingRows = useSessionStore.getState().rows;
+          const alreadyPresent = agentType !== null && existingRows.some(
+            (r) => r.agentType === agentType && r.status === 'running' && r.label.includes(agentType),
+          );
+          if (!alreadyPresent) {
+            useSessionStore.setState({ rows: [...existingRows, placeholderRow] });
+          }
         } else if (msg.type === 'subagent-update') {
           // Only apply the update if this message is for the currently viewed session
           const currentSessionId = useSessionStore.getState().selectedSessionId;

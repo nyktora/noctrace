@@ -3,9 +3,12 @@
 </p>
 
 <p align="center">
-  Chrome DevTools Network-tab-style waterfall visualizer for <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a> agent workflows.
-  <br />
-  Zero config. Zero cloud. Just run <code>npx noctrace</code> and see what your agents are doing.
+  Open-source observability for <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a> agent workflows.
+  Chrome DevTools Network-tab-style waterfall visualizer that monitors tool calls, tracks token usage, and detects context rot — all locally, with zero config.
+  <br /><br />
+  Noctrace reads Claude Code JSONL session logs from <code>~/.claude/projects/</code> and renders them as an interactive waterfall timeline.
+  See every tool call, sub-agent spawn, token cost, and context window fill level at a glance.
+  Built for developers using Anthropic's Claude Code who want to understand what their AI agents are actually doing.
 </p>
 
 <p align="center">
@@ -20,18 +23,28 @@
   <img src="docs/screenshots/noctrace-demo.gif" alt="Noctrace demo — waterfall timeline, agent groups, detail panel" width="100%" />
 </p>
 
-## Why
+## Why Noctrace?
 
 Claude Code's terminal output is opaque. Tool calls show summaries like "Read 3 files" and "Edited 2 files" — no paths, no timing, no concurrency visibility. When sub-agents spawn sub-agents, you're flying blind.
 
 Noctrace reads Claude Code's session logs from `~/.claude/projects/` and renders them as an interactive waterfall timeline — the same visual paradigm that makes Chrome DevTools' Network tab instantly readable.
 
+- **Waterfall timeline** — See tool calls laid out on a time axis, just like Chrome DevTools Network tab
+- **Sub-agent visibility** — Expandable agent rows show nested tool calls from Explore, Plan, and custom agents
+- **Context health scoring** — A-F grade based on context fill, compaction frequency, re-reads, and error acceleration
+- **Token cost tracking** — Per-row USD estimates using Claude's per-model pricing (Opus, Sonnet, Haiku)
+- **Efficiency and security tips** — Automatic detection of wasteful patterns and security anti-patterns
+- **Zero config** — Just run `npx noctrace` and it reads your local Claude Code session logs
+
 ## Install
 
 ```bash
-# Run directly (no install needed)
 npx noctrace
+```
 
+That's it. No config required. Noctrace starts a local server, opens your browser, and begins reading Claude Code session logs from `~/.claude/projects/` immediately.
+
+```bash
 # Or install globally
 npm install -g noctrace
 noctrace
@@ -43,47 +56,45 @@ noctrace
 claude plugin install nyktora/noctrace
 ```
 
-Requires Node.js 20+. That's it. No config required. Optional hooks for real-time events.
+Requires Node.js 20+. Optional `--install-hooks` flag enables real-time hook events from Claude Code.
 
 ## Features
 
-- **Waterfall timeline** — horizontal bars on a shared time axis showing tool call concurrency and duration
-- **Collapsible agent groups** — sub-agents as expandable row groups with real execution time bars showing parallel work
-- **Sub-agent visibility** — parses sub-agent JSONL files to show what happened inside each agent
-- **Real-time updates** — file watcher pushes new events via WebSocket as your session runs
-- **Token drift detection** — tracks how per-turn token cost drifts from baseline, warns when sessions burn excessive quota
-- **Context Health grade** — A-F letter grade from 5 signals with actionable recommendations
-- **Compact stats pill** — toolbar shows agent count, health grade, drift factor, total tokens, and session duration at a glance
-- **Advanced filtering** — structured filter syntax: `type:bash`, `>5s`, `<100ms`, `tokens:>1k`, `error`, `running`, `success` — combinable with plain text search
-- **Per-tool latency stats** — Session Stats flyout shows P50/P95/Max latency per tool type; calls exceeding a configurable threshold (default 5s) are flagged with a clock icon
-- **Loop detection** — flags 3+ consecutive identical tool calls (same tool + same input) as a warning tip on the row
-- **Session comparison** — split-screen view comparing two sessions side-by-side: health grades, summary metrics, tool mix bars, and context fill trajectory sparklines
-- **Virtual scrolling** — handles sessions with thousands of tool calls
-- **Zoom & pan** — mouse wheel zoom (1-50x), click-drag pan
-- **Detail panel** — click any row for full tool input/output, resizable
-- **Re-read detection** — flags duplicate file reads that waste context
-- **Efficiency tips** — 8 waste patterns detected (re-reads, fan-out, correction loops, repeated commands, token spikes, high fill, no delegation, post-compaction re-reads) with amber lightbulb indicators
-- **Security tips** — 13 patterns detect secrets, dangerous commands, exfiltration attempts, prompt injection, and more, with a red shield indicator
-- **Markdown rendering** — detail panel renders markdown in tool output with zero dependencies, XSS-safe
-- **Dark theme** — Catppuccin Mocha palette
-- **Session export** — share sessions as standalone offline HTML files
-- **Hooks integration** — optional real-time event streaming from Claude Code
-- **Context Drift Rate** — detect accelerating token growth before context rot hits
-- **MCP session registry** — when integrated with Claude Code, sessions self-register on start and unregister on exit; dashboard shows only active sessions with a live count indicator
-- **Per-tool token cost** — estimated USD cost on every waterfall row and session total in the toolbar; uses Claude's public pricing with per-model detection (Sonnet, Opus, Haiku)
-- **Agent type labels** — subagent rows show the named agent type (e.g., "Explore", "core:deep-researcher") as a blue badge chip
-- **Tool failure rows** — tool crashes, timeouts, and kills render as distinct red-tinted rows with a lightning bolt icon, separate from normal error results
-- **API error markers** — rate limit, billing, and auth failures appear as full-width red alert banners on the timeline
-- **Agent Teams panel** — detects running Agent Teams at `~/.claude/teams/`, shows members and task counts in a flyout (`GET /api/teams`)
-- **Context Startup flyout** — shows which instruction files (CLAUDE.md and others) loaded at session start with estimated token counts, parsed from JSONL system records
+- **Waterfall Timeline Visualization** — horizontal bars on a shared time axis showing tool call concurrency and duration, just like Chrome DevTools Network tab
+- **Sub-Agent Waterfall Visualization** — collapsible agent row groups with real execution time bars; parses sub-agent JSONL files to show what happened inside each agent
+- **Real-Time Session Monitoring** — file watcher pushes new events via WebSocket as your Claude Code session runs
+- **Token Drift Detection** — tracks how per-turn token cost drifts from baseline, warns when sessions burn excessive quota
+- **Context Health Scoring** — A-F letter grade from 5 signals with actionable recommendations for when to run `/compact`
+- **Compact Stats Toolbar** — shows agent count, health grade, drift factor, total tokens, and session duration at a glance
+- **Advanced Filtering** — structured filter syntax: `type:bash`, `>5s`, `<100ms`, `tokens:>1k`, `error`, `running`, `success` — combinable with plain text search
+- **Per-Tool Latency Stats** — Session Stats flyout shows P50/P95/Max latency per tool type; calls exceeding a configurable threshold (default 5s) are flagged with a clock icon
+- **Loop Detection** — flags 3+ consecutive identical tool calls (same tool + same input) as a warning tip on the row
+- **Session Comparison** — split-screen view comparing two Claude Code sessions side-by-side: health grades, summary metrics, tool mix bars, and context fill trajectory sparklines
+- **Virtual Scrolling** — handles sessions with thousands of tool calls without performance degradation
+- **Zoom and Pan** — mouse wheel zoom (1-50x), click-drag pan on the timeline
+- **Detail Panel** — click any row for full tool input/output, resizable two-column layout
+- **Re-Read Detection** — flags duplicate file reads that waste context window space
+- **Efficiency Tips** — 8 waste patterns detected (re-reads, fan-out, correction loops, repeated commands, token spikes, high fill, no delegation, post-compaction re-reads) with amber lightbulb indicators
+- **Security Tips** — 13 patterns detect secrets, dangerous commands, exfiltration attempts, prompt injection, and more, with a red shield indicator
+- **Markdown Rendering** — detail panel renders markdown in tool output with zero dependencies, XSS-safe
+- **Session Export** — share sessions as standalone offline HTML files, no server required
+- **Claude Code Hook Integration** — optional real-time event streaming from Claude Code via `--install-hooks`
+- **Context Drift Rate** — detects accelerating token growth before context rot degrades output quality
+- **MCP Session Registry** — sessions self-register and unregister automatically; dashboard shows only active sessions with a live count indicator
+- **Per-Tool Token Cost Estimation** — estimated USD cost on every waterfall row and session total in the toolbar; uses Claude's public pricing with per-model detection (Sonnet, Opus, Haiku)
+- **Agent Type Labels** — sub-agent rows show the named agent type (e.g., "Explore", "core:deep-researcher") as a blue badge chip
+- **Tool Failure Rows** — tool crashes, timeouts, and kills render as distinct red-tinted rows with a lightning bolt icon, separate from normal error results
+- **API Error Markers** — rate limit, billing, and auth failures appear as full-width red alert banners on the timeline
+- **Agent Teams Panel** — detects running Agent Teams at `~/.claude/teams/`, shows members and task counts in a flyout
+- **Context Startup Flyout** — shows which instruction files (CLAUDE.md and others) loaded at session start with estimated token counts, parsed from JSONL system records
 
 ![Noctrace waterfall timeline](docs/screenshots/noctrace-waterfall.gif)
 
-### Token Drift
+### Token Drift Detection
 
 The stats pill shows a **drift factor** (e.g. `2.8x`) measuring how much each turn costs compared to the session's baseline. A 10x drift means every turn burns 10x more quota than it did at the start. Session picker shows drift per-session so you can spot wasteful sessions at a glance.
 
-### Context Health
+### Context Health Scoring
 
 ![Context health visualization](docs/screenshots/noctrace-context-rot.png)
 
@@ -97,7 +108,7 @@ Noctrace computes a real-time health score from your session data and warns you 
 | Error Rate | 10% | Accelerating errors in second half of session |
 | Tool Efficiency | 10% | Declining productive output |
 
-### Detail Panel
+### Tool Call Detail Panel
 
 ![Detail panel with tips](docs/screenshots/noctrace-detail-panel.gif)
 
@@ -157,9 +168,27 @@ npm run dev       # starts server + Vite dev server
 - **Tests**: Vitest 4
 - **Language**: TypeScript 5.9 (strict mode)
 
+## Compatibility
+
+Noctrace works with all Claude Code versions that write JSONL session logs to `~/.claude/projects/`. This includes:
+
+- **Claude Code CLI** (`claude` command)
+- **Claude Code in VS Code** (via the extension)
+- **Claude Code in JetBrains** (via the extension)
+- **Claude Code Desktop App** (Mac/Windows)
+
+No API keys or cloud accounts required. Noctrace is 100% local — your session data never leaves your machine.
+
 ## License
 
 [MIT](LICENSE)
+
+## Links
+
+- [Website](https://nyktora.github.io/noctrace/) — Landing page and documentation
+- [npm](https://www.npmjs.com/package/noctrace) — Package registry
+- [GitHub](https://github.com/nyktora/noctrace) — Source code and issues
+- [Changelog](CHANGELOG.md) — Version history
 
 ---
 

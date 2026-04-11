@@ -1,5 +1,5 @@
 /** Waterfall row types */
-export type RowType = 'agent' | 'tool' | 'api-error';
+export type RowType = 'agent' | 'tool' | 'api-error' | 'hook';
 
 /** Severity levels for efficiency tips */
 export type TipSeverity = 'info' | 'warning' | 'critical';
@@ -58,6 +58,12 @@ export interface WaterfallRow {
   agentType: string | null;
   /** Agent color from toolUseResult (e.g. "blue", "green"). Null when not present. */
   agentColor: string | null;
+  /** Monotonic sequence number for ordering when timestamps tie. Null when absent from JSONL. */
+  sequence: number | null;
+  /** True when this row's API request used fast mode. */
+  isFastMode: boolean;
+  /** Canonical parent tool_use ID from parent_tool_use_id field. Null when absent. */
+  parentToolUseId: string | null;
 }
 
 /**
@@ -189,6 +195,14 @@ export interface SessionUnregisteredMessage {
   sessionPath: string;
 }
 
+/** WebSocket message broadcast when a SubagentStart hook event arrives. */
+export interface SubagentStartMessage {
+  type: 'subagent-start';
+  agentId: string;
+  agentType: string | null;
+  sessionId: string;
+}
+
 /**
  * A CLAUDE.md (or other instruction file) loaded at session start.
  * Parsed from system records in the JSONL log.
@@ -204,6 +218,49 @@ export interface InstructionFile {
   parentFilePath: string | null;
 }
 
+/** A compaction boundary with optional metadata from compact_metadata field. */
+export interface CompactionBoundary {
+  /** Unix-ms timestamp of the compaction event. */
+  timestamp: number;
+  /** Whether compaction was triggered manually (/compact) or automatically. Null when metadata absent. */
+  trigger: 'manual' | 'auto' | null;
+  /** Token count before compaction. Null when metadata absent. */
+  preTokens: number | null;
+}
+
+/** Per-model token usage breakdown from result records. */
+export interface ModelUsageEntry {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreateTokens: number;
+}
+
+/** Session-level result enrichments parsed from the terminal result record. */
+export interface SessionResultMetrics {
+  /** Time spent in API calls only (ms). Null when absent. */
+  durationApiMs: number | null;
+  /** Per-model token usage breakdown. Empty array when absent. */
+  modelUsage: ModelUsageEntry[];
+  /** Reason the session stopped. Null when absent. */
+  stopReason: 'end_turn' | 'max_tokens' | 'refusal' | null;
+  /** Number of permission denials during the session. */
+  permissionDenialCount: number;
+}
+
+/** Session init context: agents/skills/plugins loaded at startup. */
+export interface SessionInitContext {
+  /** Agent names available in this session. */
+  agents: string[];
+  /** Skill names loaded in this session. */
+  skills: string[];
+  /** Plugins loaded in this session. */
+  plugins: Array<{ name: string; path: string }>;
+  /** Reasoning effort level (low/medium/high/max). Null when not set. */
+  effort: string | null;
+}
+
 /**
  * A member of an Agent Team.
  */
@@ -216,6 +273,18 @@ export interface TeamMember {
   agentType: string;
 }
 
+/** A task in an Agent Team. */
+export interface TeamTask {
+  /** Task file name (without extension). */
+  id: string;
+  /** Short subject line. */
+  subject: string;
+  /** Task status. */
+  status: 'pending' | 'in_progress' | 'completed' | 'failed' | string;
+  /** Agent assigned to this task. */
+  assignedTo: string | null;
+}
+
 /**
  * An Agent Team as defined in ~/.claude/teams/{team-name}/config.json.
  */
@@ -226,4 +295,6 @@ export interface AgentTeam {
   members: TeamMember[];
   /** Number of task files in ~/.claude/tasks/{team-name}/. */
   taskCount: number;
+  /** Parsed task details from ~/.claude/tasks/{team-name}/*.json. */
+  tasks: TeamTask[];
 }

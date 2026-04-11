@@ -1,13 +1,13 @@
 {
   "name": "noctrace",
-  "version": "0.4.0",
+  "version": "0.7.5",
   "description": "Chrome DevTools Network-tab-style waterfall visualizer for Claude Code agent workflows",
-  "author": {
-    "name": "Nyktora Group LLC",
-    "url": "https://nyktora.com"
-  },
+  "author": "Nyktora Group LLC",
+  "license": "MIT",
   "homepage": "https://nyktora.github.io/noctrace/",
   "repository": "https://github.com/nyktora/noctrace",
-  "license": "MIT",
-  "keywords": ["devtools", "waterfall", "observability", "timeline", "context-health"]
+  "keywords": ["devtools", "waterfall", "observability", "timeline", "context-health", "claude-code", "agent-monitoring", "ai-observability"],
+  "category": "observability",
+  "minClaudeCodeVersion": "1.0.0",
+  "capabilities": ["hooks", "mcp"]
 }

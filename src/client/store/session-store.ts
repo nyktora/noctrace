@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { AgentTeam, ContextHealth, DriftAnalysis, InstructionFile, ProjectSummary, SessionSummary, WaterfallRow } from '../../shared/types.ts';
+import type { AgentTeam, CompactionBoundary, ContextHealth, DriftAnalysis, InstructionFile, ProjectSummary, SessionInitContext, SessionResultMetrics, SessionSummary, WaterfallRow } from '../../shared/types.ts';
 
 /** A single message in a resume conversation */
 export interface ResumeMessage {
@@ -15,9 +15,11 @@ export interface SessionStore {
   sessions: SessionSummary[];
   rows: WaterfallRow[];
   health: ContextHealth | null;
-  compactionBoundaries: number[];
+  compactionBoundaries: CompactionBoundary[];
   drift: DriftAnalysis | null;
   instructionsLoaded: InstructionFile[];
+  resultMetrics: SessionResultMetrics | null;
+  initContext: SessionInitContext | null;
   teams: AgentTeam[];
 
   // MCP mode — populated when MCP processes register sessions
@@ -35,6 +37,9 @@ export interface SessionStore {
   // Zoom/pan
   zoomLevel: number;
   panOffset: number;
+
+  // Column sizing
+  nameColWidth: number;
 
   // Session stats
   slowThresholdMs: number;
@@ -60,7 +65,7 @@ export interface SessionStore {
   compareRows: WaterfallRow[];
   compareHealth: ContextHealth | null;
   compareDrift: DriftAnalysis | null;
-  compareCompactionBoundaries: number[];
+  compareCompactionBoundaries: CompactionBoundary[];
 
   // Actions
   fetchProjects: () => Promise<void>;
@@ -76,7 +81,8 @@ export interface SessionStore {
   setAutoScroll: (on: boolean) => void;
   setZoom: (level: number) => void;
   setPan: (offset: number) => void;
-  addRows: (rows: WaterfallRow[], health: ContextHealth, boundaries: number[], drift: DriftAnalysis) => void;
+  setNameColWidth: (width: number) => void;
+  addRows: (rows: WaterfallRow[], health: ContextHealth, boundaries: CompactionBoundary[], drift: DriftAnalysis) => void;
   /**
    * Replace the children of the agent row identified by toolUseId (the parent row's id).
    * Buffers the update if the parent row does not exist yet (race condition: sub-agent file
@@ -106,6 +112,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   compactionBoundaries: [],
   drift: null,
   instructionsLoaded: [],
+  resultMetrics: null,
+  initContext: null,
   teams: [],
 
   registeredSessions: [],
@@ -120,6 +128,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   zoomLevel: 1,
   panOffset: 0,
+
+  nameColWidth: 200,
 
   slowThresholdMs: 5000,
   showSessionStats: false,
@@ -213,9 +223,11 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     const data = (await res.json()) as {
       rows: WaterfallRow[];
       health: ContextHealth;
-      compactionBoundaries: number[];
+      compactionBoundaries: CompactionBoundary[];
       drift: DriftAnalysis;
       instructionsLoaded?: InstructionFile[];
+      resultMetrics?: SessionResultMetrics;
+      initContext?: SessionInitContext;
     };
     set({
       rows: data.rows,
@@ -223,6 +235,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       compactionBoundaries: data.compactionBoundaries ?? [],
       drift: data.drift ?? null,
       instructionsLoaded: data.instructionsLoaded ?? [],
+      resultMetrics: data.resultMetrics ?? null,
+      initContext: data.initContext ?? null,
       selectedSessionId: id,
       selectedRowId: null,
       expandedAgents: new Set<string>(),
@@ -252,6 +266,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   setAutoScroll: (on) => set({ autoScroll: on }),
   setZoom: (level) => set({ zoomLevel: level }),
   setPan: (offset) => set({ panOffset: offset }),
+  setNameColWidth: (width) => set({ nameColWidth: Math.max(80, Math.min(600, width)) }),
 
   setResumeStatus: (status) => set({ resumeStatus: status }),
 
@@ -278,7 +293,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     const data = (await res.json()) as {
       rows: WaterfallRow[];
       health: ContextHealth;
-      compactionBoundaries: number[];
+      compactionBoundaries: CompactionBoundary[];
       drift: DriftAnalysis;
     };
     // Store comparison data without touching primary session fields

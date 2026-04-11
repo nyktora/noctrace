@@ -3,18 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Chrome DevTools Network-tab-style real-time waterfall visualizer for Claude Code agent workflows. Open source, local-only, zero config.">
-  <meta property="og:title" content="Noctrace — See what your AI agents are actually doing">
-  <meta property="og:description" content="Chrome DevTools Network-tab-style real-time waterfall visualizer for Claude Code agent workflows. Waterfall timelines, token tracking, and context rot detection.">
+  <meta name="description" content="Noctrace is an open-source, real-time waterfall visualizer for Claude Code agent workflows. Monitor tool calls, track token costs, detect context rot, and debug sub-agents. Chrome DevTools-style UI, zero config, local-only.">
+  <meta name="keywords" content="noctrace, claude code, claude code observability, claude code devtools, ai agent monitoring, claude code waterfall, claude code visualization, anthropic claude tools, llm observability, ai coding agent debugger, claude code hooks, context window monitor, token usage tracker, ai agent workflow visualizer">
+  <meta name="author" content="Nyktora Group">
+  <meta name="theme-color" content="#1e1e2e">
+  <meta property="og:title" content="Noctrace — Claude Code Observability &amp; Agent Workflow Visualizer">
+  <meta property="og:description" content="Open-source DevTools-style waterfall visualizer for Claude Code. Monitor AI agent workflows, track token usage, detect context rot, and debug sub-agent tool calls in real time. Zero config, local-only.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://nyktora.github.io/noctrace/">
   <meta property="og:site_name" content="Noctrace">
+  <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Noctrace — See what your AI agents are actually doing">
-  <meta name="twitter:description" content="Chrome DevTools Network-tab-style real-time waterfall visualizer for Claude Code agent workflows. Open source, local-only, zero config.">
+  <meta name="twitter:title" content="Noctrace — Claude Code Observability &amp; Agent Workflow Visualizer">
+  <meta name="twitter:description" content="Noctrace is an open-source, real-time waterfall visualizer for Claude Code agent workflows. Monitor tool calls, track token costs, detect context rot, and debug sub-agents. Chrome DevTools-style UI, zero config, local-only.">
   <link rel="canonical" href="https://nyktora.github.io/noctrace/">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <title>Noctrace — See what your AI agents are actually doing</title>
+  <title>Noctrace — Claude Code Observability &amp; Agent Workflow Visualizer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -27,13 +31,67 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Noctrace",
-    "description": "Chrome DevTools Network-tab-style real-time waterfall visualizer for Claude Code agent workflows.",
+    "alternateName": "noctrace",
+    "description": "Open-source Chrome DevTools-style waterfall visualizer for Claude Code agent workflows. Monitor tool calls, track token costs, detect context rot, and debug sub-agents in real time.",
     "url": "https://nyktora.github.io/noctrace/",
     "applicationCategory": "DeveloperApplication",
+    "applicationSubCategory": "AI Observability Tool",
     "operatingSystem": "macOS, Linux, Windows",
     "license": "https://opensource.org/licenses/MIT",
     "codeRepository": "https://github.com/nyktora/noctrace",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    "downloadUrl": "https://www.npmjs.com/package/noctrace",
+    "softwareVersion": "0.7.5",
+    "author": {
+      "@type": "Organization",
+      "name": "Nyktora Group",
+      "url": "https://github.com/nyktora"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "keywords": "claude code, observability, waterfall, devtools, ai agent, anthropic, llm monitoring"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is Noctrace?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Noctrace is an open-source, local-only waterfall visualizer for Claude Code agent sessions. It reads JSONL session logs and renders them as an interactive timeline showing tool calls, sub-agents, token usage, and context health — similar to Chrome DevTools Network tab."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I install Noctrace?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Run npx noctrace in your terminal. No installation required — it starts a local server and opens a browser tab. For permanent install: npm install -g noctrace."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does Noctrace send data to the cloud?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. Noctrace is completely local-only. It reads Claude Code session logs from your ~/.claude/ directory and serves them on localhost. No external API calls, no analytics, no telemetry."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What Claude Code features does Noctrace visualize?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Noctrace visualizes tool calls (Read, Write, Edit, Bash, Agent), sub-agent workflows, token usage per turn, context fill percentage, compaction boundaries, API errors, efficiency tips, security tips, and per-tool latency statistics."
+        }
+      }
+    ]
   }
   </script>
 </head>

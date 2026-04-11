@@ -92,12 +92,46 @@ function FileRow({ file, isChild }: { file: InstructionFile; isChild: boolean })
   );
 }
 
+/** Renders a labeled list of items in the config section */
+function ConfigList({ label, items }: { label: string; items: string[] }): React.ReactElement | null {
+  if (items.length === 0) return null;
+  return (
+    <div className="px-3 py-1.5">
+      <div
+        className="text-xs font-semibold uppercase tracking-wider mb-1"
+        style={{ color: 'var(--ctp-overlay0)', fontFamily: 'ui-sans-serif, system-ui, sans-serif', fontSize: 9 }}
+      >
+        {label}
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {items.map((item) => (
+          <span
+            key={item}
+            style={{
+              display: 'inline-block',
+              fontSize: 10,
+              fontFamily: 'ui-monospace, monospace',
+              color: 'var(--ctp-text)',
+              backgroundColor: 'var(--ctp-surface0)',
+              borderRadius: 3,
+              padding: '1px 5px',
+            }}
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Flyout panel showing instruction files (CLAUDE.md etc.) loaded at session start.
  * Groups child files under their parents in a tree structure.
  */
 export function ContextStartup({ onClose }: ContextStartupProps): React.ReactElement {
   const instructionsLoaded = useSessionStore((s) => s.instructionsLoaded);
+  const initContext = useSessionStore((s) => s.initContext);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent): void {
@@ -173,6 +207,55 @@ export function ContextStartup({ onClose }: ContextStartupProps): React.ReactEle
               ))}
             </React.Fragment>
           ))}
+        </div>
+      )}
+
+      {/* Session Configuration */}
+      {initContext && (initContext.agents.length > 0 || initContext.skills.length > 0 || initContext.plugins.length > 0 || initContext.effort !== null) && (
+        <div style={{ borderTop: '1px solid var(--ctp-surface0)' }}>
+          <div
+            className="px-3 py-2"
+            style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}
+          >
+            <span
+              className="text-xs font-semibold uppercase tracking-wider"
+              style={{ color: 'var(--ctp-overlay0)' }}
+            >
+              Session Config
+            </span>
+          </div>
+          {initContext.effort !== null && (
+            <div className="px-3 py-1.5">
+              <div
+                className="text-xs font-semibold uppercase tracking-wider mb-1"
+                style={{ color: 'var(--ctp-overlay0)', fontFamily: 'ui-sans-serif, system-ui, sans-serif', fontSize: 9 }}
+              >
+                Effort
+              </div>
+              <span
+                style={{
+                  display: 'inline-block',
+                  fontSize: 10,
+                  fontFamily: 'ui-monospace, monospace',
+                  borderRadius: 3,
+                  padding: '1px 5px',
+                  color: initContext.effort === 'low' ? 'var(--ctp-base)' :
+                    initContext.effort === 'high' ? 'var(--ctp-base)' :
+                    initContext.effort === 'max' ? 'var(--ctp-base)' : 'var(--ctp-text)',
+                  backgroundColor: initContext.effort === 'low' ? 'var(--ctp-green)' :
+                    initContext.effort === 'high' ? 'var(--ctp-yellow)' :
+                    initContext.effort === 'max' ? 'var(--ctp-red)' : 'var(--ctp-surface0)',
+                }}
+              >
+                {initContext.effort}
+              </span>
+            </div>
+          )}
+          <ConfigList label="Agents" items={initContext.agents} />
+          <ConfigList label="Skills" items={initContext.skills} />
+          {initContext.plugins.length > 0 && (
+            <ConfigList label="Plugins" items={initContext.plugins.map((p) => p.name)} />
+          )}
         </div>
       )}
 

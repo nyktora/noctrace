@@ -3,6 +3,8 @@ import React, { useMemo } from 'react';
 import type { WaterfallRow as WaterfallRowData } from '../../shared/types.ts';
 import type { ParsedFilter } from '../../shared/filter.ts';
 import { rowMatchesFilter } from '../../shared/filter.ts';
+import { HookIcon } from '../icons/hook-icon.tsx';
+import { FastIcon } from '../icons/fast-icon.tsx';
 import { ChevronIcon } from '../icons/chevron-icon.tsx';
 import { RepeatIcon } from '../icons/repeat-icon.tsx';
 import { TipIcon } from '../icons/tip-icon.tsx';
@@ -66,6 +68,8 @@ export interface WaterfallRowProps {
   waterfallWidth: number;
   zoomLevel: number;
   panOffset: number;
+  /** Current width of the Name column (resizable). Defaults to COL_NAME. */
+  nameColWidth?: number;
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
   onFocusNeighbor?: (direction: 'up' | 'down') => void;
@@ -125,6 +129,7 @@ export function WaterfallRowComponent({
   waterfallWidth,
   zoomLevel,
   panOffset,
+  nameColWidth: nameWidth = COL_NAME,
   onSelect,
   onToggle,
   onFocusNeighbor,
@@ -134,6 +139,7 @@ export function WaterfallRowComponent({
 
   const isAgent = row.type === 'agent';
   const isApiError = row.type === 'api-error';
+  const isHook = row.type === 'hook';
   const indent = row.parentAgentId ? 24 : 0;
   const toolColor = getToolColor(row.toolName, row.status);
   const toolHex = resolveColor(toolColor);
@@ -183,6 +189,52 @@ export function WaterfallRowComponent({
       e.preventDefault();
       onFocusNeighbor?.('up');
     }
+  }
+
+  // Hook rows render as muted teal banners for hook lifecycle events.
+  if (isHook) {
+    return (
+      <div
+        role="row"
+        tabIndex={0}
+        aria-selected={isSelected}
+        aria-label={`Hook: ${row.toolName}`}
+        onClick={() => onSelect(row.id)}
+        onKeyDown={handleKeyDown}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          height: ROW_HEIGHT,
+          backgroundColor: isSelected ? 'rgba(148,226,213,0.18)' : 'rgba(148,226,213,0.06)',
+          opacity: matched ? 1 : 0.25,
+          cursor: 'pointer',
+          transition: 'background-color 80ms',
+          borderBottom: '1px solid rgba(148,226,213,0.15)',
+          gap: 8,
+          paddingLeft: 8,
+          paddingRight: 12,
+        }}
+        onMouseEnter={(e) => {
+          if (!isSelected) (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(148,226,213,0.12)';
+        }}
+        onMouseLeave={(e) => {
+          if (!isSelected) (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(148,226,213,0.06)';
+        }}
+      >
+        <HookIcon size={12} color="var(--ctp-teal)" />
+        <span className="font-mono" style={{ color: 'var(--ctp-teal)', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>
+          hook
+        </span>
+        <span className="font-mono truncate" style={{ color: 'var(--ctp-subtext0)', fontSize: 10, flex: 1 }} title={row.label}>
+          {highlightMatch(row.label, highlightText)}
+        </span>
+        {row.duration != null && row.duration > 0 && (
+          <span className="font-mono" style={{ color: 'var(--ctp-overlay0)', fontSize: 10, flexShrink: 0 }}>
+            {formatDuration(row.duration)}
+          </span>
+        )}
+      </div>
+    );
   }
 
   // API error rows render as a full-width alert banner — they are point-in-time events,
@@ -310,7 +362,7 @@ export function WaterfallRowComponent({
       {/* Name column */}
       <div
         style={{
-          width: COL_NAME - 3,
+          width: nameWidth - 3,
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
@@ -381,6 +433,28 @@ export function WaterfallRowComponent({
             title={`Agent type: ${row.agentType}`}
           >
             {row.agentType}
+          </span>
+        )}
+        {row.isFastMode && (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 2,
+              fontSize: 9,
+              fontWeight: 600,
+              color: 'var(--ctp-peach)',
+              backgroundColor: 'rgba(250,179,135,0.15)',
+              border: '1px solid rgba(250,179,135,0.3)',
+              borderRadius: 3,
+              padding: '0 3px',
+              lineHeight: '14px',
+              flexShrink: 0,
+            }}
+            title="Fast mode"
+          >
+            <FastIcon size={9} color="var(--ctp-peach)" />
+            fast
           </span>
         )}
         {row.tips.length > 0 && (

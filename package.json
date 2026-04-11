@@ -17,17 +17,26 @@
     "node": ">=20"
   },
   "keywords": [
-    "claude",
+    "noctrace",
     "claude-code",
+    "claude",
     "anthropic",
+    "observability",
     "devtools",
     "waterfall",
-    "observability",
-    "agent",
-    "ai",
+    "ai-agent",
     "llm",
     "timeline",
-    "visualizer"
+    "visualizer",
+    "claude-code-hooks",
+    "token-usage",
+    "context-window",
+    "agent-monitoring",
+    "ai-observability",
+    "claude-code-devtools",
+    "session-viewer",
+    "tool-calls",
+    "sub-agents"
   ],
   "bin": {
     "noctrace": "bin/noctrace.js"

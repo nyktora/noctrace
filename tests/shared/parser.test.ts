@@ -270,12 +270,12 @@ describe('session with compaction', () => {
     it('first boundary timestamp matches the JSONL record', () => {
       const boundaries = parseCompactionBoundaries(content);
       const expected = new Date('2026-03-30T13:00:04.000Z').getTime();
-      expect(boundaries[0]).toBe(expected);
+      expect(boundaries[0].timestamp).toBe(expected);
     });
 
     it('second boundary timestamp is after the first', () => {
       const boundaries = parseCompactionBoundaries(content);
-      expect(boundaries[1]).toBeGreaterThan(boundaries[0]);
+      expect(boundaries[1].timestamp).toBeGreaterThan(boundaries[0].timestamp);
     });
   });
 });

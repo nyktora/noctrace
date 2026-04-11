@@ -64,5 +64,38 @@
         }
       ]
     }
+  ],
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST http://localhost:4117/api/hooks -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "SessionEnd": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST http://localhost:4117/api/hooks -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "PostToolUseFailure": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST http://localhost:4117/api/hooks -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
   ]
 }

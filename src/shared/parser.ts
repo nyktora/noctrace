@@ -5,6 +5,9 @@
 import type { WaterfallRow } from './types.js';
 import { getPricing, computeCost } from './token-cost.js';
 
+// Re-export from session-metadata (moved to reduce file size)
+export { parseCompactionBoundaries } from './session-metadata.js';
+
 // ---------------------------------------------------------------------------
 // Raw record types (internal)
 // ---------------------------------------------------------------------------
@@ -27,6 +30,8 @@ interface AssistantRecord {
   timestamp: string;
   uuid: string;
   parentUuid: string | null;
+  parent_tool_use_id?: string | null;
+  sequence?: number;
   message: {
     role: 'assistant';
     model?: string;
@@ -37,6 +42,8 @@ interface AssistantRecord {
       cache_creation_input_tokens?: number;
       cache_read_input_tokens?: number;
     };
+    speed?: 'fast' | 'normal';
+    error?: string;
   };
 }
 
@@ -65,6 +72,7 @@ interface SystemRecord {
   uuid: string;
   parentUuid: string | null;
   subtype?: string;
+  sequence?: number;
 }
 
 interface ProgressRecord {
@@ -115,6 +123,9 @@ interface PendingRow {
   isReread: boolean;
   assistantUuid: string;
   assistantParentUuid: string | null;
+  sequence: number | null;
+  isFastMode: boolean;
+  parentToolUseId: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -179,7 +190,7 @@ function parseLine(line: string, idx: number): KnownRecord | null {
     return null;
   }
   const type = parsed['type'];
-  if (type !== 'assistant' && type !== 'user' && type !== 'system' && type !== 'progress') return null;
+  if (type !== 'assistant' && type !== 'user' && type !== 'system' && type !== 'progress' && type !== 'result') return null;
   return parsed as unknown as KnownRecord;
 }
 
@@ -219,6 +230,23 @@ function classifyStopFailure(message: string): string {
   if (lower.includes('auth') || lower.includes('unauthorized') || lower.includes('403') || lower.includes('401')) return 'Auth Error';
   if (lower.includes('overloaded') || lower.includes('529')) return 'Overloaded';
   return 'Server Error';
+}
+
+/**
+ * Map structured assistant.error field to a display label.
+ * Falls back to classifyStopFailure for unknown values.
+ */
+function classifyAssistantError(errorField: string): string {
+  const map: Record<string, string> = {
+    rate_limit: 'Rate Limit',
+    billing_error: 'Billing Error',
+    authentication_failed: 'Auth Error',
+    server_error: 'Server Error',
+    invalid_request: 'Invalid Request',
+    max_output_tokens: 'Max Tokens',
+    unknown: 'Server Error',
+  };
+  return map[errorField] ?? classifyStopFailure(errorField);
 }
 
 // ---------------------------------------------------------------------------
@@ -367,6 +395,9 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
     const inputTokens = rawInputTokens + cacheCreateTokens + cacheReadTokens;
     const outputTokens = usage?.output_tokens ?? 0;
     const modelName = typeof ar.message.model === 'string' ? ar.message.model : null;
+    const isFastMode = ar.message.speed === 'fast';
+    const parentToolUseId = typeof ar.parent_tool_use_id === 'string' ? ar.parent_tool_use_id : null;
+    const sequence = typeof ar.sequence === 'number' ? ar.sequence : null;
     const contextFillPercent = 0; // recalculated after peak detection
 
     for (const block of ar.message.content) {
@@ -405,6 +436,9 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
         isReread,
         assistantUuid: ar.uuid,
         assistantParentUuid: ar.parentUuid,
+        sequence,
+        isFastMode,
+        parentToolUseId,
       });
     }
   }
@@ -472,6 +506,9 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       estimatedCost,
       agentType: res?.agentType ?? null,
       agentColor: res?.agentColor ?? null,
+      sequence: p.sequence,
+      isFastMode: p.isFastMode,
+      parentToolUseId: p.parentToolUseId,
     });
   }
 
@@ -512,6 +549,9 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       estimatedCost: null,
       agentType: null,
       agentColor: null,
+      sequence: null,
+      isFastMode: false,
+      parentToolUseId: null,
     });
   }
 
@@ -544,7 +584,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
   // Sort children by startTime within each agent
   for (const row of rowById.values()) {
     if (row.children.length > 1) {
-      row.children.sort((a, b) => a.startTime - b.startTime);
+      row.children.sort((a, b) => a.startTime !== b.startTime ? a.startTime - b.startTime : (a.sequence ?? 0) - (b.sequence ?? 0));
     }
   }
 
@@ -631,25 +671,101 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       estimatedCost: null,
       agentType: null,
       agentColor: null,
+      sequence: null,
+      isFastMode: false,
+      parentToolUseId: null,
     });
   }
 
-  return top;
-}
+  // Detect API errors from typed assistant.error field (newer Claude Code versions)
+  for (const rec of records) {
+    if (rec.type !== 'assistant') continue;
+    const ar = rec as AssistantRecord;
+    if (!ar.message.error) continue;
+    const ts = new Date(ar.timestamp).getTime();
+    const errorClass = classifyAssistantError(ar.message.error);
+    const rowId = `api-error-asst-${ar.uuid}`;
+    // Skip if a system-record api-error already exists at this timestamp (avoid duplicates)
+    if (top.some((r) => r.type === 'api-error' && Math.abs(r.startTime - ts) < 1000)) continue;
+    top.push({
+      id: rowId,
+      type: 'api-error',
+      toolName: errorClass,
+      label: ar.message.error,
+      startTime: ts,
+      endTime: ts,
+      duration: 0,
+      status: 'error',
+      parentAgentId: null,
+      input: {},
+      output: ar.message.error,
+      inputTokens: 0,
+      outputTokens: 0,
+      tokenDelta: 0,
+      contextFillPercent: 0,
+      isReread: false,
+      isFailure: false,
+      children: [],
+      tips: [],
+      modelName: null,
+      estimatedCost: null,
+      agentType: null,
+      agentColor: null,
+      sequence: typeof ar.sequence === 'number' ? ar.sequence : null,
+      isFastMode: false,
+      parentToolUseId: null,
+    });
+  }
 
-/**
- * Extract Unix ms timestamps of compact_boundary system records.
- */
-export function parseCompactionBoundaries(content: string): number[] {
-  const lines = content.split('\n');
-  const out: number[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const r = parseLine(lines[i], i);
-    if (r && r.type === 'system' && (r as SystemRecord).subtype === 'compact_boundary') {
-      out.push(new Date(r.timestamp).getTime());
+  // Detect hook lifecycle events from system records
+  const hookStartMap = new Map<string, number>(); // hookKey → startTime
+  for (const rec of records) {
+    if (rec.type !== 'system') continue;
+    const sr = rec as SystemRecord;
+    const subtype = sr.subtype ?? '';
+    if (subtype !== 'hook_started' && subtype !== 'hook_response') continue;
+    const raw = rec as unknown as Record<string, unknown>;
+    const hookName = typeof raw['hook_name'] === 'string' ? raw['hook_name'] : subtype;
+    const hookId = typeof raw['hook_id'] === 'string' ? raw['hook_id'] : sr.uuid;
+    const ts = new Date(sr.timestamp).getTime();
+
+    if (subtype === 'hook_started') {
+      hookStartMap.set(hookId, ts);
+    } else if (subtype === 'hook_response') {
+      const startTs = hookStartMap.get(hookId) ?? ts;
+      const duration = ts - startTs;
+      top.push({
+        id: `hook-${hookId}`,
+        type: 'hook',
+        toolName: hookName,
+        label: `Hook: ${hookName}`,
+        startTime: startTs,
+        endTime: ts,
+        duration,
+        status: 'success',
+        parentAgentId: null,
+        input: {},
+        output: null,
+        inputTokens: 0,
+        outputTokens: 0,
+        tokenDelta: 0,
+        contextFillPercent: 0,
+        isReread: false,
+        isFailure: false,
+        children: [],
+        tips: [],
+        modelName: null,
+        estimatedCost: null,
+        agentType: null,
+        agentColor: null,
+        sequence: typeof (sr as SystemRecord).sequence === 'number' ? ((sr as SystemRecord).sequence as number) : null,
+        isFastMode: false,
+        parentToolUseId: null,
+      });
     }
   }
-  return out;
+
+  return top;
 }
 
 /**
@@ -790,6 +906,9 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
         estimatedCost,
         agentType: null,
         agentColor: null,
+        sequence: null,
+        isFastMode: false,
+        parentToolUseId: null,
       });
     }
   }
@@ -835,6 +954,9 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
       estimatedCost: null,
       agentType: null,
       agentColor: null,
+      sequence: null,
+      isFastMode: false,
+      parentToolUseId: null,
     });
   }
 
@@ -906,7 +1028,7 @@ export function parseInstructionsLoaded(content: string): import('./types.js').I
     }
 
     // Match user records with isMeta=true that list loaded context files
-    if (recordType === 'user' && parsed['isMeta'] === true) {
+    if (recordType === 'user' && (parsed['isMeta'] === true || parsed['isSynthetic'] === true)) {
       const metaContent = parsed['content'];
       const contentStr = typeof metaContent === 'string' ? metaContent : '';
       if (!contentStr) continue;
