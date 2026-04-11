@@ -156,6 +156,18 @@ All steps complete. Order followed during implementation:
 36. ✅ API error markers (rate limits, billing errors, auth failures render as full-width red alert banners; new `api-error` row type)
 37. ✅ Agent Teams panel (detects `~/.claude/teams/`, shows members + task counts in flyout; new `GET /api/teams` endpoint)
 38. ✅ Context Startup flyout (which instruction files loaded at session start with estimated token counts; parsed from JSONL system records)
+39. ✅ OTel export (GET /api/session/:slug/:id/otlp, zero-dep OTLP JSON trace format for Grafana/Jaeger/Datadog)
+40. ✅ Compaction metadata (trigger type + pre-tokens on compact_boundary records; enriched tooltip on health bar)
+41. ✅ Typed assistant.error detection (structured error field replaces pattern matching for API errors)
+42. ✅ Session result metrics (duration_api_ms, modelUsage per-model breakdown, stop_reason, permission_denials)
+43. ✅ Session init context (agents/skills/plugins/effort parsed from system init; shown in Context Startup flyout)
+44. ✅ Hook lifecycle rows (hook_started/hook_response → teal waterfall rows with hook icon)
+45. ✅ Fast mode badge (assistant.message.speed === 'fast' → amber lightning bolt pill)
+46. ✅ Resizable Name column (drag header edge, 80-600px, stored in Zustand)
+47. ✅ SubagentStart real-time rows (hook event creates placeholder running agent row before JSONL exists)
+48. ✅ Agent Teams task details (reads task file contents, shows subject + status dots in panel)
+49. ✅ Plugin marketplace metadata (category, minClaudeCodeVersion, capabilities in plugin.json)
+50. ✅ Security hardening v2 (env whitelist in spawn, .env gitignore, markdown link scheme validation)
 ### Remaining polish:
 - Loading state spinners
 - README with demo GIF

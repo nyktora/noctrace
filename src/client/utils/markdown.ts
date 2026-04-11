@@ -22,7 +22,12 @@ function applyInline(text: string): string {
   // Italic (single asterisk, not preceded/followed by another asterisk)
   text = text.replace(/(?<!\*)\*(?!\*)([^*]+)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
   // Links
-  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label: string, href: string) => {
+    if (/^(https?:|\/|\.\/|#)/.test(href)) {
+      return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    }
+    return label;
+  });
   return text;
 }
 

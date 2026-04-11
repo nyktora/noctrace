@@ -5,3 +5,6 @@ dist/
 PRD.md
 docs/claude-code-tips.md
 .gstack/
+.env
+.env.*
+!.env.example

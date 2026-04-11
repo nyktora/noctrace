@@ -2,6 +2,38 @@
 
 All notable changes to noctrace will be documented in this file.
 
+## [0.8.0] - 2026-04-11
+
+### Added
+- OTel export: any session can be exported as OTLP/HTTP JSON trace format via `GET /api/session/:slug/:id/otlp`, ready to POST to Grafana, Jaeger, or Datadog collectors. Zero new dependencies
+- Compaction metadata: compaction boundary lines now show whether they were triggered manually or automatically, with the pre-compaction token count in the tooltip
+- Typed API error detection: assistant records with the new structured `error` field (rate_limit, billing_error, etc.) are detected directly instead of pattern matching
+- Session result metrics: the terminal `result` record's `duration_api_ms`, per-model `modelUsage` breakdown, `stop_reason`, and `permission_denials` are now parsed and available via the API
+- Session init context: the Context Startup flyout now shows which agents, skills, and plugins were loaded at session start, plus the reasoning effort level (low/medium/high/max) as a colored badge
+- Hook lifecycle rows: `hook_started` and `hook_response` system records render as teal-tinted waterfall rows with a hook icon, showing hook execution timing
+- Fast mode badge: API requests made with Claude Code's fast mode show an amber lightning bolt "fast" pill on the waterfall row
+- Resizable Name column: drag the right edge of the Name header to resize between 80px and 600px
+- SubagentStart real-time rows: when a SubagentStart hook event arrives, a placeholder "running" agent row appears immediately in the waterfall before the sub-agent JSONL file is written
+- Agent Teams task details: the teams panel now reads task file contents and shows each task's subject and status with colored dots
+- Plugin marketplace metadata: `.claude-plugin/plugin.json` now includes `category`, `minClaudeCodeVersion`, and `capabilities` fields for marketplace compatibility
+- Three new hook events registered: `SessionStart`, `SessionEnd`, `PostToolUseFailure`
+
+### Changed
+- `parseCompactionBoundaries()` now returns `CompactionBoundary[]` (with trigger/preTokens metadata) instead of `number[]`
+- `event.sequence` field used as tiebreaker when sorting rows with identical timestamps
+- `parent_tool_use_id` stored on WaterfallRow for canonical parent-child linking
+- `isSynthetic` recognized alongside `isMeta` for forward compatibility with newer Claude Code versions
+- `parseLine()` now accepts `result` record type
+
+### Fixed
+- OTel export route was shadowed by the session detail route (Express param capture). Moved `/otlp` route before `/:id` route
+- Markdown links with `javascript:` or `data:` URL schemes are now stripped to plain text, preventing XSS via crafted session logs
+- `spawn()` in resume handler now passes only `PATH`, `HOME`, `CLAUDE_HOME` instead of full `process.env`
+- `.env` and `.env.*` patterns added to `.gitignore`
+
+### Security
+- CSO audit completed: 3 findings (all fixed). Path traversal protection verified, command injection prevention confirmed, HTML escaping in markdown renderer validated
+
 ## [0.6.0] - 2026-04-08
 
 ### Added

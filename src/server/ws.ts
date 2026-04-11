@@ -257,7 +257,7 @@ export function setupWebSocket(server: Server, claudeHome: string): WebSocketSer
         try {
           const proc = spawn('claude', args, {
             stdio: ['ignore', 'pipe', 'pipe'],
-            env: { ...process.env },
+            env: { PATH: process.env['PATH'] ?? '', HOME: process.env['HOME'] ?? '', CLAUDE_HOME: process.env['CLAUDE_HOME'] ?? '' },
           });
           resumeProc = proc;
 
