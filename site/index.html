@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Noctrace is an open-source, real-time waterfall visualizer for Claude Code agent workflows. Monitor tool calls, track token costs, detect context rot, and debug sub-agents. Chrome DevTools-style UI, zero config, local-only.">
+  <meta name="description" content="Noctrace: open-source waterfall visualizer for Claude Code. Monitor tool calls, track tokens, detect context rot. Chrome DevTools-style, zero config.">
   <meta name="keywords" content="noctrace, claude code, claude code observability, claude code devtools, ai agent monitoring, claude code waterfall, claude code visualization, anthropic claude tools, llm observability, ai coding agent debugger, claude code hooks, context window monitor, token usage tracker, ai agent workflow visualizer">
   <meta name="author" content="Nyktora Group">
   <meta name="theme-color" content="#1e1e2e">
@@ -13,9 +13,13 @@
   <meta property="og:url" content="https://nyktora.github.io/noctrace/">
   <meta property="og:site_name" content="Noctrace">
   <meta property="og:locale" content="en_US">
-  <meta name="twitter:card" content="summary">
+  <meta property="og:image" content="https://opengraph.githubassets.com/1/nyktora/noctrace">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Noctrace - Chrome DevTools-style waterfall visualizer for Claude Code agent workflows">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Noctrace — Claude Code Observability &amp; Agent Workflow Visualizer">
-  <meta name="twitter:description" content="Noctrace is an open-source, real-time waterfall visualizer for Claude Code agent workflows. Monitor tool calls, track token costs, detect context rot, and debug sub-agents. Chrome DevTools-style UI, zero config, local-only.">
+  <meta name="twitter:description" content="Noctrace: open-source waterfall visualizer for Claude Code. Monitor tool calls, track tokens, detect context rot. Chrome DevTools-style, zero config.">
   <link rel="canonical" href="https://nyktora.github.io/noctrace/">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>Noctrace — Claude Code Observability &amp; Agent Workflow Visualizer</title>
@@ -40,7 +44,7 @@
     "license": "https://opensource.org/licenses/MIT",
     "codeRepository": "https://github.com/nyktora/noctrace",
     "downloadUrl": "https://www.npmjs.com/package/noctrace",
-    "softwareVersion": "0.7.5",
+    "softwareVersion": "0.8.0",
     "author": {
       "@type": "Organization",
       "name": "Nyktora Group",
@@ -117,6 +121,10 @@
       <li>API error markers — rate limit, billing, and auth failures appear as full-width red alert banners on the timeline</li>
       <li>Agent Teams panel — detects running Agent Teams at ~/.claude/teams/, shows members and task counts in a flyout</li>
       <li>Context Startup flyout — shows which instruction files loaded at session start with estimated token counts</li>
+      <li>OTel export — export sessions as OpenTelemetry traces for Grafana, Jaeger, or Datadog</li>
+      <li>Hook lifecycle visualization — PostToolUse, SubagentStart/Stop events rendered as distinct timeline rows</li>
+      <li>Fast mode detection — identifies sessions where Claude skips confirmations for speed</li>
+      <li>Resizable columns — drag column dividers to adjust waterfall layout to your workflow</li>
     </ul>
     <h2>Install</h2>
     <p>Install globally: <code>npm install -g noctrace</code></p>
@@ -363,7 +371,7 @@
         React.createElement("nav",{style:{position:"sticky",top:0,zIndex:100,background:BG+"ee",backdropFilter:"blur(8px)",borderBottom:"1px solid "+BD,height:44,display:"flex",alignItems:"center",padding:"0 24px",fontSize:12}},
           React.createElement("a",{href:"/noctrace/",style:{display:"flex",alignItems:"center",gap:6,textDecoration:"none",cursor:"pointer"}},React.createElement(Logo,null),React.createElement("span",{style:{color:MV,fontWeight:700,fontSize:13}},"noctrace")),
           React.createElement("span",{style:{color:DM,margin:"0 10px"}},"/"),
-          React.createElement("span",{style:{fontSize:10,color:DM,border:"1px solid "+BD,padding:"1px 6px",borderRadius:2}},"v0.7.0"),
+          React.createElement("span",{style:{fontSize:10,color:DM,border:"1px solid "+BD,padding:"1px 6px",borderRadius:2}},"v0.8.0"),
           React.createElement("div",{style:{flex:1}}),
           React.createElement("div",{style:{display:"flex",gap:20,alignItems:"center"}},
             React.createElement("a",{href:"#rot",style:{color:DM,fontSize:11,textDecoration:"none"}},"context rot"),
@@ -382,6 +390,8 @@
             React.createElement("span",{style:{color:GN}},"$")," noctrace --explain"
           ),
           React.createElement("h1",{style:{fontFamily:"inherit",fontSize:"clamp(22px,3.8vw,38px)",fontWeight:700,lineHeight:1.25,color:TXM,letterSpacing:"-0.03em",marginBottom:8,minHeight:"2.5em"}},
+            React.createElement("span",{style:{color:MV}},"Noctrace"),
+            React.createElement("span",{style:{color:DM}}," — "),
             typed,
             React.createElement("span",{style:{display:"inline-block",width:10,height:3,background:GN,marginLeft:2,animation:"blink 1s steps(1) infinite",verticalAlign:"middle",position:"relative",top:-2}})
           ),
@@ -516,7 +526,7 @@
             React.createElement("div",{style:{padding:"20px 24px",borderBottom:"1px solid "+BD,display:"flex",alignItems:"center",gap:12}},
               React.createElement("div",{style:{width:4,height:32,background:RD,borderRadius:1,flexShrink:0}}),
               React.createElement("div",null,
-                React.createElement("div",{style:{fontSize:15,fontWeight:700,color:TXM}},"Context rot detection"),
+                React.createElement("h2",{style:{fontFamily:"inherit",fontSize:15,fontWeight:700,color:TXM,margin:0}},"Context rot detection"),
                 React.createElement("div",{style:{fontSize:12,color:DM2}},"know when your session starts working against you")
               )
             ),
@@ -566,7 +576,7 @@
 
         /* FEATURES */
         React.createElement("section",{id:"features",style:{position:"relative",zIndex:1,maxWidth:900,margin:"0 auto",padding:"0 24px 72px"}},
-          React.createElement("div",{style:{fontSize:10,color:DM,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:16,display:"flex",alignItems:"center",gap:8}},
+          React.createElement("h2",{style:{fontFamily:"inherit",fontSize:10,color:DM,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:16,display:"flex",alignItems:"center",gap:8,fontWeight:700,margin:"0 0 16px"}},
             React.createElement("span",{style:{color:GND}},"#")," features"
           ),
           React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:2}},
@@ -609,7 +619,7 @@
 
         /* HOW IT WORKS */
         React.createElement("section",{style:{position:"relative",zIndex:1,maxWidth:900,margin:"0 auto",padding:"0 24px 72px"}},
-          React.createElement("div",{style:{fontSize:10,color:DM,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:16,display:"flex",alignItems:"center",gap:8}},
+          React.createElement("h2",{style:{fontFamily:"inherit",fontSize:10,color:DM,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:16,display:"flex",alignItems:"center",gap:8,fontWeight:700,margin:"0 0 16px"}},
             React.createElement("span",{style:{color:GND}},"#")," how it works"
           ),
           React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",border:"1px solid "+BD}},
