@@ -415,6 +415,46 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
   });
 
   // ---------------------------------------------------------------------------
+  // GET /api/session/:slug/:id/otlp (MUST be before :slug/:id to avoid param capture)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Export a session as OTLP/HTTP JSON trace format.
+   * The response can be POSTed directly to any OTLP collector at /v1/traces.
+   */
+  router.get('/session/:slug/:id/otlp', async (req, res) => {
+    const { slug, id } = req.params;
+    const filePath = path.join(projectsDir, slug, `${id}.jsonl`);
+
+    try {
+      assertWithinBase(filePath, projectsDir);
+    } catch {
+      res.status(400).json({ error: 'Invalid path' });
+      return;
+    }
+
+    try {
+      let content: string;
+      try {
+        content = await fs.readFile(filePath, 'utf8');
+      } catch {
+        res.status(404).json({ error: `Session not found: ${slug}/${id}` });
+        return;
+      }
+
+      const rows = parseJsonlContent(content);
+      const sessionId = extractSessionId(content) ?? id;
+      const otlp = sessionToOtlp(rows, sessionId);
+
+      res.setHeader('Content-Type', 'application/json');
+      res.json(otlp);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
   // GET /api/session/:slug/:id
   // ---------------------------------------------------------------------------
 
@@ -520,46 +560,6 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
       const tipCount = countTips(rows);
 
       res.json({ rows, compactionBoundaries: boundaries, health, sessionId, drift, tipCount, instructionsLoaded, resultMetrics, initContext });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ error: message });
-    }
-  });
-
-  // ---------------------------------------------------------------------------
-  // GET /api/session/:slug/:id/otlp
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Export a session as OTLP/HTTP JSON trace format.
-   * The response can be POSTed directly to any OTLP collector at /v1/traces.
-   */
-  router.get('/session/:slug/:id/otlp', async (req, res) => {
-    const { slug, id } = req.params;
-    const filePath = path.join(projectsDir, slug, `${id}.jsonl`);
-
-    try {
-      assertWithinBase(filePath, projectsDir);
-    } catch {
-      res.status(400).json({ error: 'Invalid path' });
-      return;
-    }
-
-    try {
-      let content: string;
-      try {
-        content = await fs.readFile(filePath, 'utf8');
-      } catch {
-        res.status(404).json({ error: `Session not found: ${slug}/${id}` });
-        return;
-      }
-
-      const rows = parseJsonlContent(content);
-      const sessionId = extractSessionId(content) ?? id;
-      const otlp = sessionToOtlp(rows, sessionId);
-
-      res.setHeader('Content-Type', 'application/json');
-      res.json(otlp);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: message });
