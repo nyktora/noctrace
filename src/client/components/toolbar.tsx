@@ -4,6 +4,7 @@ import { useSessionStore } from '../store/session-store.ts';
 import { HealthBadge } from './health-badge.tsx';
 import { SessionStats } from './session-stats.tsx';
 import { ContextStartup } from './context-startup.tsx';
+import { ReliabilityPanel } from './reliability-panel.tsx';
 import { FilterIcon } from '../icons/filter-icon.tsx';
 import { WaterfallIcon } from '../icons/waterfall-icon.tsx';
 import { WarningIcon } from '../icons/warning-icon.tsx';
@@ -12,8 +13,10 @@ import { TipIcon } from '../icons/tip-icon.tsx';
 import { ShieldIcon } from '../icons/shield-icon.tsx';
 import { StatsIcon } from '../icons/stats-icon.tsx';
 import { ContextIcon } from '../icons/context-icon.tsx';
+import { ReliabilityIcon } from '../icons/reliability-icon.tsx';
 import { formatTokens, formatDuration } from '../utils/tool-colors.ts';
 import { formatCost } from '../../shared/token-cost.ts';
+import { computeReliability } from '../../shared/reliability.ts';
 
 /**
  * Top toolbar with logo, filter bar, auto-scroll toggle, and health badge.
@@ -28,6 +31,8 @@ export function Toolbar(): React.ReactElement {
   const drift = useSessionStore((s) => s.drift);
   const showSessionStats = useSessionStore((s) => s.showSessionStats);
   const toggleSessionStats = useSessionStore((s) => s.toggleSessionStats);
+  const showReliability = useSessionStore((s) => s.showReliability);
+  const toggleReliability = useSessionStore((s) => s.toggleReliability);
   const instructionsLoaded = useSessionStore((s) => s.instructionsLoaded);
 
   const [showContextStartup, setShowContextStartup] = useState(false);
@@ -35,6 +40,10 @@ export function Toolbar(): React.ReactElement {
   const handleCloseStats = useCallback(() => {
     if (showSessionStats) toggleSessionStats();
   }, [showSessionStats, toggleSessionStats]);
+
+  const handleCloseReliability = useCallback(() => {
+    if (showReliability) toggleReliability();
+  }, [showReliability, toggleReliability]);
 
   const driftColor = !drift ? 'var(--ctp-overlay0)'
     : drift.driftFactor >= 5 ? 'var(--ctp-red)'
@@ -59,6 +68,15 @@ export function Toolbar(): React.ReactElement {
     }
     return { agentCount: agents, totalTokens: tokens, sessionDuration: maxEnd - minStart, tipCount: tips, securityTipCount: securityTips, totalCost: hasCost ? cost : null };
   }, [rows]);
+
+  const reliability = useMemo(() => computeReliability(rows), [rows]);
+  const reliabilityColor = reliability.totalCalls === 0
+    ? 'var(--ctp-overlay0)'
+    : reliability.overallReliability >= 90
+    ? 'var(--ctp-green)'
+    : reliability.overallReliability >= 70
+    ? 'var(--ctp-yellow)'
+    : 'var(--ctp-red)';
 
   return (
     <div
@@ -273,6 +291,33 @@ export function Toolbar(): React.ReactElement {
             <StatsIcon size={12} color={showSessionStats ? 'var(--ctp-blue)' : 'var(--ctp-overlay0)'} />
           </button>
 
+          {/* Reliability button */}
+          <button
+            type="button"
+            onClick={toggleReliability}
+            title="Session reliability metrics"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              color: showReliability ? reliabilityColor : 'var(--ctp-overlay0)',
+            }}
+          >
+            <ReliabilityIcon size={12} color={showReliability ? reliabilityColor : 'var(--ctp-overlay0)'} />
+            {reliability.totalCalls > 0 && (
+              <span
+                className="font-mono"
+                style={{ fontSize: 11, fontWeight: 600, color: showReliability ? reliabilityColor : 'var(--ctp-overlay0)' }}
+              >
+                {reliability.overallReliability.toFixed(0)}%
+              </span>
+            )}
+          </button>
+
           {/* Context Startup button — only shown when instruction files were detected */}
           {instructionsLoaded.length > 0 && (
             <button
@@ -296,6 +341,9 @@ export function Toolbar(): React.ReactElement {
 
         {/* Session stats flyout panel */}
         {showSessionStats && <SessionStats onClose={handleCloseStats} />}
+
+        {/* Reliability flyout panel */}
+        {showReliability && <ReliabilityPanel onClose={handleCloseReliability} />}
 
         {/* Context Startup flyout panel */}
         {showContextStartup && <ContextStartup onClose={() => setShowContextStartup(false)} />}

@@ -40,6 +40,9 @@ export interface SessionStore {
   slowThresholdMs: number;
   showSessionStats: boolean;
 
+  // Reliability panel
+  showReliability: boolean;
+
   // Resume
   resumeStatus: 'idle' | 'running' | 'done' | 'error';
   resumeMessages: ResumeMessage[];
@@ -83,6 +86,7 @@ export interface SessionStore {
   updateSubAgentChildren: (toolUseId: string, agentId: string, children: WaterfallRow[]) => void;
   setSlowThreshold: (ms: number) => void;
   toggleSessionStats: () => void;
+  toggleReliability: () => void;
   setResumeStatus: (status: 'idle' | 'running' | 'done' | 'error') => void;
   addResumeUserMessage: (text: string) => void;
   appendResumeOutput: (text: string) => void;
@@ -119,6 +123,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   slowThresholdMs: 5000,
   showSessionStats: false,
+  showReliability: false,
 
   resumeStatus: 'idle',
   resumeMessages: [],
@@ -241,6 +246,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   setSlowThreshold: (ms) => set({ slowThresholdMs: ms }),
   toggleSessionStats: () => set((s) => ({ showSessionStats: !s.showSessionStats })),
+  toggleReliability: () => set((s) => ({ showReliability: !s.showReliability })),
 
   setFilter: (text) => set({ filterText: text }),
   setAutoScroll: (on) => set({ autoScroll: on }),
