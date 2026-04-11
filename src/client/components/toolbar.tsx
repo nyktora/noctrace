@@ -56,7 +56,7 @@ export function Toolbar(): React.ReactElement {
     let agents = 0, tokens = 0, tips = 0, securityTips = 0, cost = 0, hasCost = false, minStart = Infinity, maxEnd = -Infinity;
     for (const r of rows) {
       if (r.type === 'agent') agents++;
-      tokens += r.inputTokens + r.outputTokens;
+      tokens += r.tokenDelta + r.outputTokens;
       if (r.estimatedCost !== null) { cost += r.estimatedCost; hasCost = true; }
       for (const t of r.tips) {
         tips++;
@@ -246,7 +246,7 @@ export function Toolbar(): React.ReactElement {
           <span
             className="font-mono"
             style={{ color: 'var(--ctp-subtext0)' }}
-            title={`Total tokens: ${totalTokens}`}
+            title={`Total tokens consumed: ${totalTokens} (context growth + output)`}
           >
             {formatTokens(totalTokens)}
           </span>
