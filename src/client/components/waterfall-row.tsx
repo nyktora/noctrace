@@ -4,6 +4,7 @@ import type { WaterfallRow as WaterfallRowData } from '../../shared/types.ts';
 import type { ParsedFilter } from '../../shared/filter.ts';
 import { rowMatchesFilter } from '../../shared/filter.ts';
 import { HookIcon } from '../icons/hook-icon.tsx';
+import { TurnIcon } from '../icons/turn-icon.tsx';
 import { FastIcon } from '../icons/fast-icon.tsx';
 import { ChevronIcon } from '../icons/chevron-icon.tsx';
 import { RepeatIcon } from '../icons/repeat-icon.tsx';
@@ -140,6 +141,8 @@ export function WaterfallRowComponent({
   const isAgent = row.type === 'agent';
   const isApiError = row.type === 'api-error';
   const isHook = row.type === 'hook';
+  const isTurn = row.type === 'turn';
+  const isUserPrompt = isTurn && row.toolName === 'UserPrompt';
   const indent = row.parentAgentId ? 24 : 0;
   const toolColor = getToolColor(row.toolName, row.status);
   const toolHex = resolveColor(toolColor);
@@ -189,6 +192,55 @@ export function WaterfallRowComponent({
       e.preventDefault();
       onFocusNeighbor?.('up');
     }
+  }
+
+  // Turn rows render as lightweight chat-bubble rows for user prompts and assistant text responses.
+  if (isTurn) {
+    const turnColor = isUserPrompt ? 'var(--ctp-blue)' : 'var(--ctp-lavender)';
+    const turnBg = isUserPrompt ? 'rgba(137,180,250,0.06)' : 'rgba(180,190,254,0.04)';
+    const turnLabel = isUserPrompt ? 'you' : 'claude';
+    return (
+      <div
+        role="row"
+        tabIndex={0}
+        aria-selected={isSelected}
+        aria-label={`${turnLabel}: ${row.label}`}
+        onClick={() => onSelect(row.id)}
+        onKeyDown={handleKeyDown}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          height: ROW_HEIGHT,
+          backgroundColor: isSelected ? 'rgba(137,180,250,0.15)' : turnBg,
+          opacity: matched ? 1 : 0.25,
+          cursor: 'pointer',
+          transition: 'background-color 80ms',
+          borderBottom: '1px solid rgba(69,71,90,0.3)',
+          gap: 8,
+          paddingLeft: 8,
+          paddingRight: 12,
+        }}
+        onMouseEnter={(e) => {
+          if (!isSelected) (e.currentTarget as HTMLDivElement).style.backgroundColor = isUserPrompt ? 'rgba(137,180,250,0.10)' : 'rgba(180,190,254,0.08)';
+        }}
+        onMouseLeave={(e) => {
+          if (!isSelected) (e.currentTarget as HTMLDivElement).style.backgroundColor = turnBg;
+        }}
+      >
+        <TurnIcon size={12} color={turnColor} />
+        <span className="font-mono" style={{ color: turnColor, fontSize: 10, fontWeight: 600, flexShrink: 0 }}>
+          {turnLabel}
+        </span>
+        <span className="font-mono truncate" style={{ color: 'var(--ctp-subtext0)', fontSize: 10, flex: 1 }} title={row.output ?? row.label}>
+          {highlightMatch(row.label, highlightText)}
+        </span>
+        {row.outputTokens > 0 && (
+          <span className="font-mono" style={{ color: 'var(--ctp-overlay0)', fontSize: 9, flexShrink: 0 }}>
+            {formatTokens(row.outputTokens)} out
+          </span>
+        )}
+      </div>
+    );
   }
 
   // Hook rows render as muted teal banners for hook lifecycle events.
@@ -649,6 +701,8 @@ function getTypeShort(toolName: string): string {
   if (name === 'task' || name === 'agent' || name === 'dispatch_agent') return 'Task';
   if (name === 'grep' || name === 'glob' || name === 'search') return 'Grep';
   if (name === 'monitor') return 'Mon';
+  if (name === 'userprompt') return 'You';
+  if (name === 'assistantresponse') return 'AI';
   // API error classes (from classifyStopFailure)
   if (name === 'rate limit') return 'RateL';
   if (name === 'billing error') return 'Bill';

@@ -91,6 +91,12 @@ export function parseFilterString(filter: string): ParsedFilter {
       continue;
     }
 
+    // 'turn' keyword: treated as type filter
+    if (lower === 'turn') {
+      result.typeFilters.push('turn');
+      continue;
+    }
+
     // Everything else is free text
     result.textTokens.push(lower);
   }

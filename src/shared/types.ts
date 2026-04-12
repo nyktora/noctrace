@@ -1,5 +1,5 @@
 /** Waterfall row types */
-export type RowType = 'agent' | 'tool' | 'api-error' | 'hook';
+export type RowType = 'agent' | 'tool' | 'api-error' | 'hook' | 'turn';
 
 /** Severity levels for efficiency tips */
 export type TipSeverity = 'info' | 'warning' | 'critical';

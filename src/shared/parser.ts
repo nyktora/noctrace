@@ -765,6 +765,104 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
     }
   }
 
+  // Create turn rows for user prompts (string content = human text, not tool results)
+  for (const rec of records) {
+    if (rec.type !== 'user') continue;
+    const ur = rec as UserRecord;
+    // Array content means tool_result records — skip
+    if (Array.isArray(ur.message.content)) continue;
+    if (ur.isMeta === true) continue;
+    const raw = rec as unknown as Record<string, unknown>;
+    if (raw['isSynthetic'] === true) continue;
+    const text = typeof ur.message.content === 'string' ? ur.message.content : '';
+    if (!text.trim()) continue;
+
+    const ts = new Date(ur.timestamp).getTime();
+    const truncated = text.length > 120 ? text.slice(0, 117) + '...' : text;
+
+    top.push({
+      id: `turn-user-${ur.uuid}`,
+      type: 'turn',
+      toolName: 'UserPrompt',
+      label: truncated,
+      startTime: ts,
+      endTime: ts,
+      duration: 0,
+      status: 'success',
+      parentAgentId: null,
+      input: {},
+      output: text,
+      inputTokens: 0,
+      outputTokens: 0,
+      tokenDelta: 0,
+      contextFillPercent: 0,
+      isReread: false,
+      isFailure: false,
+      children: [],
+      tips: [],
+      modelName: null,
+      estimatedCost: null,
+      agentType: null,
+      agentColor: null,
+      sequence: null,
+      isFastMode: false,
+      parentToolUseId: null,
+    });
+  }
+
+  // Create turn rows for assistant text-only responses (no tool_use blocks)
+  for (const rec of records) {
+    if (rec.type !== 'assistant') continue;
+    const ar = rec as AssistantRecord;
+    const hasToolUse = ar.message.content.some(b => isToolUse(b));
+    if (hasToolUse) continue; // already handled by the tool row creation loop
+    if (ar.message.error) continue; // already handled by api-error loop
+
+    const texts = ar.message.content
+      .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
+      .map(b => b.text);
+    const fullText = texts.join('\n');
+    if (!fullText.trim()) continue;
+
+    const ts = new Date(ar.timestamp).getTime();
+    const truncated = fullText.length > 120 ? fullText.slice(0, 117) + '...' : fullText;
+    const usage = ar.message.usage;
+    const inputTokens = (usage?.input_tokens ?? 0)
+      + (usage?.cache_creation_input_tokens ?? 0)
+      + (usage?.cache_read_input_tokens ?? 0);
+    const outputTokens = usage?.output_tokens ?? 0;
+    const modelName = typeof ar.message.model === 'string' ? ar.message.model : null;
+
+    top.push({
+      id: `turn-asst-${ar.uuid}`,
+      type: 'turn',
+      toolName: 'AssistantResponse',
+      label: truncated,
+      startTime: ts,
+      endTime: ts,
+      duration: 0,
+      status: 'success',
+      parentAgentId: null,
+      input: {},
+      output: fullText,
+      inputTokens,
+      outputTokens,
+      tokenDelta: 0,
+      contextFillPercent: (inputTokens / effectiveWindow) * 100,
+      isReread: false,
+      isFailure: false,
+      children: [],
+      tips: [],
+      modelName,
+      estimatedCost: null,
+      agentType: null,
+      agentColor: null,
+      sequence: typeof ar.sequence === 'number' ? ar.sequence : null,
+      isFastMode: ar.message.speed === 'fast',
+      parentToolUseId: null,
+    });
+  }
+
   return top;
 }
 

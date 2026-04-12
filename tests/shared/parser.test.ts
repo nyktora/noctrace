@@ -28,9 +28,11 @@ function loadFixture(name: string): string {
 
 describe('simple session', () => {
   const content = loadFixture('simple-session.jsonl');
-  const rows = parseJsonlContent(content);
+  const allRows = parseJsonlContent(content);
+  // Filter to tool/agent rows only — turn rows (user prompts, assistant text) are tested separately
+  const rows = allRows.filter((r) => r.type === 'tool' || r.type === 'agent');
 
-  it('extracts exactly 3 rows', () => {
+  it('extracts exactly 3 tool rows', () => {
     expect(rows).toHaveLength(3);
   });
 
@@ -53,7 +55,7 @@ describe('simple session', () => {
     expect(row.label).toBe('Bash: npm test');
   });
 
-  it('all rows have success status', () => {
+  it('all tool rows have success status', () => {
     for (const row of rows) {
       expect(row.status).toBe('success');
     }
@@ -198,9 +200,10 @@ describe('session with agents', () => {
 
 describe('session with errors', () => {
   const content = loadFixture('session-with-errors.jsonl');
-  const rows = parseJsonlContent(content);
+  const allRows = parseJsonlContent(content);
+  const rows = allRows.filter((r) => r.type === 'tool' || r.type === 'agent' || r.type === 'api-error');
 
-  it('extracts 4 rows', () => {
+  it('extracts 4 tool/error rows', () => {
     expect(rows).toHaveLength(4);
   });
 
@@ -237,7 +240,8 @@ describe('session with compaction', () => {
   const content = loadFixture('session-with-compaction.jsonl');
 
   describe('parseJsonlContent', () => {
-    const rows = parseJsonlContent(content);
+    const allRows = parseJsonlContent(content);
+    const rows = allRows.filter((r) => r.type === 'tool' || r.type === 'agent');
 
     it('extracts 4 tool call rows', () => {
       expect(rows).toHaveLength(4);
@@ -545,9 +549,10 @@ describe('running tool calls (no result yet)', () => {
 
 describe('tool failure detection (isFailure)', () => {
   const content = loadFixture('session-with-failure.jsonl');
-  const rows = parseJsonlContent(content);
+  const allRows = parseJsonlContent(content);
+  const rows = allRows.filter((r) => r.type === 'tool' || r.type === 'agent');
 
-  it('extracts 2 rows from the fixture', () => {
+  it('extracts 2 tool rows from the fixture', () => {
     expect(rows).toHaveLength(2);
   });
 

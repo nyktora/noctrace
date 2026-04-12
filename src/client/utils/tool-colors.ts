@@ -15,6 +15,8 @@ export function getToolColor(toolName: string, status?: string): string {
   if (name === 'task' || name === 'agent' || name === 'dispatch_agent') return 'var(--color-agent)';
   if (name === 'grep' || name === 'glob' || name === 'search') return 'var(--color-grep)';
   if (name === 'monitor') return 'var(--color-monitor)';
+  if (name === 'userprompt') return 'var(--ctp-blue)';
+  if (name === 'assistantresponse') return 'var(--ctp-lavender)';
   if (name.startsWith('mcp__')) return 'var(--ctp-teal)';
 
   return 'var(--ctp-overlay0)';
@@ -33,6 +35,8 @@ const COLOR_HEX: Record<string, string> = {
   'var(--color-monitor)': '#89dceb',
   'var(--ctp-overlay0)': '#6c7086',
   'var(--ctp-teal)': '#94e2d5',
+  'var(--ctp-blue)': '#89b4fa',
+  'var(--ctp-lavender)': '#b4befe',
 };
 
 /** Resolves a CSS variable color string to its hex value */
