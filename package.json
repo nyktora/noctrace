@@ -1,7 +1,7 @@
 {
   "name": "noctrace",
-  "version": "0.8.1",
-  "description": "Chrome DevTools Network-tab-style waterfall visualizer for Claude Code agent workflows",
+  "version": "0.8.2",
+  "description": "Claude Code observability — DevTools-style waterfall visualizer for AI agent workflows, token tracking, and context health monitoring",
   "type": "module",
   "license": "MIT",
   "author": "Nyktora Group LLC",
@@ -19,16 +19,20 @@
   "keywords": [
     "noctrace",
     "claude-code",
+    "claude-code-observability",
     "claude",
     "anthropic",
     "observability",
     "devtools",
     "waterfall",
     "ai-agent",
+    "ai-agent-observability",
     "llm",
+    "llm-observability",
     "timeline",
     "visualizer",
     "claude-code-hooks",
+    "claude-code-monitoring",
     "token-usage",
     "context-window",
     "agent-monitoring",
@@ -36,7 +40,9 @@
     "claude-code-devtools",
     "session-viewer",
     "tool-calls",
-    "sub-agents"
+    "sub-agents",
+    "opentelemetry",
+    "context-health"
   ],
   "bin": {
     "noctrace": "bin/noctrace.js"
