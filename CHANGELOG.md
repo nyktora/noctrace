@@ -2,6 +2,19 @@
 
 All notable changes to noctrace will be documented in this file.
 
+## [0.9.0] - 2026-04-12
+
+### Added
+- Conversation turn rows: user prompts now appear as blue "you" rows and assistant text-only responses as lavender "claude" rows in the waterfall timeline. Previously only tool calls were shown; now you can read the full session narrative
+- Turn icon (chat bubble SVG) distinguishes conversation rows from tool calls
+- Filter support for turn rows: `type:turn` matches conversation rows, text search matches prompt/response content
+- Turn rows show output token count for assistant responses
+
+### Fixed
+- Toolbar token total was double-counting context window (summing full `inputTokens` per row instead of `tokenDelta`). Now correctly shows net tokens consumed
+- npm search ranking: description now leads with "Claude Code observability" for exact phrase match
+- Site SEO: semantic H1/H2 headings, og:image, shortened meta description, updated version badges
+
 ## [0.8.0] - 2026-04-11
 
 ### Added
