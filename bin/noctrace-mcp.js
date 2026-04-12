@@ -20,9 +20,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 
-const VERSION = '0.5.1';
-const NOCTRACE_PORT = 4117;
-const BASE_URL = `http://localhost:${NOCTRACE_PORT}`;
+const VERSION = '0.9.0';
+const NOCTRACE_PORT = parseInt(process.env.NOCTRACE_PORT ?? '4117', 10);
+const NOCTRACE_HOST = process.env.NOCTRACE_HOST ?? 'localhost';
+const BASE_URL = `http://${NOCTRACE_HOST}:${NOCTRACE_PORT}`;
 
 // ---------------------------------------------------------------------------
 // Session path discovery
@@ -72,25 +73,48 @@ async function newestJsonl(dir) {
 }
 
 /**
+ * Translate a container-internal path to the host-side path.
+ * Uses NOCTRACE_PATH_MAP env var: "container_prefix:host_prefix"
+ * Example: NOCTRACE_PATH_MAP="/root/.claude:/Users/lam/.claude"
+ *
+ * @param {string} containerPath
+ * @returns {string}
+ */
+function translatePath(containerPath) {
+  const pathMap = process.env.NOCTRACE_PATH_MAP;
+  if (!pathMap) return containerPath;
+  const sep = pathMap.indexOf(':');
+  if (sep === -1) return containerPath;
+  const containerPrefix = pathMap.slice(0, sep);
+  const hostPrefix = pathMap.slice(sep + 1);
+  if (containerPath.startsWith(containerPrefix)) {
+    return hostPrefix + containerPath.slice(containerPrefix.length);
+  }
+  return containerPath;
+}
+
+/**
  * Discover the JSONL session path for the current Claude Code session.
+ * Returns the host-translated path when NOCTRACE_PATH_MAP is set.
  *
  * @returns {Promise<string|null>}
  */
 async function discoverSessionPath() {
   // Option a: direct env var
   if (process.env.CLAUDE_SESSION_PATH) {
-    return process.env.CLAUDE_SESSION_PATH;
+    return translatePath(process.env.CLAUDE_SESSION_PATH);
   }
 
   // Option b: derive from project directory
   const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.env.PWD ?? null;
   if (!projectDir) return null;
 
-  const claudeHome = process.env.CLAUDE_HOME ?? path.join(os.homedir(), '.claude');
+  const claudeHome = process.env.CLAUDE_CONFIG_DIR ?? process.env.CLAUDE_HOME ?? path.join(os.homedir(), '.claude');
   const slug = pathToSlug(projectDir);
   const projectSessionDir = path.join(claudeHome, 'projects', slug);
 
-  return newestJsonl(projectSessionDir);
+  const sessionPath = await newestJsonl(projectSessionDir);
+  return sessionPath ? translatePath(sessionPath) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -149,7 +173,7 @@ async function postSessionAction(action, sessionPath) {
   return new Promise((resolve) => {
     const req = http.request(
       {
-        hostname: 'localhost',
+        hostname: NOCTRACE_HOST,
         port: NOCTRACE_PORT,
         path: `/api/sessions/${action}`,
         method: 'POST',
@@ -254,10 +278,14 @@ function handleMessage(line) {
 async function main() {
   let sessionPath = await discoverSessionPath();
 
+  // When running inside Docker (NOCTRACE_HOST != localhost), skip server start —
+  // the noctrace server runs on the host, not inside the container.
+  const isRemote = NOCTRACE_HOST !== 'localhost' && NOCTRACE_HOST !== '127.0.0.1';
+
   // Check if noctrace is already running; if not, start it (first MCP process wins).
   // Use a retry loop to handle the race where two MCP processes start simultaneously.
   const running = await isServerRunning();
-  if (!running) {
+  if (!running && !isRemote) {
     process.stderr.write('[noctrace-mcp] Starting noctrace server...\n');
     try {
       await startNoctraceServer();
