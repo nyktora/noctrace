@@ -205,11 +205,18 @@ if (args.includes('--docker')) {
     process.exit(1);
   }
 
-  const { execSync, spawn: spawnProcess } = await import('node:child_process');
+  const { execFileSync } = await import('node:child_process');
 
-  // Verify container exists and is running
+  // Validate container name to prevent command injection (Docker names: [a-zA-Z0-9][a-zA-Z0-9_.-]*)
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(containerArg)) {
+    console.error(`[noctrace] Invalid container name: "${containerArg}"`);
+    console.error(`[noctrace] Container names must be alphanumeric (hyphens, dots, underscores allowed).`);
+    process.exit(1);
+  }
+
+  // Verify container exists and is running (execFileSync: no shell, no injection)
   try {
-    execSync(`docker inspect --format '{{.State.Running}}' ${containerArg}`, { stdio: 'pipe' });
+    execFileSync('docker', ['inspect', '--format', '{{.State.Running}}', containerArg], { stdio: 'pipe' });
   } catch {
     console.error(`[noctrace] Container "${containerArg}" not found or not running.`);
     console.error(`[noctrace] Check: docker ps`);
@@ -217,8 +224,8 @@ if (args.includes('--docker')) {
   }
 
   // Find Claude config dir inside the container
-  const claudeDir = execSync(
-    `docker exec ${containerArg} sh -c 'echo \${CLAUDE_CONFIG_DIR:-$HOME/.claude}'`,
+  const claudeDir = execFileSync(
+    'docker', ['exec', containerArg, 'sh', '-c', 'echo ${CLAUDE_CONFIG_DIR:-$HOME/.claude}'],
     { stdio: 'pipe' },
   ).toString().trim();
 
@@ -243,9 +250,9 @@ if (args.includes('--docker')) {
 
   async function syncSessions() {
     try {
-      // List all JSONL files in the container's claude projects dir
-      const listing = execSync(
-        `docker exec ${containerArg} find ${claudeDir}/projects -name '*.jsonl' -type f 2>/dev/null`,
+      // List all JSONL files in the container's claude projects dir (execFileSync: no shell injection)
+      const listing = execFileSync(
+        'docker', ['exec', containerArg, 'find', `${claudeDir}/projects`, '-name', '*.jsonl', '-type', 'f'],
         { stdio: 'pipe', timeout: 5000 },
       ).toString().trim();
 
@@ -254,14 +261,19 @@ if (args.includes('--docker')) {
 
       for (const cp of containerPaths) {
         // Derive local sync path: preserve the relative structure
-        const relPath = cp.slice(claudeDir.length); // e.g. /projects/-workspace/session.jsonl
+        const relPath = cp.slice(claudeDir.length);
         const localPath = path.join(syncDir, relPath);
+
+        // Validate against path traversal — resolved path must stay within syncDir
+        const resolvedLocal = path.resolve(localPath);
+        if (!resolvedLocal.startsWith(path.resolve(syncDir) + path.sep)) continue;
+
         const localDir = path.dirname(localPath);
 
-        // Check if we need to sync (compare mtimes via docker exec stat)
+        // Check if we need to sync (compare mtimes)
         try {
-          const containerMtime = execSync(
-            `docker exec ${containerArg} stat -c %Y "${cp}" 2>/dev/null || docker exec ${containerArg} stat -f %m "${cp}" 2>/dev/null`,
+          const containerMtime = execFileSync(
+            'docker', ['exec', containerArg, 'stat', '-c', '%Y', cp],
             { stdio: 'pipe', timeout: 3000 },
           ).toString().trim();
 
@@ -277,17 +289,19 @@ if (args.includes('--docker')) {
         // Copy the file from container to host sync dir
         await fs.mkdir(localDir, { recursive: true });
         try {
-          execSync(`docker cp "${containerArg}:${cp}" "${localPath}"`, { stdio: 'pipe', timeout: 10000 });
+          execFileSync('docker', ['cp', `${containerArg}:${cp}`, localPath], { stdio: 'pipe', timeout: 10000 });
         } catch { continue; }
 
         // Also sync subagents dir if it exists
         const sessionId = path.basename(cp, '.jsonl');
         const subagentsDir = path.join(path.dirname(cp), sessionId, 'subagents');
         try {
-          execSync(`docker exec ${containerArg} test -d "${subagentsDir}"`, { stdio: 'pipe', timeout: 2000 });
+          execFileSync('docker', ['exec', containerArg, 'test', '-d', subagentsDir], { stdio: 'pipe', timeout: 2000 });
           const localSubDir = path.join(path.dirname(localPath), sessionId, 'subagents');
+          const resolvedSubDir = path.resolve(localSubDir);
+          if (!resolvedSubDir.startsWith(path.resolve(syncDir) + path.sep)) continue;
           await fs.mkdir(localSubDir, { recursive: true });
-          execSync(`docker cp "${containerArg}:${subagentsDir}/." "${localSubDir}/"`, { stdio: 'pipe', timeout: 10000 });
+          execFileSync('docker', ['cp', `${containerArg}:${subagentsDir}/.`, `${localSubDir}/`], { stdio: 'pipe', timeout: 10000 });
         } catch { /* no subagents dir */ }
 
         // Register the local path with noctrace

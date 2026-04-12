@@ -22,7 +22,11 @@ import os from 'node:os';
 
 const VERSION = '0.9.0';
 const NOCTRACE_PORT = parseInt(process.env.NOCTRACE_PORT ?? '4117', 10);
-const NOCTRACE_HOST = process.env.NOCTRACE_HOST ?? 'localhost';
+
+// Validate NOCTRACE_HOST: only allow localhost, 127.0.0.1, and host.docker.internal
+const rawHost = process.env.NOCTRACE_HOST ?? 'localhost';
+const ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'host.docker.internal'];
+const NOCTRACE_HOST = ALLOWED_HOSTS.includes(rawHost) ? rawHost : 'localhost';
 const BASE_URL = `http://${NOCTRACE_HOST}:${NOCTRACE_PORT}`;
 
 // ---------------------------------------------------------------------------
@@ -88,7 +92,14 @@ function translatePath(containerPath) {
   const containerPrefix = pathMap.slice(0, sep);
   const hostPrefix = pathMap.slice(sep + 1);
   if (containerPath.startsWith(containerPrefix)) {
-    return hostPrefix + containerPath.slice(containerPrefix.length);
+    const translated = hostPrefix + containerPath.slice(containerPrefix.length);
+    // Validate no path traversal: resolved path must stay under hostPrefix
+    const resolved = path.resolve(translated);
+    if (!resolved.startsWith(path.resolve(hostPrefix) + path.sep) && resolved !== path.resolve(hostPrefix)) {
+      process.stderr.write(`[noctrace-mcp] Path traversal blocked: ${containerPath}\n`);
+      return containerPath;
+    }
+    return translated;
   }
   return containerPath;
 }
