@@ -25,6 +25,8 @@ import {
   copyWatcherScript,
   spawnWatcher,
   cleanupWatcher,
+  findContainerByLabel,
+  resolveDevcontainerContainer,
 } from '../../src/server/docker';
 import type { SpawnOptions } from 'node:child_process';
 
@@ -343,5 +345,130 @@ describe('resolveClaudeDir', () => {
     const execCall = runner.calls.find((c) => c.args.includes('exec'));
     expect(execCall).toBeDefined();
     expect(execCall!.args).toContain('my-box');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// findContainerByLabel
+// ---------------------------------------------------------------------------
+
+describe('findContainerByLabel', () => {
+  it('returns the container ID when docker ps prints one', () => {
+    const runner = makeRunner({
+      execSync() { return 'abc1234def56\n'; },
+    });
+    const id = findContainerByLabel('devcontainer.local_folder', '/Users/me/myproject', runner);
+    expect(id).toBe('abc1234def56');
+  });
+
+  it('returns null when docker ps output is empty', () => {
+    const runner = makeRunner({
+      execSync() { return '\n'; },
+    });
+    const id = findContainerByLabel('devcontainer.local_folder', '/Users/me/myproject', runner);
+    expect(id).toBeNull();
+  });
+
+  it('passes label=value as a single argv element (not concatenated separately)', () => {
+    const runner = makeRunner({
+      execSync() { return 'deadbeef\n'; },
+    });
+    findContainerByLabel('devcontainer.local_folder', '/Users/me/myproject', runner);
+
+    const psCall = runner.calls.find((c) => c.args.includes('ps'));
+    expect(psCall).toBeDefined();
+    // The label filter must appear as a single element: "label=key=value"
+    const filterArg = psCall!.args.find((a) => a.startsWith('label='));
+    expect(filterArg).toBe('label=devcontainer.local_folder=/Users/me/myproject');
+    // Must not be split into two elements
+    expect(psCall!.args).not.toContain('devcontainer.local_folder');
+    expect(psCall!.args).not.toContain('/Users/me/myproject');
+  });
+
+  it('returns null when docker ps throws', () => {
+    const runner = makeRunner({
+      execSync() { throw new Error('docker not available'); },
+    });
+    const id = findContainerByLabel('devcontainer.local_folder', '/some/path', runner);
+    expect(id).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveDevcontainerContainer
+// ---------------------------------------------------------------------------
+
+describe('resolveDevcontainerContainer', () => {
+  it('passes through a plain container name unchanged', () => {
+    const runner = makeRunner();
+    const result = resolveDevcontainerContainer('my-devcontainer', runner);
+    expect(result).toBe('my-devcontainer');
+    // No docker calls should have been made
+    expect(runner.calls).toHaveLength(0);
+  });
+
+  it('resolves an absolute path via devcontainer.local_folder first and returns the ID', () => {
+    let callCount = 0;
+    const runner = makeRunner({
+      execSync(_cmd, args) {
+        callCount++;
+        // First call: devcontainer.local_folder query — return a match
+        const filterArg = args.find((a) => a.startsWith('label='));
+        if (filterArg && filterArg.includes('devcontainer.local_folder')) {
+          return 'cafebabe\n';
+        }
+        return '\n';
+      },
+    });
+    const result = resolveDevcontainerContainer('/Users/me/myproject', runner);
+    expect(result).toBe('cafebabe');
+    // Should have queried the canonical label and stopped (no fallback needed)
+    expect(callCount).toBe(1);
+  });
+
+  it('falls back to vsch.local.folder when devcontainer.local_folder has no match', () => {
+    const runner = makeRunner({
+      execSync(_cmd, args) {
+        const filterArg = args.find((a) => a.startsWith('label='));
+        if (filterArg && filterArg.includes('devcontainer.local_folder')) {
+          return '\n'; // no match
+        }
+        if (filterArg && filterArg.includes('vsch.local.folder')) {
+          return 'oldlabel99\n';
+        }
+        return '\n';
+      },
+    });
+    const result = resolveDevcontainerContainer('/Users/me/myproject', runner);
+    expect(result).toBe('oldlabel99');
+  });
+
+  it('throws a helpful error when neither label matches', () => {
+    const runner = makeRunner({
+      execSync() { return '\n'; },
+    });
+    expect(() => resolveDevcontainerContainer('/Users/me/myproject', runner)).toThrow(
+      /No devcontainer found for path/,
+    );
+    expect(() => resolveDevcontainerContainer('/Users/me/myproject', runner)).toThrow(
+      /devcontainer\.local_folder/,
+    );
+  });
+
+  it('resolves a relative path to an absolute path before the label query', () => {
+    let queriedPath: string | undefined;
+    const runner = makeRunner({
+      execSync(_cmd, args) {
+        const filterArg = args.find((a) => a.startsWith('label='));
+        if (filterArg) {
+          // Extract the value after label=devcontainer.local_folder=
+          queriedPath = filterArg.split('=').slice(2).join('=');
+        }
+        return 'resolved01\n';
+      },
+    });
+    // Pass a relative path — it should be resolved against the supplied cwd
+    resolveDevcontainerContainer('./myproject', runner, '/Users/me');
+    expect(queriedPath).toBe('/Users/me/myproject');
   });
 });

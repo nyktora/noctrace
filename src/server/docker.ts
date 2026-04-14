@@ -6,6 +6,8 @@
  * DockerRunner interface so callers (and tests) can swap in a stub.
  */
 
+import path from 'node:path';
+import os from 'node:os';
 import type { SpawnOptions } from 'node:child_process';
 
 // ---------------------------------------------------------------------------
@@ -239,4 +241,88 @@ export function cleanupWatcher(containerArg: string, runner: DockerRunner): void
       { stdio: 'pipe', timeout: 3000 },
     );
   } catch { /* container may be gone */ }
+}
+
+// ---------------------------------------------------------------------------
+// Devcontainer support
+// ---------------------------------------------------------------------------
+
+/**
+ * Look up a running container by an exact Docker label match.
+ * Returns the container ID (short form), or null when nothing matches.
+ *
+ * Uses `docker ps --filter "label=<label>=<value>" --format "{{.ID}}"`.
+ * The label and value are passed as a single `label=key=value` filter argument
+ * so no shell interpolation occurs.
+ */
+export function findContainerByLabel(
+  label: string,
+  value: string,
+  runner: DockerRunner,
+): string | null {
+  let output: string;
+  try {
+    output = runner.execSync(
+      'docker',
+      ['ps', '--filter', `label=${label}=${value}`, '--format', '{{.ID}}'],
+      { stdio: 'pipe' },
+    );
+  } catch {
+    return null;
+  }
+  const id = output.trim().split('\n')[0]?.trim() ?? '';
+  return id.length > 0 ? id : null;
+}
+
+/**
+ * Resolve a devcontainer argument to a concrete container ID.
+ *
+ * If `input` looks like a path (starts with `/`, `.`, `./`, or `~/`) it is
+ * resolved to an absolute path and looked up via the canonical
+ * `devcontainer.local_folder` label, falling back to the older
+ * `vsch.local.folder` label.  When neither label matches an error is thrown
+ * with a clear hint pointing the user at `docker ps --filter "label=devcontainer.*"`.
+ *
+ * If `input` is not a path it is treated as a container name/ID.
+ * `isValidContainerName` is checked and the value is returned directly.
+ *
+ * @param cwd - Working directory used to resolve relative paths. Defaults to `process.cwd()`.
+ */
+export function resolveDevcontainerContainer(
+  input: string,
+  runner: DockerRunner,
+  cwd?: string,
+): string {
+  const isPath = input.startsWith('/') || input.startsWith('.') || input.startsWith('~/');
+
+  if (!isPath) {
+    if (!isValidContainerName(input)) {
+      throw new Error(`Invalid container name: "${input}"`);
+    }
+    return input;
+  }
+
+  // Resolve to an absolute path — devcontainer labels always store absolute paths.
+  // path.resolve does not expand ~ so handle that explicitly.
+  let absPath: string;
+  if (input.startsWith('~/')) {
+    absPath = path.join(os.homedir(), input.slice(2));
+  } else {
+    absPath = path.resolve(cwd ?? process.cwd(), input);
+  }
+
+  // Try canonical label first, then the older VS Code label.
+  const id =
+    findContainerByLabel('devcontainer.local_folder', absPath, runner) ??
+    findContainerByLabel('vsch.local.folder', absPath, runner);
+
+  if (id === null) {
+    throw new Error(
+      `No devcontainer found for path: ${absPath}\n` +
+      `Hint: make sure the devcontainer is running, then check:\n` +
+      `  docker ps --filter "label=devcontainer.local_folder"`,
+    );
+  }
+
+  return id;
 }

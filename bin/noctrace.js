@@ -197,14 +197,11 @@ if (args.includes('--disable')) {
   process.exit(0);
 }
 
-if (args.includes('--docker')) {
-  const containerArg = args[args.indexOf('--docker') + 1];
-  if (!containerArg || containerArg.startsWith('--')) {
-    console.error('[noctrace] Usage: npx noctrace --docker <container-name-or-id>');
-    console.error('[noctrace] Example: npx noctrace --docker my-claude-container');
-    process.exit(1);
-  }
-
+/**
+ * Run Docker watcher mode with a known, already-validated container ID.
+ * Shared by --docker and --devcontainer.
+ */
+async function runDockerMode(containerArg) {
   const {
     isValidContainerName,
     assertContainerRunning,
@@ -318,6 +315,44 @@ if (args.includes('--docker')) {
 
   // Keep process alive
   await new Promise(() => {});
+}
+
+if (args.includes('--docker')) {
+  const containerArg = args[args.indexOf('--docker') + 1];
+  if (!containerArg || containerArg.startsWith('--')) {
+    console.error('[noctrace] Usage: npx noctrace --docker <container-name-or-id>');
+    console.error('[noctrace] Example: npx noctrace --docker my-claude-container');
+    process.exit(1);
+  }
+  await runDockerMode(containerArg);
+}
+
+if (args.includes('--devcontainer')) {
+  const devcontainerArg = args[args.indexOf('--devcontainer') + 1];
+  if (!devcontainerArg || devcontainerArg.startsWith('--')) {
+    console.error('[noctrace] Usage: npx noctrace --devcontainer <path-or-container>');
+    console.error('[noctrace] Examples:');
+    console.error('[noctrace]   npx noctrace --devcontainer .');
+    console.error('[noctrace]   npx noctrace --devcontainer /Users/me/myproject');
+    console.error('[noctrace]   npx noctrace --devcontainer my-devcontainer-id');
+    process.exit(1);
+  }
+
+  const { resolveDevcontainerContainer, defaultDockerRunner } =
+    await import('../dist/server/server/docker.js');
+
+  let resolvedContainer;
+  try {
+    resolvedContainer = resolveDevcontainerContainer(devcontainerArg, defaultDockerRunner);
+  } catch (err) {
+    const lines = err.message.split('\n');
+    for (const line of lines) {
+      console.error(`[noctrace] ${line}`);
+    }
+    process.exit(1);
+  }
+
+  await runDockerMode(resolvedContainer);
 }
 
 if (args.includes('--mcp')) {
