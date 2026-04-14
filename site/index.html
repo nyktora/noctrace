@@ -689,6 +689,72 @@
           )
         ),
 
+        /* DOCKER SUPPORT CALLOUT */
+        React.createElement("section",{id:"docker",style:{position:"relative",zIndex:1,maxWidth:900,margin:"0 auto",padding:"0 24px 72px"}},
+          React.createElement("div",{style:{border:"1px solid "+BD,background:SF,overflow:"hidden"}},
+            React.createElement("div",{style:{padding:"20px 24px",borderBottom:"1px solid "+BD,display:"flex",alignItems:"center",gap:12}},
+              React.createElement("div",{style:{width:4,height:32,background:TL,borderRadius:1,flexShrink:0}}),
+              React.createElement("div",null,
+                React.createElement("h2",{style:{fontFamily:"inherit",fontSize:15,fontWeight:700,color:TXM,margin:0}},"Docker support"),
+                React.createElement("div",{style:{fontSize:12,color:DM2}},
+                  React.createElement("span",{style:{color:TL,fontWeight:600}},"new in v1.0"),
+                  " — trace Claude Code sessions running inside containers"
+                )
+              )
+            ),
+            React.createElement("div",{className:"noctrace-rot-grid",style:{padding:"20px 24px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}},
+              React.createElement("div",null,
+                React.createElement("div",{style:{fontSize:12,color:TX,lineHeight:1.8,marginBottom:16}},
+                  "Running Claude Code in a container — CI, a remote dev box, a reproducible build env — normally means the session logs are trapped inside. No waterfall. No health grade. No visibility."
+                ),
+                React.createElement("div",{style:{fontSize:12,color:TX,lineHeight:1.8,marginBottom:16}},
+                  React.createElement("code",{style:{color:TL,background:SF2,padding:"1px 5px",borderRadius:2,fontSize:11}},"npx noctrace --docker <container>"),
+                  " inspects the container, injects a ",
+                  React.createElement("span",{style:{color:TXB,fontWeight:600}},"lightweight watcher"),
+                  ", and streams JSONL events back to your host in real time. Zero container setup — any image with ",
+                  React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",fontSize:11}},"curl"),
+                  " or ",
+                  React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",fontSize:11}},"wget"),
+                  " works."
+                ),
+                React.createElement("div",{style:{fontSize:12,color:TX,lineHeight:1.8}},
+                  "Auto-detects ",
+                  React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",fontSize:11}},"$CLAUDE_CONFIG_DIR"),
+                  ", resolves the host URL via ",
+                  React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",fontSize:11}},"host.docker.internal"),
+                  " on macOS and Windows or the gateway IP on Linux, and cleans up the watcher on Ctrl-C. No images to rebuild. No volumes to mount."
+                )
+              ),
+              React.createElement("div",null,
+                React.createElement("div",{style:{fontSize:10,color:DM,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10,fontWeight:600}},"How the flow works"),
+                [
+                  {icon:React.createElement("span",{style:{fontSize:11,fontWeight:700,color:GN}},"$"),label:"Attach",desc:"noctrace --docker <id> inspects and verifies the container is running"},
+                  {icon:React.createElement("svg",{width:18,height:18,viewBox:"0 0 14 14"},
+                    React.createElement("g",{fill:"none",stroke:TL,strokeWidth:"0.9"},
+                      React.createElement("rect",{x:"0.8",y:"7",width:"2.6",height:"2.6"}),
+                      React.createElement("rect",{x:"4",y:"7",width:"2.6",height:"2.6"}),
+                      React.createElement("rect",{x:"7.2",y:"7",width:"2.6",height:"2.6"}),
+                      React.createElement("rect",{x:"4",y:"3.8",width:"2.6",height:"2.6"}),
+                      React.createElement("rect",{x:"7.2",y:"3.8",width:"2.6",height:"2.6"})
+                    )
+                  ),label:"Inject watcher",desc:"Small shell script copied to /tmp, runs in the background inside the container"},
+                  {icon:React.createElement("span",{style:{fontSize:13,color:TL,fontWeight:700}},"\u2192"),label:"Stream events",desc:"JSONL rows POST to your host over HTTP the instant Claude Code writes them"},
+                  {icon:React.createElement("span",{style:{fontSize:10,color:BL,fontFamily:"inherit",fontWeight:700}},"{net}"),label:"Auto network",desc:"host.docker.internal on macOS and Windows, gateway IP on Linux — no config"},
+                  {icon:React.createElement("span",{style:{fontSize:11,color:DM2,fontFamily:"inherit"}},"^C"),label:"Clean exit",desc:"Ctrl-C kills the watcher and removes the temp script from the container"},
+                ].map(function(s,i){return(
+                  React.createElement("div",{key:i,style:{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<4?"1px solid "+BD+"60":"none"}},
+                    React.createElement("div",{style:{width:24,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},s.icon),
+                    React.createElement("div",null,
+                      React.createElement("div",{style:{fontSize:11,color:TXB,fontWeight:600}},s.label),
+                      React.createElement("div",{style:{fontSize:11,color:DM2}},s.desc)
+                    )
+                  )
+                )})
+              )
+            )
+          )
+        ),
+
         /* FEATURES */
         React.createElement("section",{id:"features",style:{position:"relative",zIndex:1,maxWidth:900,margin:"0 auto",padding:"0 24px 72px"}},
           React.createElement("h2",{style:{fontFamily:"inherit",fontSize:10,color:DM,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:16,display:"flex",alignItems:"center",gap:8,fontWeight:700,margin:"0 0 16px"}},
