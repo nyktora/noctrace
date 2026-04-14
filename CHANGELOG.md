@@ -2,6 +2,24 @@
 
 All notable changes to noctrace will be documented in this file.
 
+## [1.0.0] - 2026-04-13
+
+Noctrace hits 1.0. The JSONL parser, context health scoring, waterfall UI, hook integration, MCP session registry, and session export have shipped across 30+ releases and are stable in daily use. This release consolidates that surface into a 1.0 line and adds Docker support.
+
+### Added
+- You can now trace Claude Code sessions running inside Docker containers with a single flag: `npx noctrace --docker <container>`. Noctrace inspects the container, injects a lightweight watcher, and streams JSONL events back to your host in real time. Zero container setup — works with any image that has `curl` or `wget`
+- Docker support auto-detects the container's Claude config dir (`$CLAUDE_CONFIG_DIR` or `$HOME/.claude`), resolves the host URL (`host.docker.internal` on macOS/Windows, gateway IP on Linux), and cleans up the injected watcher on Ctrl-C
+
+### Changed
+- Docker orchestration logic extracted from `bin/noctrace.js` into a testable module (`src/server/docker.ts`) with a `DockerRunner` interface for dependency injection. External CLI behavior is unchanged; every Docker code path is now under unit test coverage
+
+### Security
+- **Docker watcher shell injection locked down**: the injected watcher no longer interpolates `claudeDir` or `containerTargetUrl` into a shell `-c` string. Values are passed as positional arguments through `sh -c '/tmp/noctrace-watcher.sh "$1" "$2" "$3"' -- ...`. A regression test asserts the static `-c` body and argv shape so this can't silently regress
+- **Container name validation**: names that don't match `^[a-zA-Z0-9][a-zA-Z0-9_.-]*$` are rejected before any docker command runs, blocking command injection via crafted container names
+- **Path traversal rejection (ISSUE-001)**: container paths containing `..` segments are rejected before any docker command runs
+- **Command injection hardening across Docker glue**: all `docker exec`, `docker cp`, and `docker inspect` calls use `execFileSync` with discrete argv elements — never shell-string concatenation
+- 24 new unit tests in `tests/server/docker.test.ts` protect these security-sensitive branches. 267 tests total across the project
+
 ## [0.9.0] - 2026-04-12
 
 ### Added

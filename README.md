@@ -87,6 +87,7 @@ Requires Node.js 20+. Optional `--install-hooks` flag enables real-time hook eve
 - **API Error Markers** — rate limit, billing, and auth failures appear as full-width red alert banners on the timeline
 - **Agent Teams Panel** — detects running Agent Teams at `~/.claude/teams/`, shows members and task counts in a flyout
 - **Context Startup Flyout** — shows which instruction files (CLAUDE.md and others) loaded at session start with estimated token counts, parsed from JSONL system records
+- **Docker Support** — `npx noctrace --docker <container>` attaches to a running Docker container, injects a lightweight watcher, and streams JSONL events back to your host in real time. Zero container setup required
 
 ![Noctrace waterfall timeline](docs/screenshots/noctrace-waterfall.gif)
 
@@ -141,6 +142,7 @@ No config files. No cloud. Everything stays local. Optional hooks for richer rea
 
 | CLI Flag | Description |
 |----------|-------------|
+| `--docker <container>` | Attach to a running Docker container and stream its Claude Code sessions back to your host. Zero container setup |
 | `--install-hooks` | Configure Claude Code to push real-time events to noctrace |
 | `--uninstall-hooks` | Remove noctrace hooks from Claude Code |
 
