@@ -31,6 +31,36 @@
   <style>
     body { margin: 0; background: #0a0e14; font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Menlo', 'Consolas', monospace; }
     * { box-sizing: border-box; }
+    /* MOBILE POLISH */
+    @media (max-width:768px){
+      /* hide desktop sidebar TOC on mobile */
+      .noctrace-docs-sidebar{display:none !important}
+      /* main content: full width, no left border, tighter padding */
+      .noctrace-docs-main{padding:20px 16px 64px !important;border-left:none !important;max-width:100% !important;min-width:0 !important}
+      /* any table/code block overflows horizontally instead of clipping */
+      .noctrace-docs-main table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+      .noctrace-docs-main pre,.noctrace-docs-main code{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:pre}
+      /* show the mobile TOC accordion */
+      .noctrace-docs-toc-mobile{display:block !important}
+    }
+    /* nav links: don't wrap multi-word labels like "context rot" */
+    .noctrace-nav-link{white-space:nowrap}
+    @media (max-width:480px){
+      /* tighter nav on small phones */
+      .noctrace-nav-links{gap:12px !important;font-size:10px !important}
+      .noctrace-nav-links .noctrace-nav-link{font-size:10px !important}
+      /* hide the middle link ("context rot") to keep nav one-line on narrow screens */
+      .noctrace-nav-hide-xs{display:none !important}
+    }
+    /* mobile TOC accordion: hidden on desktop, shown on mobile via media query above */
+    .noctrace-docs-toc-mobile{display:none;margin:0 0 24px;border:1px solid #1b2028;background:#0f1318}
+    .noctrace-docs-toc-mobile summary{cursor:pointer;list-style:none;padding:10px 14px;font-size:11px;color:#c9d1d9;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;display:flex;justify-content:space-between;align-items:center}
+    .noctrace-docs-toc-mobile summary::-webkit-details-marker{display:none}
+    .noctrace-docs-toc-mobile summary::after{content:"\25BE";color:#6e7681;font-weight:400}
+    .noctrace-docs-toc-mobile[open] summary::after{content:"\25B4"}
+    .noctrace-docs-toc-mobile ul{list-style:none;margin:0;padding:0 14px 12px;display:flex;flex-direction:column;gap:4px}
+    .noctrace-docs-toc-mobile a{display:block;padding:6px 0;font-size:12px;color:#8b949e;text-decoration:none;border-left:1px solid #1b2028;padding-left:12px}
+    .noctrace-docs-toc-mobile a:hover{color:#c9d1d9}
   </style>
   <script type="application/ld+json">
   {
@@ -258,8 +288,8 @@
           React.createElement("span",{style:{color:DM,margin:"0 10px"}},"/"),
           React.createElement("span",{style:{color:TXB,fontWeight:600,fontSize:12}},"docs"),
           React.createElement("div",{style:{flex:1}}),
-          React.createElement("div",{style:{display:"flex",gap:20,alignItems:"center"}},
-            React.createElement("a",{href:"index.html",style:{color:DM,fontSize:11}},"home"),
+          React.createElement("div",{className:"noctrace-nav-links",style:{display:"flex",gap:20,alignItems:"center"}},
+            React.createElement("a",{href:"index.html",className:"noctrace-nav-link",style:{color:DM,fontSize:11,textDecoration:"none"}},"home"),
             React.createElement("a",{href:"https://github.com/nyktora/noctrace",style:{color:DM,display:"flex"}},React.createElement(GHI,null))
           )
         ),
@@ -267,8 +297,8 @@
         /* LAYOUT: sidebar + content */
         React.createElement("div",{style:{display:"flex",maxWidth:1060,margin:"0 auto",minHeight:"calc(100vh - 44px)"}},
 
-          /* SIDEBAR TOC */
-          React.createElement("aside",{style:{width:200,flexShrink:0,padding:"24px 0 24px 24px",position:"sticky",top:44,alignSelf:"flex-start",height:"calc(100vh - 44px)",overflowY:"auto"}},
+          /* SIDEBAR TOC (desktop only) */
+          React.createElement("aside",{className:"noctrace-docs-sidebar",style:{width:200,flexShrink:0,padding:"24px 0 24px 24px",position:"sticky",top:44,alignSelf:"flex-start",height:"calc(100vh - 44px)",overflowY:"auto"}},
             React.createElement("div",{style:{fontSize:10,color:DM,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:12,fontWeight:600}},"On this page"),
             toc.map(function(t){return(
               React.createElement("a",{key:t.id,href:"#"+t.id,
@@ -287,13 +317,25 @@
           ),
 
           /* MAIN CONTENT */
-          React.createElement("main",{style:{flex:1,padding:"24px 24px 80px 32px",maxWidth:720,borderLeft:"1px solid "+BD+"60"}},
+          React.createElement("main",{className:"noctrace-docs-main",style:{flex:1,padding:"24px 24px 80px 32px",maxWidth:720,borderLeft:"1px solid "+BD+"60",minWidth:0}},
 
             /* HEADER */
-            React.createElement("div",{style:{marginBottom:40}},
+            React.createElement("div",{style:{marginBottom:24}},
               React.createElement("div",{style:{fontSize:11,color:DM,marginBottom:6}},"documentation"),
               React.createElement("h1",{style:{fontSize:24,fontWeight:700,color:TXM,marginBottom:8,letterSpacing:"-0.02em"}},"noctrace docs"),
               React.createElement("p",{style:{color:DM2,fontSize:13}},"Everything you need to install, run, and understand noctrace.")
+            ),
+
+            /* MOBILE TOC ACCORDION (hidden on desktop) */
+            React.createElement("details",{className:"noctrace-docs-toc-mobile"},
+              React.createElement("summary",null,"on this page"),
+              React.createElement("ul",null,
+                toc.map(function(t){return(
+                  React.createElement("li",{key:t.id},
+                    React.createElement("a",{href:"#"+t.id},t.label)
+                  )
+                )})
+              )
             ),
 
             /* INSTALL */
