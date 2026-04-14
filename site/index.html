@@ -30,7 +30,31 @@
   <style>
     body { margin: 0; background: #0a0e14; font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Menlo', 'Consolas', monospace; }
     * { box-sizing: border-box; }
-    @media (max-width:480px){.noctrace-banner-code{display:none}.noctrace-banner{padding:6px 12px !important}}
+    /* MOBILE POLISH */
+    @media (max-width:640px){
+      /* banner: tighter on small screens, hide code snippet */
+      .noctrace-banner-code{display:none}
+      .noctrace-banner{padding:6px 12px !important;gap:8px !important;font-size:10px !important}
+      .noctrace-banner-pill{font-size:8px !important;padding:1px 5px !important}
+      .noctrace-banner-desc{font-size:11px !important}
+      /* features: stack rows instead of 2-column */
+      .noctrace-feature-row{flex-direction:column !important}
+      .noctrace-feature-name{width:auto !important;border-right:none !important;border-bottom:1px solid #1b2028 !important;padding:10px 14px !important}
+      .noctrace-feature-desc{padding:10px 14px !important;font-size:12.5px !important}
+      /* how it works: single column */
+      .noctrace-steps-grid{grid-template-columns:1fr !important}
+      .noctrace-step-card{border-right:none !important;border-bottom:1px solid #1b2028 !important}
+      .noctrace-step-card:last-child{border-bottom:none !important}
+      /* context rot: single column */
+      .noctrace-rot-grid{grid-template-columns:1fr !important;gap:12px !important;padding:16px !important}
+      /* waterfall: nudge user to scroll horizontally */
+      .noctrace-waterfall-wrap::after{content:"\2190 scroll \2192";display:block;text-align:center;font-size:9px;color:#6e7681;padding:4px 0;background:#141a21;border-top:1px solid #1b2028}
+    }
+    @media (max-width:480px){
+      /* even tighter: hide banner icon, keep pill + copy + docs link */
+      .noctrace-banner{justify-content:space-between !important}
+      .noctrace-banner-icon{display:none}
+    }
   </style>
   <script type="application/ld+json">
   {
@@ -443,11 +467,11 @@
         },
           onMouseEnter:function(e){e.currentTarget.style.background="linear-gradient(90deg,"+TL+"18,"+TL+"08 50%,"+MV+"10)"},
           onMouseLeave:function(e){e.currentTarget.style.background="linear-gradient(90deg,"+TL+"10,"+TL+"05 50%,"+MV+"08)"}},
-          React.createElement("span",{style:{
+          React.createElement("span",{className:"noctrace-banner-pill",style:{
             fontSize:9,padding:"2px 6px",borderRadius:2,
             background:TL+"22",color:TL,fontWeight:700,letterSpacing:"0.5px",flexShrink:0,
           }},"NEW IN v1.0"),
-          React.createElement("svg",{width:14,height:14,viewBox:"0 0 14 14",style:{flexShrink:0}},
+          React.createElement("svg",{className:"noctrace-banner-icon",width:14,height:14,viewBox:"0 0 14 14",style:{flexShrink:0}},
             React.createElement("g",{fill:"none",stroke:TL,strokeWidth:"0.9"},
               React.createElement("rect",{x:"0.8",y:"7",width:"2.6",height:"2.6"}),
               React.createElement("rect",{x:"4",y:"7",width:"2.6",height:"2.6"}),
@@ -457,7 +481,7 @@
               React.createElement("path",{d:"M10.5 5.2 Q 12.8 5.2 12.8 7.5 L 10.5 9.8",strokeLinecap:"round"})
             )
           ),
-          React.createElement("span",{style:{color:TXB}},"Docker support — trace Claude Code sessions running inside containers."),
+          React.createElement("span",{className:"noctrace-banner-desc",style:{color:TXB}},"Docker support — trace Claude Code sessions running inside containers."),
           React.createElement("code",{className:"noctrace-banner-code",style:{color:TXM,background:SF2,padding:"1px 6px",borderRadius:2,fontSize:10,border:"1px solid "+BD}},"npx noctrace --docker <container>"),
           React.createElement("span",{style:{color:TL,fontSize:11,display:"flex",alignItems:"center",gap:3,flexShrink:0}},"docs ",React.createElement("span",null,"\u2192"))
         ),
@@ -497,14 +521,14 @@
             ),
             React.createElement("a",{href:"https://github.com/nyktora/noctrace",style:{display:"flex",alignItems:"center",gap:6,background:SF,border:"1px solid "+BD,padding:"9px 16px",color:TX,fontSize:12,textDecoration:"none"}},React.createElement(GHI,null)," source")
           ),
-          React.createElement("div",{style:{fontSize:11,color:DM,marginBottom:8,animation:"fadeUp 0.4s ease 0.45s both"}},
+          React.createElement("div",{style:{fontSize:11,color:TX,marginBottom:8,animation:"fadeUp 0.4s ease 0.45s both"}},
             "then run ",
             React.createElement("code",{style:{color:TX,background:SF2,padding:"1px 5px"}},"noctrace --enable"),
             " to auto-start with every Claude Code session. or try without installing: ",
             React.createElement("code",{style:{color:TX,background:SF2,padding:"1px 5px"}},"npx noctrace"),
             "."
           ),
-          React.createElement("div",{style:{fontSize:11,color:DM,marginBottom:40,animation:"fadeUp 0.4s ease 0.5s both"}},
+          React.createElement("div",{style:{fontSize:11,color:TX,marginBottom:40,animation:"fadeUp 0.4s ease 0.5s both"}},
             "zero config. reads ",
             React.createElement("code",{style:{color:TX,background:SF2,padding:"1px 5px"}},"~/.claude/"),
             " passively. no hooks. no cloud."
@@ -513,7 +537,7 @@
 
         /* ANIMATED WATERFALL WITH CONTEXT ROT */
         React.createElement("section",{style:{position:"relative",zIndex:1,maxWidth:1060,margin:"0 auto",padding:"0 24px 48px"}},
-          React.createElement("div",{style:{border:"1px solid "+BD,background:SF,overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,0.35)",overflowX:"auto",WebkitOverflowScrolling:"touch"}},
+          React.createElement("div",{className:"noctrace-waterfall-wrap",style:{border:"1px solid "+BD,background:SF,overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,0.35)",overflowX:"auto",WebkitOverflowScrolling:"touch"}},
             React.createElement("div",{style:{minWidth:680}},
             /* browser chrome */
             React.createElement("div",{style:{height:26,background:BG,borderBottom:"1px solid "+BD,display:"flex",alignItems:"center",padding:"0 12px",gap:6,fontSize:10,color:DM}},
@@ -615,7 +639,7 @@
                 React.createElement("div",{style:{fontSize:12,color:DM2}},"know when your session starts working against you")
               )
             ),
-            React.createElement("div",{style:{padding:"20px 24px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}},
+            React.createElement("div",{className:"noctrace-rot-grid",style:{padding:"20px 24px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}},
               React.createElement("div",null,
                 React.createElement("div",{style:{fontSize:12,color:TX,lineHeight:1.8,marginBottom:16}},
                   "Every Claude Code session degrades silently. As the context window fills, Claude starts forgetting decisions, re-reading files it already processed, and contradicting its own earlier work."
@@ -689,15 +713,15 @@
               {f:"agent-teams",tag:"new",tagC:PH,d:"Detects running Agent Teams at ~/.claude/teams/ and shows a flyout with each team's members and task counts. New GET /api/teams endpoint. Useful for multi-agent workflows using the Claude Teams feature."},
               {f:"context-startup",tag:"new",tagC:YL,d:"Context Startup flyout lists which CLAUDE.md and instruction files loaded at session start, each with an estimated token count. Parsed from JSONL system records so you can see exactly what filled your context before the first tool call."},
             ].map(function(item,i){return(
-              React.createElement("div",{key:i,style:{display:"flex",border:"1px solid "+BD,background:SF,transition:"all 0.15s"},
+              React.createElement("div",{key:i,className:"noctrace-feature-row",style:{display:"flex",border:"1px solid "+BD,background:SF,transition:"all 0.15s"},
                 onMouseEnter:function(e){e.currentTarget.style.background=SF2;e.currentTarget.style.borderColor=BDL},
                 onMouseLeave:function(e){e.currentTarget.style.background=SF;e.currentTarget.style.borderColor=BD}},
-                React.createElement("div",{style:{width:200,padding:"12px 16px",borderRight:"1px solid "+BD,display:"flex",alignItems:"baseline",gap:6,flexShrink:0}},
+                React.createElement("div",{className:"noctrace-feature-name",style:{width:200,padding:"12px 16px",borderRight:"1px solid "+BD,display:"flex",alignItems:"baseline",gap:6,flexShrink:0,flexWrap:"wrap"}},
                   React.createElement("span",{style:{color:GN}},"--"),
                   React.createElement("span",{style:{color:TXB,fontWeight:600,fontSize:13}},item.f),
                   item.tag&&React.createElement("span",{style:{fontSize:8,padding:"1px 5px",borderRadius:2,background:item.tagC+"15",color:item.tagC,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.04em"}},item.tag)
                 ),
-                React.createElement("div",{style:{padding:"12px 16px",fontSize:12,color:TX,lineHeight:1.7}},item.d)
+                React.createElement("div",{className:"noctrace-feature-desc",style:{padding:"12px 16px",fontSize:12,color:TX,lineHeight:1.7}},item.d)
               )
             )})
           )
@@ -708,13 +732,13 @@
           React.createElement("h2",{style:{fontFamily:"inherit",fontSize:10,color:DM,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:16,display:"flex",alignItems:"center",gap:8,fontWeight:700,margin:"0 0 16px"}},
             React.createElement("span",{style:{color:GND}},"#")," how it works"
           ),
-          React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",border:"1px solid "+BD}},
+          React.createElement("div",{className:"noctrace-steps-grid",style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",border:"1px solid "+BD}},
             [
               {n:"01",t:"install once",c:"$ npm install -g noctrace",d:"Installs permanently. Run noctrace --enable to opt in — opens on every session."},
               {n:"02",t:"it reads your logs",c:"~/.claude/projects/*.jsonl",d:"Passively watches Claude Code session logs already on your machine."},
               {n:"03",t:"you see everything",c:"waterfall + health + rot",d:"Timing bars, token counts, context degradation — all in real time."},
             ].map(function(s,i){return(
-              React.createElement("div",{key:i,style:{padding:"18px 16px",background:SF,borderRight:i<2?"1px solid "+BD:"none"}},
+              React.createElement("div",{key:i,className:"noctrace-step-card",style:{padding:"18px 16px",background:SF,borderRight:i<2?"1px solid "+BD:"none"}},
                 React.createElement("div",{style:{fontSize:10,color:GND,fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.1em"}},"step "+s.n),
                 React.createElement("div",{style:{fontSize:12,fontWeight:600,color:TXB,marginBottom:6}},s.t),
                 React.createElement("code",{style:{display:"block",fontSize:12,color:GN,background:BG,border:"1px solid "+BD,padding:"5px 8px",marginBottom:6}},s.c),
