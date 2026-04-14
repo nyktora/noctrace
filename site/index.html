@@ -381,6 +381,37 @@
           )
         ),
 
+        /* DOCKER BANNER — new in v1.0 */
+        React.createElement("a",{href:"docs.html",style:{
+          position:"relative",zIndex:2,display:"flex",
+          background:"linear-gradient(90deg,"+TL+"10,"+TL+"05 50%,"+MV+"08)",
+          borderBottom:"1px solid "+TL+"33",
+          padding:"9px 24px",fontSize:11,color:TX,textDecoration:"none",
+          alignItems:"center",justifyContent:"center",gap:12,flexWrap:"wrap",
+          animation:"fadeUp 0.4s ease 0.1s both",
+          transition:"background 0.2s",
+        },
+          onMouseEnter:function(e){e.currentTarget.style.background="linear-gradient(90deg,"+TL+"18,"+TL+"08 50%,"+MV+"10)"},
+          onMouseLeave:function(e){e.currentTarget.style.background="linear-gradient(90deg,"+TL+"10,"+TL+"05 50%,"+MV+"08)"}},
+          React.createElement("span",{style:{
+            fontSize:9,padding:"2px 6px",borderRadius:2,
+            background:TL+"22",color:TL,fontWeight:700,letterSpacing:"0.5px",flexShrink:0,
+          }},"NEW IN v1.0"),
+          React.createElement("svg",{width:14,height:14,viewBox:"0 0 14 14",style:{flexShrink:0}},
+            React.createElement("g",{fill:"none",stroke:TL,strokeWidth:"0.9"},
+              React.createElement("rect",{x:"0.8",y:"7",width:"2.6",height:"2.6"}),
+              React.createElement("rect",{x:"4",y:"7",width:"2.6",height:"2.6"}),
+              React.createElement("rect",{x:"7.2",y:"7",width:"2.6",height:"2.6"}),
+              React.createElement("rect",{x:"4",y:"3.8",width:"2.6",height:"2.6"}),
+              React.createElement("rect",{x:"7.2",y:"3.8",width:"2.6",height:"2.6"}),
+              React.createElement("path",{d:"M10.5 5.2 Q 12.8 5.2 12.8 7.5 L 10.5 9.8",strokeLinecap:"round"})
+            )
+          ),
+          React.createElement("span",{style:{color:TXB}},"Docker support — trace Claude Code sessions running inside containers."),
+          React.createElement("code",{style:{color:TXM,background:SF2,padding:"1px 6px",borderRadius:2,fontSize:10,border:"1px solid "+BD}},"npx noctrace --docker <container>"),
+          React.createElement("span",{style:{color:TL,fontSize:11,display:"flex",alignItems:"center",gap:3,flexShrink:0}},"docs ",React.createElement("span",null,"\u2192"))
+        ),
+
         /* GRID BG */
         React.createElement("div",{style:{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,backgroundImage:"radial-gradient(circle at 1px 1px, "+BD+"35 1px, transparent 0)",backgroundSize:"40px 40px"}}),
 
