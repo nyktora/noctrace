@@ -2,6 +2,13 @@
 
 All notable changes to noctrace will be documented in this file.
 
+## [1.1.0] - 2026-04-13
+
+### Added
+- `npx noctrace --devcontainer <path>` resolves the running devcontainer for any local folder and attaches to it using the same inject-and-stream flow as `--docker`. Pass `.` for the current directory. Works with containers launched by the VS Code Dev Containers extension or the `@devcontainers/cli` package — resolution uses the canonical `devcontainer.local_folder` label with a fallback to the older `vsch.local.folder` label
+- `findContainerByLabel` and `resolveDevcontainerContainer` are new exported functions in `src/server/docker.ts`, testable via the existing `DockerRunner` injection interface. Plain container names/IDs passed to `--devcontainer` are forwarded directly to the existing Docker flow
+- 9 new unit tests covering both functions across the happy path, empty-match, label-format, fallback, relative-path-resolution, and error-message cases. 276 tests total
+
 ## [1.0.0] - 2026-04-13
 
 Noctrace hits 1.0. The JSONL parser, context health scoring, waterfall UI, hook integration, MCP session registry, and session export have shipped across 30+ releases and are stable in daily use. This release consolidates that surface into a 1.0 line and adds Docker support.

@@ -476,7 +476,7 @@
           React.createElement("span",{className:"noctrace-banner-pill",style:{
             fontSize:9,padding:"2px 6px",borderRadius:2,
             background:TL+"22",color:TL,fontWeight:700,letterSpacing:"0.5px",flexShrink:0,
-          }},"NEW IN v1.0"),
+          }},"NEW IN v1.1"),
           React.createElement("svg",{className:"noctrace-banner-icon",width:14,height:14,viewBox:"0 0 14 14",style:{flexShrink:0}},
             React.createElement("g",{fill:"none",stroke:TL,strokeWidth:"0.9"},
               React.createElement("rect",{x:"0.8",y:"7",width:"2.6",height:"2.6"}),
@@ -487,8 +487,8 @@
               React.createElement("path",{d:"M10.5 5.2 Q 12.8 5.2 12.8 7.5 L 10.5 9.8",strokeLinecap:"round"})
             )
           ),
-          React.createElement("span",{className:"noctrace-banner-desc",style:{color:TXB}},"Docker support — trace Claude Code sessions running inside containers."),
-          React.createElement("code",{className:"noctrace-banner-code",style:{color:TXM,background:SF2,padding:"1px 6px",borderRadius:2,fontSize:10,border:"1px solid "+BD}},"npx noctrace --docker <container>"),
+          React.createElement("span",{className:"noctrace-banner-desc",style:{color:TXB}},"Isolated envs — trace sessions running inside Docker or devcontainers."),
+          React.createElement("code",{className:"noctrace-banner-code",style:{color:TXM,background:SF2,padding:"1px 6px",borderRadius:2,fontSize:10,border:"1px solid "+BD}},"npx noctrace --devcontainer ."),
           React.createElement("span",{style:{color:TL,fontSize:11,display:"flex",alignItems:"center",gap:3,flexShrink:0}},"docs ",React.createElement("span",null,"\u2192"))
         ),
 
@@ -689,46 +689,53 @@
           )
         ),
 
-        /* DOCKER SUPPORT CALLOUT */
-        React.createElement("section",{id:"docker",style:{position:"relative",zIndex:1,maxWidth:900,margin:"0 auto",padding:"0 24px 72px"}},
+        /* ISOLATED ENVIRONMENTS CALLOUT (Docker + devcontainers) */
+        React.createElement("section",{id:"isolated",style:{position:"relative",zIndex:1,maxWidth:900,margin:"0 auto",padding:"0 24px 72px"}},
           React.createElement("div",{style:{border:"1px solid "+BD,background:SF,overflow:"hidden"}},
             React.createElement("div",{style:{padding:"20px 24px",borderBottom:"1px solid "+BD,display:"flex",alignItems:"center",gap:12}},
               React.createElement("div",{style:{width:4,height:32,background:TL,borderRadius:1,flexShrink:0}}),
               React.createElement("div",null,
-                React.createElement("h2",{style:{fontFamily:"inherit",fontSize:15,fontWeight:700,color:TXM,margin:0}},"Docker support"),
+                React.createElement("h2",{style:{fontFamily:"inherit",fontSize:15,fontWeight:700,color:TXM,margin:0}},"Isolated environments"),
                 React.createElement("div",{style:{fontSize:12,color:DM2}},
-                  React.createElement("span",{style:{color:TL,fontWeight:600}},"new in v1.0"),
-                  " — trace Claude Code sessions running inside containers"
+                  React.createElement("span",{style:{color:TL,fontWeight:600}},"new in v1.1"),
+                  " — trace sessions running inside Docker containers or devcontainers"
                 )
               )
             ),
             React.createElement("div",{className:"noctrace-rot-grid",style:{padding:"20px 24px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}},
               React.createElement("div",null,
                 React.createElement("div",{style:{fontSize:12,color:TX,lineHeight:1.8,marginBottom:16}},
-                  "Running Claude Code in a container — CI, a remote dev box, a reproducible build env — normally means the session logs are trapped inside. No waterfall. No health grade. No visibility."
+                  "Running Claude Code in an isolated environment — a Docker container, a VS Code devcontainer, a reproducible build env, a CI runner — normally means the session logs are trapped inside. No waterfall. No health grade. No visibility."
                 ),
                 React.createElement("div",{style:{fontSize:12,color:TX,lineHeight:1.8,marginBottom:16}},
-                  React.createElement("code",{style:{color:TL,background:SF2,padding:"1px 5px",borderRadius:2,fontSize:11}},"npx noctrace --docker <container>"),
-                  " inspects the container, injects a ",
+                  "Two flags, one pipeline. ",
+                  React.createElement("code",{style:{color:TL,background:SF2,padding:"1px 5px",borderRadius:2,fontSize:11}},"--docker <container>"),
+                  " attaches to any running container by name or ID. ",
+                  React.createElement("code",{style:{color:TL,background:SF2,padding:"1px 5px",borderRadius:2,fontSize:11}},"--devcontainer <path>"),
+                  " resolves the running devcontainer for a local folder via the ",
+                  React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",fontSize:11}},"devcontainer.local_folder"),
+                  " label. Pass ",
+                  React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",fontSize:11}},"."),
+                  " for the current directory."
+                ),
+                React.createElement("div",{style:{fontSize:12,color:TX,lineHeight:1.8}},
+                  "Both modes inject a ",
                   React.createElement("span",{style:{color:TXB,fontWeight:600}},"lightweight watcher"),
-                  ", and streams JSONL events back to your host in real time. Zero container setup — any image with ",
+                  ", auto-detect ",
+                  React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",fontSize:11}},"$CLAUDE_CONFIG_DIR"),
+                  ", resolve the host URL via ",
+                  React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",fontSize:11}},"host.docker.internal"),
+                  " on macOS and Windows or the gateway IP on Linux, and clean up on Ctrl-C. Any image with ",
                   React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",fontSize:11}},"curl"),
                   " or ",
                   React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",fontSize:11}},"wget"),
-                  " works."
-                ),
-                React.createElement("div",{style:{fontSize:12,color:TX,lineHeight:1.8}},
-                  "Auto-detects ",
-                  React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",fontSize:11}},"$CLAUDE_CONFIG_DIR"),
-                  ", resolves the host URL via ",
-                  React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",fontSize:11}},"host.docker.internal"),
-                  " on macOS and Windows or the gateway IP on Linux, and cleans up the watcher on Ctrl-C. No images to rebuild. No volumes to mount."
+                  " works. No image rebuilds. No volume mounts."
                 )
               ),
               React.createElement("div",null,
                 React.createElement("div",{style:{fontSize:10,color:DM,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10,fontWeight:600}},"How the flow works"),
                 [
-                  {icon:React.createElement("span",{style:{fontSize:11,fontWeight:700,color:GN}},"$"),label:"Attach",desc:"noctrace --docker <id> inspects and verifies the container is running"},
+                  {icon:React.createElement("span",{style:{fontSize:11,fontWeight:700,color:GN}},"$"),label:"Attach",desc:"--docker <id> uses the name directly; --devcontainer <path> resolves via container labels first"},
                   {icon:React.createElement("svg",{width:18,height:18,viewBox:"0 0 14 14"},
                     React.createElement("g",{fill:"none",stroke:TL,strokeWidth:"0.9"},
                       React.createElement("rect",{x:"0.8",y:"7",width:"2.6",height:"2.6"}),

@@ -143,6 +143,7 @@ No config files. No cloud. Everything stays local. Optional hooks for richer rea
 | CLI Flag | Description |
 |----------|-------------|
 | `--docker <container>` | Attach to a running Docker container and stream its Claude Code sessions back to your host. Zero container setup |
+| `--devcontainer <path>` | Resolve the running devcontainer for a local folder path and attach to it. Pass `.` for the current directory. Falls back to `--docker` if you pass a container name directly |
 | `--install-hooks` | Configure Claude Code to push real-time events to noctrace |
 | `--uninstall-hooks` | Remove noctrace hooks from Claude Code |
 

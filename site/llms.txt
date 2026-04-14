@@ -22,6 +22,7 @@ Noctrace gives Claude Code users a browser-based observability dashboard. It sho
 - Session comparison: split-screen health grades, summary metrics, tool mix bars, context fill trajectory sparklines
 - Real-time streaming: WebSocket byte-offset incremental parsing; auto-reconnect
 - Docker support: `npx noctrace --docker <container>` syncs sessions from running containers
+- Devcontainer support: `npx noctrace --devcontainer <path>` resolves the backing Dev Containers container and streams its session logs
 - OTel export: sessions exportable as OpenTelemetry traces for Grafana, Jaeger, or Datadog
 - MCP session registry: sessions self-register on start; dashboard shows only active sessions
 
