@@ -2,7 +2,7 @@
  * REST API routes for project and session data.
  * All data is read from JSONL files on disk — no in-memory caching.
  */
-import { Router } from 'express';
+import express, { Router } from 'express';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -85,6 +85,9 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
    * When non-empty the client operates in "MCP mode" and shows only these sessions.
    */
   const registeredSessionPaths = new Set<string>();
+
+  /** Last heartbeat timestamp from Docker container watchers, keyed by container name. */
+  const dockerHeartbeats = new Map<string, number>();
 
   /** Broadcast a message to all connected WebSocket clients. */
   function broadcast(msg: SessionRegisteredMessage | SessionUnregisteredMessage): void {
@@ -564,6 +567,111 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
       const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: message });
     }
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /api/docker/stream
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Receive streamed JSONL content from a Docker container watcher.
+   * Appends raw text to a local sync file under the projects directory.
+   * Chokidar picks up the file change and handles parsing + WebSocket broadcasting.
+   */
+  router.post('/docker/stream', express.text({ type: 'text/plain', limit: '1mb' }), async (req, res) => {
+    try {
+      const containerName = req.headers['x-container-name'];
+      const containerPath = req.headers['x-container-path'];
+
+      if (typeof containerName !== 'string' || !containerName) {
+        res.status(400).json({ error: 'X-Container-Name header required' });
+        return;
+      }
+      if (typeof containerPath !== 'string' || !containerPath) {
+        res.status(400).json({ error: 'X-Container-Path header required' });
+        return;
+      }
+      if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(containerName)) {
+        res.status(400).json({ error: 'Invalid container name format' });
+        return;
+      }
+
+      const body = req.body as string;
+      if (!body || !body.trim()) {
+        res.status(400).json({ error: 'Empty body' });
+        return;
+      }
+
+      // Extract relative path after /projects/
+      const projectsIdx = containerPath.indexOf('/projects/');
+      if (projectsIdx === -1) {
+        res.status(400).json({ error: 'Container path must contain /projects/' });
+        return;
+      }
+
+      const relativePath = containerPath.slice(projectsIdx + '/projects/'.length);
+      const slashIdx = relativePath.indexOf('/');
+      if (slashIdx === -1) {
+        res.status(400).json({ error: 'Invalid container path structure' });
+        return;
+      }
+
+      const containerSlug = relativePath.slice(0, slashIdx);
+      const sessionFile = relativePath.slice(slashIdx + 1);
+      const localSlug = `docker--${containerName}--${containerSlug}`;
+      const localPath = path.join(projectsDir, localSlug, sessionFile);
+
+      try {
+        assertWithinBase(localPath, projectsDir);
+      } catch {
+        res.status(400).json({ error: 'Invalid path' });
+        return;
+      }
+
+      await fs.mkdir(path.dirname(localPath), { recursive: true });
+      await fs.appendFile(localPath, body.endsWith('\n') ? body : body + '\n');
+
+      // Auto-register the session
+      if (localPath.endsWith('.jsonl') && !registeredSessionPaths.has(localPath)) {
+        const resolvedPath = path.resolve(localPath);
+        registeredSessionPaths.add(resolvedPath);
+        broadcast({ type: 'session-registered', sessionPath: resolvedPath });
+      }
+
+      res.json({ ok: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /api/docker/heartbeat
+  // ---------------------------------------------------------------------------
+
+  /** Keepalive endpoint for Docker container watchers. */
+  router.post('/docker/heartbeat', (req, res) => {
+    const containerName = req.headers['x-container-name'];
+    if (typeof containerName !== 'string' || !containerName) {
+      res.status(400).json({ error: 'X-Container-Name header required' });
+      return;
+    }
+    dockerHeartbeats.set(containerName, Date.now());
+    res.json({ ok: true });
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /api/docker/status
+  // ---------------------------------------------------------------------------
+
+  /** Returns the status of connected Docker containers. */
+  router.get('/docker/status', (_req, res) => {
+    const containers: Array<{ name: string; lastHeartbeat: number; stale: boolean }> = [];
+    const now = Date.now();
+    for (const [name, ts] of dockerHeartbeats) {
+      containers.push({ name, lastHeartbeat: ts, stale: now - ts > 30_000 });
+    }
+    res.json({ containers });
   });
 
   // ---------------------------------------------------------------------------

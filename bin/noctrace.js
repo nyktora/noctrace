@@ -205,16 +205,16 @@ if (args.includes('--docker')) {
     process.exit(1);
   }
 
-  const { execFileSync } = await import('node:child_process');
+  const { execFileSync, spawn: spawnChild } = await import('node:child_process');
+  const { readFileSync } = await import('node:fs');
 
-  // Validate container name to prevent command injection (Docker names: [a-zA-Z0-9][a-zA-Z0-9_.-]*)
+  // Validate container name to prevent command injection
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(containerArg)) {
     console.error(`[noctrace] Invalid container name: "${containerArg}"`);
-    console.error(`[noctrace] Container names must be alphanumeric (hyphens, dots, underscores allowed).`);
     process.exit(1);
   }
 
-  // Verify container exists and is running (execFileSync: no shell, no injection)
+  // Verify container exists and is running
   try {
     execFileSync('docker', ['inspect', '--format', '{{.State.Running}}', containerArg], { stdio: 'pipe' });
   } catch {
@@ -229,7 +229,43 @@ if (args.includes('--docker')) {
     { stdio: 'pipe' },
   ).toString().trim();
 
-  console.log(`[noctrace] Watching container "${containerArg}" (claude dir: ${claudeDir})`);
+  console.log(`[noctrace] Connecting to container "${containerArg}" (claude dir: ${claudeDir})`);
+
+  // Check if curl or wget exists in the container
+  let httpTool = 'none';
+  try {
+    execFileSync('docker', ['exec', containerArg, 'which', 'curl'], { stdio: 'pipe' });
+    httpTool = 'curl';
+  } catch {
+    try {
+      execFileSync('docker', ['exec', containerArg, 'which', 'wget'], { stdio: 'pipe' });
+      httpTool = 'wget';
+    } catch { /* neither */ }
+  }
+
+  if (httpTool === 'none') {
+    console.error('[noctrace] Container has neither curl nor wget. Cannot stream sessions.');
+    console.error('[noctrace] Install curl in the container: apt-get install -y curl');
+    process.exit(1);
+  }
+
+  // Resolve host URL that the container can reach
+  let hostUrl;
+  try {
+    execFileSync('docker', ['exec', containerArg, 'getent', 'hosts', 'host.docker.internal'], { stdio: 'pipe' });
+    hostUrl = 'http://host.docker.internal';
+  } catch {
+    // Fall back to container gateway IP (Linux without host.docker.internal)
+    try {
+      const gatewayIp = execFileSync(
+        'docker', ['inspect', '--format', '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}', containerArg],
+        { stdio: 'pipe' },
+      ).toString().trim();
+      hostUrl = gatewayIp ? `http://${gatewayIp}` : 'http://host.docker.internal';
+    } catch {
+      hostUrl = 'http://host.docker.internal';
+    }
+  }
 
   // Start noctrace server on the host
   process.env.NOCTRACE_NO_AUTOSTART = '1';
@@ -238,109 +274,90 @@ if (args.includes('--docker')) {
   const openMod = await import('open');
   const port = await startServer();
   const url = `http://localhost:${port}`;
+  const containerTargetUrl = `${hostUrl}:${port}`;
   console.log(`[noctrace] Dashboard: ${url}`);
+  console.log(`[noctrace] Container will stream to: ${containerTargetUrl}`);
   await openMod.default(url);
 
-  // Poll the container for session files and sync them to a temp directory
-  const syncDir = path.join(os.tmpdir(), 'noctrace-docker-sync', containerArg);
-  await fs.mkdir(path.join(syncDir, 'projects'), { recursive: true });
+  // Read the watcher script from the package
+  const watcherScript = readFileSync(
+    new URL('./docker-watcher.sh', import.meta.url), 'utf8'
+  );
 
-  // Set CLAUDE_HOME override so the server watches the sync dir
-  // Actually, we'll use the register API to tell noctrace about each session file
+  // Inject the watcher script into the container and run it in the background
+  console.log(`[noctrace] Injecting watcher into container...`);
+  const watcherProc = spawnChild('docker', [
+    'exec', '-d', containerArg, 'sh', '-c',
+    `${watcherScript.replace(/'/g, "'\\''")}\nexit 0`,
+    '--', claudeDir, containerTargetUrl, containerArg,
+  ], { stdio: 'pipe' });
 
-  async function syncSessions() {
+  // Actually, docker exec -d doesn't let us pass the script via -c easily with args.
+  // Better approach: pipe the script content via stdin
+  // Let's use a simpler method: write the script to a temp file in the container, then exec it
+
+  // Kill the -d attempt (it won't work with complex scripts)
+  watcherProc.kill();
+
+  // Copy script into container and run it
+  const tmpScript = path.join(os.tmpdir(), `noctrace-watcher-${Date.now()}.sh`);
+  const { writeFileSync, unlinkSync } = await import('node:fs');
+  writeFileSync(tmpScript, watcherScript);
+
+  execFileSync('docker', ['cp', tmpScript, `${containerArg}:/tmp/noctrace-watcher.sh`], { stdio: 'pipe' });
+  execFileSync('docker', ['exec', containerArg, 'chmod', '+x', '/tmp/noctrace-watcher.sh'], { stdio: 'pipe' });
+  unlinkSync(tmpScript);
+
+  // Run the watcher in the background inside the container
+  const watcherBg = spawnChild('docker', [
+    'exec', '-d', containerArg,
+    'sh', '-c', `/tmp/noctrace-watcher.sh "${claudeDir}" "${containerTargetUrl}" "${containerArg}"`,
+  ], { stdio: 'ignore' });
+
+  watcherBg.on('error', () => {}); // swallow spawn errors
+
+  console.log(`[noctrace] Watcher injected. Streaming sessions in real-time.`);
+  console.log(`[noctrace] Press Ctrl+C to stop.`);
+
+  // Monitor heartbeats
+  let lastHeartbeatCheck = Date.now();
+  const heartbeatInterval = setInterval(async () => {
     try {
-      // List all JSONL files in the container's claude projects dir (execFileSync: no shell injection)
-      const listing = execFileSync(
-        'docker', ['exec', containerArg, 'find', `${claudeDir}/projects`, '-name', '*.jsonl', '-type', 'f'],
-        { stdio: 'pipe', timeout: 5000 },
-      ).toString().trim();
+      const { default: http } = await import('node:http');
+      const result = await new Promise((resolve) => {
+        const req = http.get(`http://localhost:${port}/api/docker/status`, { timeout: 2000 }, (res) => {
+          let data = '';
+          res.on('data', (chunk) => { data += chunk; });
+          res.on('end', () => { try { resolve(JSON.parse(data)); } catch { resolve(null); } });
+        });
+        req.on('error', () => resolve(null));
+      });
 
-      if (!listing) return;
-      const containerPaths = listing.split('\n').filter(Boolean);
-
-      for (const cp of containerPaths) {
-        // Derive local sync path: preserve the relative structure
-        const relPath = cp.slice(claudeDir.length);
-        const localPath = path.join(syncDir, relPath);
-
-        // Validate against path traversal — resolved path must stay within syncDir
-        const resolvedLocal = path.resolve(localPath);
-        if (!resolvedLocal.startsWith(path.resolve(syncDir) + path.sep)) continue;
-
-        const localDir = path.dirname(localPath);
-
-        // Check if we need to sync (compare mtimes)
-        try {
-          const containerMtime = execFileSync(
-            'docker', ['exec', containerArg, 'stat', '-c', '%Y', cp],
-            { stdio: 'pipe', timeout: 3000 },
-          ).toString().trim();
-
-          let localMtime = '0';
-          try {
-            const stat = await fs.stat(localPath);
-            localMtime = String(Math.floor(stat.mtimeMs / 1000));
-          } catch { /* file doesn't exist locally yet */ }
-
-          if (containerMtime === localMtime) continue;
-        } catch { /* stat failed, sync anyway */ }
-
-        // Copy the file from container to host sync dir
-        await fs.mkdir(localDir, { recursive: true });
-        try {
-          execFileSync('docker', ['cp', `${containerArg}:${cp}`, localPath], { stdio: 'pipe', timeout: 10000 });
-        } catch { continue; }
-
-        // Also sync subagents dir if it exists
-        const sessionId = path.basename(cp, '.jsonl');
-        const subagentsDir = path.join(path.dirname(cp), sessionId, 'subagents');
-        try {
-          execFileSync('docker', ['exec', containerArg, 'test', '-d', subagentsDir], { stdio: 'pipe', timeout: 2000 });
-          const localSubDir = path.join(path.dirname(localPath), sessionId, 'subagents');
-          const resolvedSubDir = path.resolve(localSubDir);
-          if (!resolvedSubDir.startsWith(path.resolve(syncDir) + path.sep)) continue;
-          await fs.mkdir(localSubDir, { recursive: true });
-          execFileSync('docker', ['cp', `${containerArg}:${subagentsDir}/.`, `${localSubDir}/`], { stdio: 'pipe', timeout: 10000 });
-        } catch { /* no subagents dir */ }
-
-        // Register the local path with noctrace
-        try {
-          const { default: http } = await import('node:http');
-          const body = JSON.stringify({ sessionPath: localPath });
-          await new Promise((resolve) => {
-            const req = http.request(
-              { hostname: 'localhost', port, path: '/api/sessions/register', method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }, timeout: 2000 },
-              () => resolve(),
-            );
-            req.on('error', () => resolve());
-            req.write(body);
-            req.end();
-          });
-        } catch { /* registration is best-effort */ }
+      if (result && result.containers) {
+        const container = result.containers.find((c) => c.name === containerArg);
+        if (container && container.stale && Date.now() - lastHeartbeatCheck > 30000) {
+          console.log(`[noctrace] Warning: No heartbeat from container "${containerArg}" in 30s. It may have stopped.`);
+          lastHeartbeatCheck = Date.now();
+        }
       }
-    } catch (err) {
-      // Container may have stopped — non-fatal
-      if (err.message?.includes('not running')) {
-        console.log(`[noctrace] Container "${containerArg}" stopped. Waiting for restart...`);
-      }
-    }
-  }
+    } catch { /* heartbeat check is best-effort */ }
+  }, 15000);
 
-  // Initial sync
-  await syncSessions();
-
-  // Poll every 2 seconds
-  setInterval(syncSessions, 2000);
-  console.log(`[noctrace] Syncing sessions from container every 2s. Press Ctrl+C to stop.`);
-
-  // Keep process alive
-  process.on('SIGINT', () => { console.log('\n[noctrace] Stopped.'); process.exit(0); });
+  // Cleanup on exit
+  process.on('SIGINT', () => {
+    console.log('\n[noctrace] Stopping...');
+    clearInterval(heartbeatInterval);
+    // Kill the watcher inside the container
+    try {
+      execFileSync('docker', ['exec', containerArg, 'sh', '-c', 'pkill -f noctrace-watcher 2>/dev/null || true'], { stdio: 'pipe', timeout: 3000 });
+    } catch { /* container may be gone */ }
+    console.log('[noctrace] Stopped.');
+    process.exit(0);
+  });
   process.on('SIGTERM', () => process.exit(0));
 
-  // Prevent falling through to the default server start
-  await new Promise(() => {}); // hang forever
+  // Keep process alive
+  await new Promise(() => {});
 }
 
 if (args.includes('--mcp')) {

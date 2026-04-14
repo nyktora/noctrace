@@ -195,6 +195,16 @@ export interface SessionUnregisteredMessage {
   sessionPath: string;
 }
 
+/** Metadata for a Docker-sourced session streamed via /api/docker/stream. */
+export interface DockerSessionMeta {
+  /** Docker container name. */
+  containerName: string;
+  /** Original file path inside the container. */
+  containerPath: string;
+  /** Unix-ms timestamp of the last heartbeat from the container watcher. */
+  lastHeartbeat: number;
+}
+
 /** WebSocket message broadcast when a SubagentStart hook event arrives. */
 export interface SubagentStartMessage {
   type: 'subagent-start';
