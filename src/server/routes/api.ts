@@ -610,6 +610,13 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
       }
 
       const relativePath = containerPath.slice(projectsIdx + '/projects/'.length);
+
+      // Reject path traversal patterns in the relative path
+      if (relativePath.includes('..')) {
+        res.status(400).json({ error: 'Invalid path' });
+        return;
+      }
+
       const slashIdx = relativePath.indexOf('/');
       if (slashIdx === -1) {
         res.status(400).json({ error: 'Invalid container path structure' });
