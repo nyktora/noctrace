@@ -205,44 +205,40 @@ if (args.includes('--docker')) {
     process.exit(1);
   }
 
-  const { execFileSync, spawn: spawnChild } = await import('node:child_process');
-  const { readFileSync } = await import('node:fs');
+  const {
+    isValidContainerName,
+    assertContainerRunning,
+    resolveClaudeDir,
+    detectHttpTool,
+    resolveHostUrl,
+    copyWatcherScript,
+    spawnWatcher,
+    cleanupWatcher,
+    defaultDockerRunner,
+  } = await import('../dist/server/server/docker.js');
+
+  const { readFileSync, writeFileSync, unlinkSync } = await import('node:fs');
 
   // Validate container name to prevent command injection
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(containerArg)) {
+  if (!isValidContainerName(containerArg)) {
     console.error(`[noctrace] Invalid container name: "${containerArg}"`);
     process.exit(1);
   }
 
   // Verify container exists and is running
   try {
-    execFileSync('docker', ['inspect', '--format', '{{.State.Running}}', containerArg], { stdio: 'pipe' });
-  } catch {
-    console.error(`[noctrace] Container "${containerArg}" not found or not running.`);
-    console.error(`[noctrace] Check: docker ps`);
+    assertContainerRunning(containerArg, defaultDockerRunner);
+  } catch (err) {
+    console.error(`[noctrace] ${err.message}`);
     process.exit(1);
   }
 
   // Find Claude config dir inside the container
-  const claudeDir = execFileSync(
-    'docker', ['exec', containerArg, 'sh', '-c', 'echo ${CLAUDE_CONFIG_DIR:-$HOME/.claude}'],
-    { stdio: 'pipe' },
-  ).toString().trim();
-
+  const claudeDir = resolveClaudeDir(containerArg, defaultDockerRunner);
   console.log(`[noctrace] Connecting to container "${containerArg}" (claude dir: ${claudeDir})`);
 
   // Check if curl or wget exists in the container
-  let httpTool = 'none';
-  try {
-    execFileSync('docker', ['exec', containerArg, 'which', 'curl'], { stdio: 'pipe' });
-    httpTool = 'curl';
-  } catch {
-    try {
-      execFileSync('docker', ['exec', containerArg, 'which', 'wget'], { stdio: 'pipe' });
-      httpTool = 'wget';
-    } catch { /* neither */ }
-  }
-
+  const httpTool = detectHttpTool(containerArg, defaultDockerRunner);
   if (httpTool === 'none') {
     console.error('[noctrace] Container has neither curl nor wget. Cannot stream sessions.');
     console.error('[noctrace] Install curl in the container: apt-get install -y curl');
@@ -250,22 +246,7 @@ if (args.includes('--docker')) {
   }
 
   // Resolve host URL that the container can reach
-  let hostUrl;
-  try {
-    execFileSync('docker', ['exec', containerArg, 'getent', 'hosts', 'host.docker.internal'], { stdio: 'pipe' });
-    hostUrl = 'http://host.docker.internal';
-  } catch {
-    // Fall back to container gateway IP (Linux without host.docker.internal)
-    try {
-      const gatewayIp = execFileSync(
-        'docker', ['inspect', '--format', '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}', containerArg],
-        { stdio: 'pipe' },
-      ).toString().trim();
-      hostUrl = gatewayIp ? `http://${gatewayIp}` : 'http://host.docker.internal';
-    } catch {
-      hostUrl = 'http://host.docker.internal';
-    }
-  }
+  const hostUrl = resolveHostUrl(containerArg, defaultDockerRunner);
 
   // Start noctrace server on the host
   process.env.NOCTRACE_NO_AUTOSTART = '1';
@@ -284,37 +265,19 @@ if (args.includes('--docker')) {
     new URL('./docker-watcher.sh', import.meta.url), 'utf8'
   );
 
-  // Inject the watcher script into the container and run it in the background
+  // Copy watcher script into the container
   console.log(`[noctrace] Injecting watcher into container...`);
-  const watcherProc = spawnChild('docker', [
-    'exec', '-d', containerArg, 'sh', '-c',
-    `${watcherScript.replace(/'/g, "'\\''")}\nexit 0`,
-    '--', claudeDir, containerTargetUrl, containerArg,
-  ], { stdio: 'pipe' });
-
-  // Actually, docker exec -d doesn't let us pass the script via -c easily with args.
-  // Better approach: pipe the script content via stdin
-  // Let's use a simpler method: write the script to a temp file in the container, then exec it
-
-  // Kill the -d attempt (it won't work with complex scripts)
-  watcherProc.kill();
-
-  // Copy script into container and run it
   const tmpScript = path.join(os.tmpdir(), `noctrace-watcher-${Date.now()}.sh`);
-  const { writeFileSync, unlinkSync } = await import('node:fs');
   writeFileSync(tmpScript, watcherScript);
 
-  execFileSync('docker', ['cp', tmpScript, `${containerArg}:/tmp/noctrace-watcher.sh`], { stdio: 'pipe' });
-  execFileSync('docker', ['exec', containerArg, 'chmod', '+x', '/tmp/noctrace-watcher.sh'], { stdio: 'pipe' });
-  unlinkSync(tmpScript);
+  try {
+    copyWatcherScript(containerArg, tmpScript, defaultDockerRunner);
+  } finally {
+    unlinkSync(tmpScript);
+  }
 
   // Run the watcher in the background inside the container
-  const watcherBg = spawnChild('docker', [
-    'exec', '-d', containerArg,
-    'sh', '-c', `/tmp/noctrace-watcher.sh "${claudeDir}" "${containerTargetUrl}" "${containerArg}"`,
-  ], { stdio: 'ignore' });
-
-  watcherBg.on('error', () => {}); // swallow spawn errors
+  spawnWatcher(containerArg, claudeDir, containerTargetUrl, defaultDockerRunner);
 
   console.log(`[noctrace] Watcher injected. Streaming sessions in real-time.`);
   console.log(`[noctrace] Press Ctrl+C to stop.`);
@@ -347,10 +310,7 @@ if (args.includes('--docker')) {
   process.on('SIGINT', () => {
     console.log('\n[noctrace] Stopping...');
     clearInterval(heartbeatInterval);
-    // Kill the watcher inside the container
-    try {
-      execFileSync('docker', ['exec', containerArg, 'sh', '-c', 'pkill -f noctrace-watcher 2>/dev/null || true'], { stdio: 'pipe', timeout: 3000 });
-    } catch { /* container may be gone */ }
+    cleanupWatcher(containerArg, defaultDockerRunner);
     console.log('[noctrace] Stopped.');
     process.exit(0);
   });
