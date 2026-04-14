@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Noctrace: open-source waterfall visualizer for Claude Code. Monitor tool calls, track tokens, detect context rot. Chrome DevTools-style, zero config.">
-  <meta name="keywords" content="noctrace, claude code, claude code observability, claude code devtools, ai agent monitoring, claude code waterfall, claude code visualization, anthropic claude tools, llm observability, ai coding agent debugger, claude code hooks, context window monitor, token usage tracker, ai agent workflow visualizer">
   <meta name="author" content="Nyktora Group">
   <meta name="theme-color" content="#1e1e2e">
   <meta property="og:title" content="Noctrace — Claude Code Observability &amp; Agent Workflow Visualizer">
@@ -20,6 +19,8 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Noctrace — Claude Code Observability &amp; Agent Workflow Visualizer">
   <meta name="twitter:description" content="Noctrace: open-source waterfall visualizer for Claude Code. Monitor tool calls, track tokens, detect context rot. Chrome DevTools-style, zero config.">
+  <meta name="twitter:image" content="https://nyktora.github.io/noctrace/og-image.png">
+  <meta name="indexnow-key" content="4d691bd276782520f8d95f96adb9508e">
   <link rel="canonical" href="https://nyktora.github.io/noctrace/">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>Noctrace — Claude Code Observability &amp; Agent Workflow Visualizer</title>
@@ -29,6 +30,7 @@
   <style>
     body { margin: 0; background: #0a0e14; font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Menlo', 'Consolas', monospace; }
     * { box-sizing: border-box; }
+    @media (max-width:480px){.noctrace-banner-code{display:none}.noctrace-banner{padding:6px 12px !important}}
   </style>
   <script type="application/ld+json">
   {
@@ -45,17 +47,24 @@
     "codeRepository": "https://github.com/nyktora/noctrace",
     "downloadUrl": "https://www.npmjs.com/package/noctrace",
     "softwareVersion": "1.0.0",
-    "author": {
-      "@type": "Organization",
-      "name": "Nyktora Group",
-      "url": "https://github.com/nyktora"
-    },
+    "author": {"@id":"https://nyktora.github.io/noctrace/#organization"},
+    "screenshot": "https://nyktora.github.io/noctrace/og-image.png",
+    "featureList": "Waterfall timeline, Context health scoring, Sub-agent visibility, Token cost estimation, Context rot detection, Efficiency tips, Security tips, Loop detection, Advanced filtering, Session comparison, Real-time streaming, Docker support, OTel export, MCP session registry",
     "offers": {
       "@type": "Offer",
       "price": "0",
       "priceCurrency": "USD"
     },
     "keywords": "claude code, observability, waterfall, devtools, ai agent, anthropic, llm monitoring"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {"@type":"WebSite","@id":"https://nyktora.github.io/noctrace/#website","name":"Noctrace","url":"https://nyktora.github.io/noctrace/","description":"Open-source Chrome DevTools-style waterfall visualizer for Claude Code agent workflows.","inLanguage":"en","publisher":{"@id":"https://nyktora.github.io/noctrace/#organization"}},
+      {"@type":"Organization","@id":"https://nyktora.github.io/noctrace/#organization","name":"Nyktora Group","url":"https://github.com/nyktora","sameAs":["https://github.com/nyktora","https://www.npmjs.com/~nyktora"]}
+    ]
   }
   </script>
   <script type="application/ld+json">
@@ -102,35 +111,83 @@
 <body>
   <div id="root"></div>
   <noscript>
-  <div style="max-width:900px;margin:0 auto;padding:48px 24px;color:#c9d1d9;font-family:monospace;">
-    <h1>Noctrace</h1>
-    <p>Chrome DevTools Network-tab-style real-time waterfall visualizer for Claude Code agent workflows. Open source, local-only, zero config.</p>
-    <h2>Features</h2>
-    <ul>
-      <li>Waterfall timeline — see every tool call, API request, and agent spawn on a shared time axis</li>
-      <li>Context health scoring — detect context rot before it derails your session</li>
-      <li>Token tracking — monitor cumulative token usage across the session</li>
-      <li>Sub-agent visibility — collapsible agent groups with nested tool calls</li>
-      <li>Real-time streaming — live updates via WebSocket as your session progresses</li>
-      <li>Efficiency tips — 8 waste patterns flagged with an amber lightbulb indicator</li>
-      <li>Security tips — 13 security patterns flagged with a red shield indicator</li>
-      <li>MCP session registry — sessions register/unregister themselves; dashboard shows only active sessions with a live count indicator</li>
-      <li>Per-tool token cost — estimated USD cost on every row and session total in the toolbar; Claude public pricing with per-model detection</li>
-      <li>Agent type labels — subagent rows show the named agent type as a blue badge chip</li>
-      <li>Tool failure rows — crashes, timeouts, and kills render as distinct red-tinted rows with a lightning bolt icon</li>
-      <li>API error markers — rate limit, billing, and auth failures appear as full-width red alert banners on the timeline</li>
-      <li>Agent Teams panel — detects running Agent Teams at ~/.claude/teams/, shows members and task counts in a flyout</li>
-      <li>Context Startup flyout — shows which instruction files loaded at session start with estimated token counts</li>
-      <li>OTel export — export sessions as OpenTelemetry traces for Grafana, Jaeger, or Datadog</li>
-      <li>Hook lifecycle visualization — PostToolUse, SubagentStart/Stop events rendered as distinct timeline rows</li>
-      <li>Fast mode detection — identifies sessions where Claude skips confirmations for speed</li>
-      <li>Resizable columns — drag column dividers to adjust waterfall layout to your workflow</li>
-    </ul>
-    <h2>Install</h2>
-    <p>Install globally: <code>npm install -g noctrace</code></p>
-    <p>Then opt in to auto-start: <code>noctrace --enable</code></p>
-    <p>Or try without installing: <code>npx noctrace</code></p>
-    <p><a href="https://github.com/nyktora/noctrace">View on GitHub</a> | <a href="https://npmjs.com/package/noctrace">View on npm</a></p>
+  <div style="max-width:900px;margin:0 auto;padding:48px 24px;color:#c9d1d9;font-family:monospace;line-height:1.75;">
+    <h1>Noctrace — Claude Code Observability &amp; Agent Workflow Visualizer</h1>
+
+    <section>
+      <p>Noctrace is a free, open-source, local-only observability dashboard for Claude Code agent workflows. It reads JSONL session logs that Claude Code writes to <code>~/.claude/projects/</code> and renders them as an interactive waterfall timeline in your browser — with no cloud dependency, no telemetry, no database, and zero configuration required. Install it with a single command: <code>npx noctrace</code>.</p>
+      <p>The interface is modeled after Chrome DevTools' Network tab. Every tool call — Read, Write, Edit, Bash, Agent, MCP — appears as a horizontal timing bar on a shared time axis. You can see exactly what your AI agent did, how long each step took, how many tokens it consumed, and what it cost in estimated USD. Sub-agents spawned by Claude Code appear as collapsible row groups, letting you drill into nested tool calls across the full agent delegation tree.</p>
+    </section>
+
+    <section>
+      <h2>What is context rot and why does it matter?</h2>
+      <p>Context rot is the progressive degradation of Claude Code session quality that happens as the context window fills. When context fill exceeds roughly 80%, Claude begins to lose access to early instructions, prior tool outputs, and reasoning chains. The practical result is repeated work, contradictory edits, and an increasing error rate — a session that starts strong but quietly goes off the rails.</p>
+      <p>Noctrace makes context rot visible. Waterfall rows are tinted red when they executed above 80% context fill. A heat strip along the left edge of each row transitions from green to yellow to red as the window fills. Compaction boundary lines mark where Claude Code triggered automatic context compaction — each one is a lossy memory operation. A drift rate metric (tokens per minute, computed via three-window linear regression) shows how fast the context is growing before health scores catch up. Together, these signals let you see a session degrading in real time and decide when to compact or restart.</p>
+    </section>
+
+    <section>
+      <h2>Key capabilities</h2>
+      <ul>
+        <li><strong>Waterfall timeline:</strong> every tool call and agent spawn on a shared time axis with zoom (1–50x) and click-drag pan. Identical in concept to Chrome DevTools Network tab.</li>
+        <li><strong>Context health scoring:</strong> an A–F grade computed from five weighted signals — context fill (40%), compaction events (25%), file re-reads (15%), error rate acceleration (10%), and tool efficiency trends (10%). The animated ring badge fills in real time as the session progresses.</li>
+        <li><strong>Sub-agent visibility:</strong> collapsible agent groups with nested tool call rows. Agent type labels show the named type (Explore, core:deep-researcher, senior-software-engineer, etc.) as a blue badge chip next to each agent row.</li>
+        <li><strong>Token cost estimation:</strong> estimated USD cost appears on every waterfall row and as a session total in the toolbar. Pricing uses Claude's public rates with automatic per-model detection (Sonnet, Opus, Haiku).</li>
+        <li><strong>Context rot detection:</strong> red row tinting above 80% fill, a heat strip along the left edge, compaction boundary markers, re-read indicators, and a drift rate metric that shows tokens-per-minute growth.</li>
+        <li><strong>Efficiency tips:</strong> 8 waste patterns detected per session — re-reads, fan-out, correction loops, repeated commands, token spikes, high context fill, lack of delegation, and post-compaction re-reads. Flagged with an amber lightbulb indicator in the toolbar.</li>
+        <li><strong>Security tips:</strong> 13 security patterns scanned, including secrets in tool calls, dangerous commands, exfiltration attempts, and prompt injection. Flagged with a red shield indicator.</li>
+        <li><strong>Loop detection:</strong> three or more consecutive identical tool calls (same tool type and same input) automatically trigger a warning tip.</li>
+        <li><strong>Advanced filtering:</strong> structured syntax alongside text search — <code>type:bash</code>, <code>&gt;5s</code>, <code>&lt;100ms</code>, <code>tokens:&gt;1k</code>, <code>error</code>, <code>running</code>. Structured filters are AND-ed; multiple <code>type:</code> filters are OR-ed.</li>
+        <li><strong>Session comparison:</strong> split-screen view comparing two sessions side by side, with health grades, summary metric deltas, tool mix proportion bars, and context fill trajectory sparklines.</li>
+        <li><strong>Real-time streaming:</strong> WebSocket byte-offset incremental parsing means only new bytes are read on each file change. Auto-reconnect handles server restarts.</li>
+        <li><strong>Docker support:</strong> <code>npx noctrace --docker &lt;container&gt;</code> attaches to a running Docker container and streams its Claude Code session logs to your host. Zero container setup — any image with curl or wget works.</li>
+        <li><strong>OTel export:</strong> sessions are exportable as OpenTelemetry traces for Grafana, Jaeger, or Datadog via <code>GET /api/session/:slug/:id/otlp</code>.</li>
+        <li><strong>MCP session registry:</strong> sessions self-register on start and unregister on exit. The dashboard shows only active sessions with a live count indicator.</li>
+        <li><strong>Per-tool latency stats:</strong> P50, P95, and Max latency breakdown per tool type in the Stats flyout. Calls exceeding the slow-call threshold (default 5000ms) are flagged with a clock icon on the row.</li>
+        <li><strong>Context Startup flyout:</strong> shows which CLAUDE.md and instruction files loaded at session start with estimated token counts, so you can see what filled your context before the first tool call.</li>
+        <li><strong>Hook lifecycle rows:</strong> PostToolUse, SubagentStart, and SubagentStop events from Claude Code hooks render as distinct teal timeline rows.</li>
+        <li><strong>Resizable Name column:</strong> drag the column header edge to resize, stored in state across sessions.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>How to install Noctrace</h2>
+      <p><strong>Option 1 — Try without installing (recommended for first use):</strong></p>
+      <p><code>npx noctrace</code></p>
+      <p>This downloads noctrace temporarily, starts a local server on port 4117, and opens the dashboard in your browser. Nothing is written to disk after you close it. Requires Node.js 20 LTS or later and an existing Claude Code installation with at least one session in <code>~/.claude/projects/</code>.</p>
+      <p><strong>Option 2 — Install globally:</strong></p>
+      <p><code>npm install -g noctrace</code></p>
+      <p>After installing, run <code>noctrace --enable</code> to register Noctrace as an MCP server in Claude Code. This causes the dashboard to open automatically every time a new Claude Code session starts. To stop auto-starting, run <code>noctrace --disable</code>.</p>
+      <p><strong>Option 3 — Real-time hook events (optional):</strong></p>
+      <p>By default Noctrace reads session logs passively with no hooks required. For real-time event streaming (SubagentStart/Stop, PostToolUse, compaction events pushed directly to the dashboard), run <code>noctrace --install-hooks</code>. Remove hooks with <code>noctrace --uninstall-hooks</code>.</p>
+    </section>
+
+    <section>
+      <h2>How Noctrace works</h2>
+      <p>Noctrace is a single Node.js process. It runs a local Express 5 server on port 4117 that serves a React SPA, exposes a REST API, and upgrades WebSocket connections. The file watcher (chokidar) monitors <code>~/.claude/projects/</code> for new or modified JSONL files. When a file changes, the server reads only the new bytes using byte-offset incremental parsing and pushes the parsed rows to the browser over WebSocket. No data ever leaves the machine.</p>
+      <p>Session logs are JSONL files written by Claude Code at <code>~/.claude/projects/&lt;project-slug&gt;/&lt;session-id&gt;.jsonl</code>. Sub-agent logs live at <code>~/.claude/projects/&lt;project-slug&gt;/&lt;session-id&gt;/subagents/agent-&lt;agent-id&gt;.jsonl</code>. Noctrace parses both formats and links sub-agent rows to their parent agent rows. The server is stateless — all persistent state comes from the JSONL files on disk.</p>
+      <p>The waterfall component is built with positioned <code>div</code> elements and virtual scrolling, rendering only visible rows for sessions with 200+ tool calls. The health scorer runs a weighted average of five signals on every WebSocket push. All colors use CSS custom properties from a single theme file (Catppuccin Mocha).</p>
+    </section>
+
+    <section>
+      <h2>System requirements</h2>
+      <ul>
+        <li>Node.js 20 LTS or later</li>
+        <li>macOS, Linux, or Windows (WSL recommended on Windows)</li>
+        <li>Any modern browser (Chrome, Firefox, Safari, Edge)</li>
+        <li>An existing Claude Code installation with at least one session logged to <code>~/.claude/projects/</code></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>License and links</h2>
+      <p>Noctrace is free and open source under the MIT license.</p>
+      <ul>
+        <li><a href="https://github.com/nyktora/noctrace">GitHub repository</a></li>
+        <li><a href="https://www.npmjs.com/package/noctrace">npm package</a></li>
+        <li><a href="https://nyktora.github.io/noctrace/docs.html">Full documentation</a></li>
+        <li><a href="https://github.com/nyktora/noctrace/blob/main/CHANGELOG.md">Changelog</a></li>
+      </ul>
+    </section>
   </div>
 </noscript>
 
@@ -334,17 +391,10 @@
 
     function Landing(){
       var _vr=useState([]),visR=_vr[0],setVisR=_vr[1];
-      var _t=useState(""),typed=_t[0],setTyped=_t[1];
       var _cp=useState(false),copied=_cp[0],setCopied=_cp[1];
       var _hs=useState(72),hScore=_hs[0],setHScore=_hs[1];
       var _sr=useState(null),selRow=_sr[0],setSelRow=_sr[1];
       var headline="See what your AI agents are actually doing";
-
-      useEffect(function(){
-        var i=0;
-        var iv=setInterval(function(){i++;if(i>headline.length){clearInterval(iv);return}setTyped(headline.slice(0,i))},32);
-        return function(){clearInterval(iv)};
-      },[]);
 
       useEffect(function(){
         demoRows.forEach(function(r,i){
@@ -382,7 +432,7 @@
         ),
 
         /* DOCKER BANNER — new in v1.0 */
-        React.createElement("a",{href:"docs.html",style:{
+        React.createElement("a",{href:"docs.html",className:"noctrace-banner",style:{
           position:"relative",zIndex:2,display:"flex",
           background:"linear-gradient(90deg,"+TL+"10,"+TL+"05 50%,"+MV+"08)",
           borderBottom:"1px solid "+TL+"33",
@@ -408,7 +458,7 @@
             )
           ),
           React.createElement("span",{style:{color:TXB}},"Docker support — trace Claude Code sessions running inside containers."),
-          React.createElement("code",{style:{color:TXM,background:SF2,padding:"1px 6px",borderRadius:2,fontSize:10,border:"1px solid "+BD}},"npx noctrace --docker <container>"),
+          React.createElement("code",{className:"noctrace-banner-code",style:{color:TXM,background:SF2,padding:"1px 6px",borderRadius:2,fontSize:10,border:"1px solid "+BD}},"npx noctrace --docker <container>"),
           React.createElement("span",{style:{color:TL,fontSize:11,display:"flex",alignItems:"center",gap:3,flexShrink:0}},"docs ",React.createElement("span",null,"\u2192"))
         ),
 
@@ -420,11 +470,10 @@
           React.createElement("div",{style:{fontSize:12,color:DM,marginBottom:10,display:"flex",alignItems:"center",gap:6,animation:"fadeUp 0.4s ease both"}},
             React.createElement("span",{style:{color:GN}},"$")," noctrace --explain"
           ),
-          React.createElement("h1",{style:{fontFamily:"inherit",fontSize:"clamp(22px,3.8vw,38px)",fontWeight:700,lineHeight:1.25,color:TXM,letterSpacing:"-0.03em",marginBottom:8,minHeight:"2.5em"}},
+          React.createElement("h1",{style:{fontFamily:"inherit",fontSize:"clamp(22px,3.8vw,38px)",fontWeight:700,lineHeight:1.25,color:TXM,letterSpacing:"-0.03em",marginBottom:8}},
             React.createElement("span",{style:{color:MV}},"Noctrace"),
             React.createElement("span",{style:{color:DM}}," — "),
-            typed,
-            React.createElement("span",{style:{display:"inline-block",width:10,height:3,background:GN,marginLeft:2,animation:"blink 1s steps(1) infinite",verticalAlign:"middle",position:"relative",top:-2}})
+            headline
           ),
           React.createElement("p",{style:{color:TX,fontSize:13,maxWidth:520,marginBottom:24,lineHeight:1.75,animation:"fadeUp 0.4s ease 0.3s both"}},
             "Chrome DevTools ",
@@ -433,7 +482,12 @@
             React.createElement("span",{style:{color:RD,fontWeight:600}},"context rot"),
             " detection — so you can see when your session starts degrading."
           ),
-          React.createElement("div",{style:{display:"flex",gap:10,marginBottom:8,animation:"fadeUp 0.4s ease 0.4s both",flexWrap:"wrap"}},
+          React.createElement("div",{style:{display:"flex",gap:10,marginBottom:8,animation:"fadeUp 0.4s ease 0.4s both",flexWrap:"wrap",alignItems:"center"}},
+            React.createElement("a",{href:"#install",onClick:doCopy,style:{display:"inline-flex",alignItems:"center",gap:6,background:GND,border:"1px solid "+GN,padding:"10px 20px",cursor:"pointer",textDecoration:"none",fontWeight:700,color:"#0a0e14",fontSize:13,transition:"all 0.2s"},
+              onMouseEnter:function(e){e.currentTarget.style.background=GN;e.currentTarget.style.boxShadow="0 0 20px rgba(63,185,80,0.25)"},
+              onMouseLeave:function(e){e.currentTarget.style.background=GND;e.currentTarget.style.boxShadow="none"}},
+              "Install ",React.createElement("span",null,"\u2192")
+            ),
             React.createElement("div",{onClick:doCopy,style:{display:"flex",alignItems:"center",gap:8,background:SF,border:"1px solid "+BD,padding:"9px 16px",cursor:"pointer",transition:"all 0.2s"},
               onMouseEnter:function(e){e.currentTarget.style.borderColor=GND;e.currentTarget.style.boxShadow="0 0 20px rgba(63,185,80,0.06)"},
               onMouseLeave:function(e){e.currentTarget.style.borderColor=BD;e.currentTarget.style.boxShadow="none"}},
@@ -675,7 +729,8 @@
           React.createElement("span",null,"noctrace \u00B7 MIT \u00B7 Maintained by ",React.createElement("a",{href:"https://nyktora.com",style:{color:DM}},"nyktora.com"),". Contributions welcome."),
           React.createElement("div",{style:{display:"flex",gap:16}},
             React.createElement("a",{href:"https://github.com/nyktora/noctrace",style:{color:DM}},"github"),
-            React.createElement("a",{href:"https://npmjs.com/package/noctrace",style:{color:DM}},"npm")
+            React.createElement("a",{href:"https://npmjs.com/package/noctrace",style:{color:DM}},"npm"),
+            React.createElement("a",{href:"https://github.com/nyktora/noctrace/blob/main/CHANGELOG.md",style:{color:DM}},"changelog")
           )
         )
       );

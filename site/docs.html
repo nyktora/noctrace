@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Complete guide to Noctrace: installation, Claude Code hook setup, waterfall timeline usage, context health scoring, efficiency tips, sub-agent visualization, and troubleshooting.">
-  <meta name="keywords" content="noctrace docs, noctrace documentation, claude code observability guide, claude code hooks setup, waterfall timeline tutorial, context health scoring, ai agent debugging, noctrace installation">
   <meta name="author" content="Nyktora Group">
   <meta name="theme-color" content="#1e1e2e">
   <meta property="og:title" content="Noctrace Documentation — Installation, Configuration &amp; Usage Guide">
   <meta property="og:description" content="Complete guide to Noctrace: installation, Claude Code hook setup, waterfall timeline usage, context health scoring, efficiency tips, sub-agent visualization, and troubleshooting.">
-  <meta property="og:type" content="website">
+  <meta property="og:type" content="article">
+  <meta property="article:modified_time" content="2026-04-14T00:00:00Z">
   <meta property="og:url" content="https://nyktora.github.io/noctrace/docs.html">
   <meta property="og:site_name" content="Noctrace">
   <meta property="og:locale" content="en_US">
@@ -20,6 +20,8 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Noctrace Documentation — Installation, Configuration &amp; Usage Guide">
   <meta name="twitter:description" content="Complete guide to Noctrace: installation, Claude Code hook setup, waterfall timeline usage, context health scoring, efficiency tips, sub-agent visualization, and troubleshooting.">
+  <meta name="twitter:image" content="https://nyktora.github.io/noctrace/og-image.png">
+  <meta name="indexnow-key" content="4d691bd276782520f8d95f96adb9508e">
   <link rel="canonical" href="https://nyktora.github.io/noctrace/docs.html">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>Noctrace Documentation — Installation, Configuration &amp; Usage Guide</title>
@@ -33,11 +35,17 @@
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "WebPage",
+    "@type": "TechArticle",
     "name": "Noctrace Documentation",
+    "headline": "Noctrace Documentation — Installation, Configuration &amp; Usage Guide",
     "description": "Installation, configuration, waterfall view, context health, context rot detection, and troubleshooting guide for Noctrace.",
     "url": "https://nyktora.github.io/noctrace/docs.html",
-    "isPartOf": { "@type": "WebSite", "name": "Noctrace", "url": "https://nyktora.github.io/noctrace/" }
+    "dateModified": "2026-04-14",
+    "proficiencyLevel": "Expert",
+    "dependencies": "Node.js 20 LTS, Claude Code",
+    "author": {"@id":"https://nyktora.github.io/noctrace/#organization"},
+    "publisher": {"@type":"Organization","name":"Nyktora Group","url":"https://github.com/nyktora"},
+    "isPartOf": {"@id":"https://nyktora.github.io/noctrace/#website"}
   }
   </script>
   <script type="application/ld+json">
@@ -54,31 +62,91 @@
 <body>
   <div id="root"></div>
   <noscript>
-    <div style="max-width:900px;margin:0 auto;padding:48px 24px;color:#c9d1d9;font-family:monospace;">
-      <h1>Noctrace Documentation</h1>
-      <h2>Installation</h2>
-      <p>Install globally (recommended): <code>npm install -g noctrace</code>. Then run <code>noctrace --enable</code> to register with Claude Code for auto-start. Or try without installing: <code>npx noctrace</code></p>
-      <h2>What is Noctrace?</h2>
-      <p>Noctrace is a Chrome DevTools Network-tab-style waterfall visualizer for Claude Code agent workflows. It reads JSONL session logs from ~/.claude/projects/ and renders them as an interactive timeline.</p>
-      <h2>Features</h2>
-      <ul>
-        <li>Waterfall timeline with tool calls, API requests, and agent spawns</li>
-        <li>Context health scoring to detect context rot</li>
-        <li>Token tracking across sessions</li>
-        <li>Sub-agent visibility with collapsible groups</li>
-        <li>Real-time WebSocket streaming</li>
-        <li>Zoom, pan, and filtering</li>
-        <li>Efficiency tips — 8 waste patterns with amber lightbulb indicator</li>
-        <li>Security tips — 13 security patterns with red shield indicator</li>
-        <li>MCP session registry — sessions self-register on start and unregister on exit; dashboard shows only active sessions with a live count</li>
-        <li>Per-tool token cost — estimated USD cost on every row and session total in toolbar; Claude public pricing with per-model detection</li>
-        <li>Agent type labels — subagent rows show the named agent type as a blue badge chip</li>
-        <li>Tool failure rows — crashes, timeouts, and kills render as distinct red-tinted rows with a lightning bolt icon</li>
-        <li>API error markers — rate limit, billing, and auth failures appear as full-width red alert banners on the timeline</li>
-        <li>Agent Teams panel — detects running Agent Teams at ~/.claude/teams/, shows members and task counts in a flyout (GET /api/teams)</li>
-        <li>Context Startup flyout — shows which instruction files loaded at session start with estimated token counts</li>
-      </ul>
-      <p><a href="https://github.com/nyktora/noctrace">View on GitHub</a> | <a href="./">Back to home</a></p>
+    <div style="max-width:900px;margin:0 auto;padding:48px 24px;color:#c9d1d9;font-family:monospace;line-height:1.75;">
+      <h1>Noctrace Documentation — Installation, Configuration &amp; Usage Guide</h1>
+
+      <section>
+        <h2>What is Noctrace?</h2>
+        <p>Noctrace is a free, open-source, local-only observability dashboard for Claude Code agent workflows. It reads the JSONL session logs that Claude Code writes to <code>~/.claude/projects/</code> and renders them as an interactive waterfall timeline in your browser — no cloud dependency, no telemetry, no database, and zero configuration required. The interface is modeled after Chrome DevTools' Network tab: every tool call is a horizontal timing bar on a shared time axis.</p>
+        <p>Noctrace runs as a single Node.js process. It starts a local Express 5 server on port 4117, serves a React SPA, and opens a WebSocket connection so the waterfall updates in real time as your Claude Code session progresses. All data stays on your machine.</p>
+      </section>
+
+      <section>
+        <h2>Installation</h2>
+        <p><strong>Option 1 — Try without installing (recommended for first use):</strong> run <code>npx noctrace</code> in your terminal. This downloads noctrace temporarily and starts the dashboard. Requires Node.js 20 LTS or later.</p>
+        <p><strong>Option 2 — Install globally:</strong></p>
+        <p><code>npm install -g noctrace</code></p>
+        <p>Then run <code>noctrace --enable</code> to register Noctrace as an MCP server in Claude Code. After this, the dashboard opens automatically whenever a new Claude Code session starts. To stop auto-starting, run <code>noctrace --disable</code>.</p>
+        <p><strong>Option 3 — Real-time hook events (optional):</strong> run <code>noctrace --install-hooks</code> to enable real-time hook streaming (SubagentStart/Stop, PostToolUse, compaction events). Remove with <code>noctrace --uninstall-hooks</code>.</p>
+        <p><strong>Docker:</strong> to trace Claude Code sessions running inside a Docker container, run <code>npx noctrace --docker &lt;container&gt;</code>. Noctrace injects a lightweight watcher and streams JSONL events back to your host. Zero container setup required.</p>
+      </section>
+
+      <section>
+        <h2>Quick start</h2>
+        <p>Before starting Noctrace, make sure Claude Code has been used at least once so that session logs exist at <code>~/.claude/projects/</code>. Then run <code>npx noctrace</code>. A browser tab opens at <code>http://localhost:4117</code>. Select a project from the left sidebar and pick a session — the waterfall renders immediately. For live updates, keep both Claude Code and Noctrace running simultaneously.</p>
+        <p>If port 4117 is taken, Noctrace tries the next available port automatically and prints the URL it bound to. To pin a port, use the <code>PORT</code> environment variable: <code>PORT=3001 npx noctrace</code>.</p>
+      </section>
+
+      <section>
+        <h2>Waterfall view</h2>
+        <p>The waterfall renders every tool call as a horizontal bar on a shared time axis. Columns show row number, tool name and target (file path, command, agent name), tool type badge (Read, Write, Edit, Bash, Task, Grep, MCP), wall-clock duration, cumulative token count, estimated USD cost, context fill percentage, and a timing bar whose position and width map to start time and duration.</p>
+        <p>Agent hierarchy: when Claude Code spawns a sub-agent using the Task or Agent tool, it appears as a collapsible row group. Click the chevron to expand and see the agent's child tool calls nested inside. Each sub-agent row shows the agent's named type as a blue badge chip (for example: Explore, core:deep-researcher, senior-software-engineer).</p>
+        <p>Filtering: use the filter bar to search by tool name, file path, or text. Special keywords include <code>error</code> (show only failed calls), <code>running</code> (show only in-progress calls), and <code>agent</code> (show only agent rows). Structured syntax: <code>type:bash</code>, <code>&gt;5s</code>, <code>&lt;100ms</code>, <code>tokens:&gt;1k</code>, <code>success</code>. Multiple <code>type:</code> filters are OR-ed; others AND.</p>
+      </section>
+
+      <section>
+        <h2>Context health scoring</h2>
+        <p>Noctrace computes a real-time A–F grade for the session's context window health. The grade appears as a ring badge in the toolbar. Click it to expand the signal breakdown panel with per-signal sub-scores and recommendations.</p>
+        <p>The five weighted signals are: context fill (40%) — how full the window is right now relative to the model's detected context size; compaction events (25%) — each compact_boundary is a lossy memory operation; re-reads (15%) — duplicate Read calls on the same file path indicate retrieval failures; error rate acceleration (10%) — comparing error rate in the second half of the session to the first; tool efficiency (10%) — whether the proportion of Write and Edit calls is declining, which signals the agent is spinning instead of making progress.</p>
+        <p>Grades: A (85–100, healthy), B (70–84, good), C (55–69, consider compaction), D (40–54, degraded — compact now), F (0–39, critical — clear recommended).</p>
+      </section>
+
+      <section>
+        <h2>Context rot detection</h2>
+        <p>Context rot is the progressive degradation of Claude Code session quality as the context window fills. When fill exceeds roughly 80%, Claude begins losing early instructions, prior tool outputs, and reasoning chains. The practical symptoms are repeated work, contradictory edits, and an increasing error rate.</p>
+        <p>Noctrace makes context rot visible through five indicators: red row tinting on rows that executed above 80% fill; a heat strip along the left edge of each row that transitions from green to yellow to red as context fills; compaction boundary lines (red dashed vertical lines) that mark where Claude triggered automatic context compaction; re-read indicators (yellow arrow icon) on any file read that was already read earlier in the session; and a drift rate metric showing tokens-per-minute growth via three-window linear regression with labels stable, rising, accelerating, and critical.</p>
+      </section>
+
+      <section>
+        <h2>Token tracking and cost estimation</h2>
+        <p>Every waterfall row shows the cumulative input and output token count at that point in the session. The detail panel (click any row) shows the in/out token split, the context fill percentage at execution time, and the estimated USD cost for that specific call. The session total estimated cost appears in the toolbar. Pricing uses Claude's public rates with automatic per-model detection (Sonnet, Opus, Haiku).</p>
+        <p>Expensive calls consuming more than 5,000 tokens are highlighted in yellow in the Tokens column. The Stats flyout (toolbar bar-chart icon) shows P50, P95, and Max latency per tool type, and flags calls exceeding the slow-call threshold (default 5,000ms) with a clock icon on the row.</p>
+      </section>
+
+      <section>
+        <h2>Efficiency tips and security tips</h2>
+        <p>The efficiency engine detects eight waste patterns per session: re-reads (reading the same file multiple times), fan-out (spawning too many sub-agents for simple tasks), correction loops (repeated fix-test-fix cycles), repeated identical commands, token spikes (individual calls with abnormally high token counts), high context fill (session running near capacity), no delegation (long sessions with no sub-agent spawns), and post-compaction re-reads (reading files that were in context before a compaction event). When patterns are found, an amber lightbulb appears in the toolbar. Click it for the tips panel.</p>
+        <p>The security engine scans thirteen patterns: hardcoded secrets or API keys appearing in tool call inputs or outputs, dangerous shell commands (rm -rf, chmod 777, curl | bash), potential exfiltration (writing sensitive data to public locations), prompt injection attempts in tool outputs, and others. A red shield badge in the toolbar indicates findings.</p>
+      </section>
+
+      <section>
+        <h2>CLI options reference</h2>
+        <ul>
+          <li><code>noctrace</code> — start server and open dashboard</li>
+          <li><code>noctrace --enable</code> — register with Claude Code for auto-start on every session</li>
+          <li><code>noctrace --disable</code> — unregister from Claude Code</li>
+          <li><code>noctrace --install-hooks</code> — enable real-time hook events</li>
+          <li><code>noctrace --uninstall-hooks</code> — remove hook event listeners</li>
+          <li><code>noctrace --docker &lt;container&gt;</code> — stream sessions from a running Docker container</li>
+          <li><code>PORT=3001 noctrace</code> — run on a custom port</li>
+          <li><code>CLAUDE_HOME=/path noctrace</code> — use a custom Claude config directory</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Troubleshooting</h2>
+        <p><strong>"No projects found" on startup:</strong> Claude Code must have been used at least once. Check that <code>~/.claude/projects/</code> exists and contains at least one <code>.jsonl</code> file.</p>
+        <p><strong>Waterfall shows no rows:</strong> select a session from the sidebar. Sessions containing only system records with no tool calls will render a blank waterfall. Choose a session with coding activity.</p>
+        <p><strong>Real-time updates not appearing:</strong> for live updates, both Claude Code and Noctrace must be running simultaneously. If the session ended before Noctrace started, the completed session renders statically.</p>
+        <p><strong>Browser doesn't open automatically:</strong> some environments (WSL, SSH sessions, headless Linux) cannot open browsers. Noctrace still starts the server — navigate to <code>http://localhost:4117</code> manually.</p>
+      </section>
+
+      <section>
+        <h2>System requirements</h2>
+        <p>Node.js 20 LTS or later. macOS, Linux, or Windows (WSL recommended). Any modern browser. An existing Claude Code installation. No API keys, no accounts, no cloud.</p>
+      </section>
+
+      <p><a href="https://github.com/nyktora/noctrace">GitHub repository</a> | <a href="https://www.npmjs.com/package/noctrace">npm package</a> | <a href="./">Back to home</a> | <a href="https://github.com/nyktora/noctrace/blob/main/CHANGELOG.md">Changelog</a></p>
     </div>
   </noscript>
 

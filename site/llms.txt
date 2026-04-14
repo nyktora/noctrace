@@ -1,0 +1,58 @@
+# Noctrace
+
+> Open-source, local-only Chrome DevTools-style waterfall visualizer for Claude Code agent workflows. Zero configuration. MIT license.
+
+Noctrace reads JSONL session logs from ~/.claude/projects/ and renders them as an interactive timeline showing every tool call, sub-agent spawn, API request, token cost, and context health grade in real time. It runs entirely on localhost with no cloud dependency, no telemetry, and no database. Install with `npx noctrace`.
+
+## What Noctrace does
+
+Noctrace gives Claude Code users a browser-based observability dashboard. It shows tool calls (Read, Write, Edit, Bash, Agent, MCP) as horizontal bars on a shared time axis — identical in concept to Chrome DevTools Network tab. Each row displays: tool type, target file or command, duration, cumulative token count, estimated USD cost, and context fill percentage. Rows turn red when context fill exceeds 80%, making context rot visible before it degrades session quality.
+
+## Key capabilities
+
+- Waterfall timeline: every tool call and agent spawn on a shared time axis with zoom (1–50x) and pan
+- Context health scoring: A–F grade computed from context fill (40%), compaction events (25%), file re-reads (15%), error rate acceleration (10%), and tool efficiency trends (10%)
+- Sub-agent visibility: collapsible agent groups with nested tool call rows; agent type labels (e.g., "Explore", "core:deep-researcher")
+- Token cost estimation: per-row USD cost using Claude public pricing with per-model detection
+- Context rot detection: red row tinting, heat strips, compaction boundary markers, and context drift rate (tokens/min growth via 3-window linear regression)
+- Efficiency tips: 8 waste patterns flagged with amber lightbulb indicators
+- Security tips: 13 security patterns flagged with red shield indicators
+- Loop detection: 3+ consecutive identical tool calls trigger a warning
+- Advanced filtering: structured syntax — type:bash, >5s, tokens:>1k, error, running
+- Session comparison: split-screen health grades, summary metrics, tool mix bars, context fill trajectory sparklines
+- Real-time streaming: WebSocket byte-offset incremental parsing; auto-reconnect
+- Docker support: `npx noctrace --docker <container>` syncs sessions from running containers
+- OTel export: sessions exportable as OpenTelemetry traces for Grafana, Jaeger, or Datadog
+- MCP session registry: sessions self-register on start; dashboard shows only active sessions
+
+## Installation
+
+npx noctrace
+
+Or install globally:
+
+npm install -g noctrace
+noctrace --enable
+
+Requirements: Node.js 20 LTS or later. macOS, Linux, or Windows (WSL). Any modern browser. An existing Claude Code installation.
+
+## How Noctrace works
+
+Noctrace is a single Node.js process. It runs a local Express 5 server on port 4117 that serves a React SPA, exposes a REST API, and upgrades WebSocket connections. The file watcher (chokidar) monitors ~/.claude/projects/ for new or modified JSONL files. When a file changes, the server reads only the new bytes (byte-offset incremental parsing) and pushes the parsed rows to the browser over WebSocket. No data ever leaves the machine.
+
+Session logs are JSONL files written by Claude Code at ~/.claude/projects/<project-slug>/<session-id>.jsonl. Sub-agent logs live at ~/.claude/projects/<project-slug>/<session-id>/subagents/agent-<agent-id>.jsonl. Noctrace parses both formats and links sub-agent rows to their parent agent rows.
+
+## Context rot
+
+Context rot is the progressive degradation of Claude Code session quality as the context window fills. When context fill exceeds 80%, Claude begins losing early instructions, tool outputs, and reasoning chains, which causes repeated work, contradictory edits, and increased error rates. Noctrace makes context rot visible: rows are tinted red above 80% fill, a heat strip runs along the top of the waterfall, compaction boundary lines show where Claude Code triggered automatic context compaction, and a drift rate metric shows how fast the context is growing in tokens per minute.
+
+## Pricing and license
+
+Noctrace is free and open source under the MIT license. Repository: https://github.com/nyktora/noctrace. npm package: https://www.npmjs.com/package/noctrace.
+
+## Docs
+
+- Full documentation: https://nyktora.github.io/noctrace/docs.html
+- GitHub repository: https://github.com/nyktora/noctrace
+- npm package: https://www.npmjs.com/package/noctrace
+- Changelog: https://github.com/nyktora/noctrace/blob/main/CHANGELOG.md

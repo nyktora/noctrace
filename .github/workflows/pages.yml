@@ -29,3 +29,17 @@ jobs:
           path: site
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+      # IndexNow key: 4d691bd276782520f8d95f96adb9508e
+      - name: Notify IndexNow
+        run: |
+          curl -s -X POST "https://api.indexnow.org/indexnow" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "host": "nyktora.github.io",
+              "key": "4d691bd276782520f8d95f96adb9508e",
+              "keyLocation": "https://nyktora.github.io/noctrace/4d691bd276782520f8d95f96adb9508e.txt",
+              "urlList": [
+                "https://nyktora.github.io/noctrace/",
+                "https://nyktora.github.io/noctrace/docs.html"
+              ]
+            }'
