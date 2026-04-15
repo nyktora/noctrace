@@ -2,6 +2,20 @@
 
 All notable changes to noctrace will be documented in this file.
 
+## [1.2.0] - 2026-04-14
+
+### Added
+- **Patterns view** — a new top-level tab that aggregates across every session in the chosen time window (today, 7 days, 30 days). The existing per-session waterfall stays the default; click "Patterns" in the toolbar to see the cross-session picture. Answers the question "which of my projects and tools are degrading?" without tracking spend or tokens
+- **Health distribution panel** — five bars A through F showing how many sessions landed in each grade for the current window, with ghost outlines showing the previous same-sized window. Delta arrows surface week-over-week regressions at a glance
+- **Project rot leaderboard** — your projects ranked by what percentage of their sessions scored a D or F. Shows session count, bad count, bad %, average compactions per session, and a link arrow. Click a row to jump to that project in the sessions view
+- **Tool health grid** — every tool with ≥10 calls in the window, ranked by failure rate. Columns: calls, failures, fail %, p50 ms, p95 ms, and a calls delta vs the previous window. Fail % and p95 latency cells are color-coded so outliers pop
+- **Calendar-semantic time windows** — "today" is midnight-local to now, "7d" is the last 7 calendar days including today, "30d" is the last 30. Previous window is always the same-sized window immediately preceding, so regression comparisons are apples-to-apples
+- **Stat-on-read session cache** — in-memory map keyed by file `mtime` so warm navigations return in milliseconds even with thousands of sessions. Cold first load uses mtime pre-filter + bounded-parallel parse (chunks of 20) to avoid redundant work on archived sessions
+- 75 new unit and integration tests covering the session-summary extractor, cache invalidation, rollup aggregation, the new route, and all three panel components. **350 tests total**
+
+### Changed
+- Toolbar now includes a Sessions | Patterns nav toggle. Last-chosen view and window persist to localStorage
+
 ## [1.1.0] - 2026-04-13
 
 ### Added

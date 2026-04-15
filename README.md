@@ -88,6 +88,7 @@ Requires Node.js 20+. Optional `--install-hooks` flag enables real-time hook eve
 - **Agent Teams Panel** — detects running Agent Teams at `~/.claude/teams/`, shows members and task counts in a flyout
 - **Context Startup Flyout** — shows which instruction files (CLAUDE.md and others) loaded at session start with estimated token counts, parsed from JSONL system records
 - **Docker Support** — `npx noctrace --docker <container>` attaches to a running Docker container, injects a lightweight watcher, and streams JSONL events back to your host in real time. Zero container setup required
+- **Patterns View (new in v1.2)** — a second top-level tab that aggregates across every session in the chosen time window (today, 7 days, 30 days). Three panels: health distribution (A/B/C/D/F grade counts with week-over-week delta arrows), project rot leaderboard (which codebases are degrading, ranked), and tool health grid (per-tool failure rate and p50/p95 latency). Zero spend or token tracking — this is about quality and waste
 
 ![Noctrace waterfall timeline](docs/screenshots/noctrace-waterfall.gif)
 

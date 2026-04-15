@@ -171,6 +171,7 @@ All steps complete. Order followed during implementation:
 51. ✅ Docker support (`npx noctrace --docker <container>`: inject-and-stream watcher, auto-detects claude config dir, host URL resolution, curl/wget fallback)
 52. ✅ Docker module extraction (testable `src/server/docker.ts` with `DockerRunner` injection interface, 24 unit tests, shell-injection-hardened watcher spawn)
 53. ✅ Devcontainer support (`--devcontainer <path>` resolves via docker labels, reuses Docker watcher pipeline)
+54. ✅ Patterns view (cross-session rollup: health distribution, project rot leaderboard, tool health grid — `GET /api/patterns` with calendar-semantic windows + mtime-keyed stat-on-read cache)
 ### Remaining polish:
 - Loading state spinners
 - README with demo GIF
