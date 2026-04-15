@@ -61,6 +61,8 @@
     "test:smoke": "npm run build && vitest run tests/smoke/",
     "lint": "eslint src/",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
+    "version:check": "node scripts/check-version.mjs",
+    "version:bump": "node scripts/bump-version.mjs",
     "postinstall": "node bin/postinstall.js",
     "preuninstall": "node bin/preuninstall.js"
   },
