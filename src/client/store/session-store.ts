@@ -46,6 +46,7 @@ export interface SessionStore {
   expandedAgents: Set<string>;
   filterText: string;
   autoScroll: boolean;
+  showConversation: boolean;
 
   // Zoom/pan
   zoomLevel: number;
@@ -97,6 +98,7 @@ export interface SessionStore {
   toggleAgent: (id: string) => void;
   setFilter: (text: string) => void;
   setAutoScroll: (on: boolean) => void;
+  setShowConversation: (on: boolean) => void;
   setZoom: (level: number) => void;
   setPan: (offset: number) => void;
   setNameColWidth: (width: number) => void;
@@ -146,6 +148,10 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   expandedAgents: new Set<string>(),
   filterText: '',
   autoScroll: true,
+  showConversation: ((): boolean => {
+    try { return localStorage.getItem('noctrace.showConversation') === '1'; }
+    catch { return false; }
+  })(),
 
   zoomLevel: 1,
   panOffset: 0,
@@ -300,6 +306,10 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   setFilter: (text) => set({ filterText: text }),
   setAutoScroll: (on) => set({ autoScroll: on }),
+  setShowConversation: (on) => {
+    try { localStorage.setItem('noctrace.showConversation', on ? '1' : '0'); } catch { /* ignore */ }
+    set({ showConversation: on });
+  },
   setZoom: (level) => set({ zoomLevel: level }),
   setPan: (offset) => set({ panOffset: offset }),
   setNameColWidth: (width) => set({ nameColWidth: Math.max(80, Math.min(600, width)) }),

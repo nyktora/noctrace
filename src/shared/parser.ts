@@ -863,6 +863,14 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
     });
   }
 
+  // Chronological sort: tool rows, turn rows, api-errors, and hook rows are pushed
+  // in separate passes above. Without this sort, turn rows cluster at the end of
+  // the waterfall instead of interleaving with the tool calls they happened between.
+  top.sort((a, b) => {
+    if (a.startTime !== b.startTime) return a.startTime - b.startTime;
+    return (a.sequence ?? 0) - (b.sequence ?? 0);
+  });
+
   return top;
 }
 
@@ -1058,10 +1066,15 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
     });
   }
 
-  // Compute per-row token delta for sub-agent rows
-  const sorted = [...rows].sort((a, b) => a.startTime - b.startTime);
+  // Chronological sort — same rule as parseJsonlContent.
+  rows.sort((a, b) => {
+    if (a.startTime !== b.startTime) return a.startTime - b.startTime;
+    return (a.sequence ?? 0) - (b.sequence ?? 0);
+  });
+
+  // Compute per-row token delta over the now-sorted rows.
   let prevInput = 0;
-  for (const row of sorted) {
+  for (const row of rows) {
     row.tokenDelta = row.inputTokens > 0 ? Math.max(0, row.inputTokens - prevInput) : 0;
     if (row.inputTokens > 0) prevInput = row.inputTokens;
   }

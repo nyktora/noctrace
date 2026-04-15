@@ -28,6 +28,8 @@ export function Toolbar(): React.ReactElement {
   const setFilter = useSessionStore((s) => s.setFilter);
   const autoScroll = useSessionStore((s) => s.autoScroll);
   const setAutoScroll = useSessionStore((s) => s.setAutoScroll);
+  const showConversation = useSessionStore((s) => s.showConversation);
+  const setShowConversation = useSessionStore((s) => s.setShowConversation);
   const health = useSessionStore((s) => s.health);
   const rows = useSessionStore((s) => s.rows);
   const drift = useSessionStore((s) => s.drift);
@@ -159,6 +161,23 @@ export function Toolbar(): React.ReactElement {
         title="Toggle auto-scroll to follow new rows"
       >
         Auto
+      </button>
+
+      {/* Conversation toggle — hides user prompt + assistant text rows by default */}
+      <button
+        type="button"
+        onClick={() => setShowConversation(!showConversation)}
+        className="text-xs px-2 py-0.5 rounded shrink-0 transition-colors"
+        style={{
+          backgroundColor: showConversation ? 'var(--ctp-surface1)' : 'transparent',
+          border: '1px solid var(--ctp-surface1)',
+          color: showConversation ? 'var(--ctp-text)' : 'var(--ctp-overlay0)',
+          fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+          cursor: 'pointer',
+        }}
+        title="Show user prompts and assistant text responses in the waterfall"
+      >
+        Chat
       </button>
 
       {/* Compact stats pill — wrapped in relative container for flyout positioning */}

@@ -53,7 +53,12 @@ function flattenRows(rows: WaterfallRow[], expandedAgents: Set<string>): FlatRow
  * Renders the column headers, time axis, virtual-scrolled rows, and handles zoom/pan.
  */
 export function Waterfall(): React.ReactElement {
-  const rows = useSessionStore((s) => s.rows);
+  const rawRows = useSessionStore((s) => s.rows);
+  const showConversation = useSessionStore((s) => s.showConversation);
+  const rows = useMemo(
+    () => (showConversation ? rawRows : rawRows.filter((r) => r.type !== 'turn')),
+    [rawRows, showConversation],
+  );
   const health = useSessionStore((s) => s.health);
   const compactionBoundaries = useSessionStore((s) => s.compactionBoundaries);
   const expandedAgents = useSessionStore((s) => s.expandedAgents);
