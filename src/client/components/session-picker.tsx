@@ -6,6 +6,13 @@ import { usePatternsStore } from '../store/patterns-store.ts';
 import { formatRelativeTime } from '../utils/tool-colors.ts';
 import { CompareIcon } from '../icons/compare-icon.tsx';
 import { TeamIcon } from '../icons/team-icon.tsx';
+import { ProviderIcon } from '../icons/provider-icon.tsx';
+
+/**
+ * Extended session summary that may carry provider information once Phase B lands.
+ * The `provider` field is optional so this is backward-compatible with pre-Phase B servers.
+ */
+type SessionSummaryWithProvider = SessionSummary & { provider?: string };
 
 /**
  * Detect if a slug is a git worktree path.
@@ -97,7 +104,7 @@ function buildSessionBadges(session: SessionSummary): SessionBadge[] {
 
 /** Props for SessionPickerRow */
 export interface SessionPickerRowProps {
-  session: SessionSummary;
+  session: SessionSummaryWithProvider;
   isSelected: boolean;
   onSelect: (id: string) => void;
   /** When set, renders the Compare button for this row */
@@ -156,6 +163,27 @@ function SessionPickerRow({ session, isSelected, onSelect, onCompare }: SessionP
               {b.label}
             </span>
           ))}
+          {/* Provider badge — shown when Phase B surfaces a non-claude-code provider */}
+          {session.provider && session.provider !== 'claude-code' && (
+            <span
+              data-testid="provider-badge"
+              className="shrink-0 flex items-center gap-1 font-mono"
+              title={`Provider: ${session.provider}`}
+              style={{
+                fontSize: 8,
+                fontWeight: 600,
+                padding: '0px 3px',
+                borderRadius: 3,
+                backgroundColor: 'rgba(137,180,250,0.15)',
+                color: 'var(--ctp-blue)',
+                lineHeight: '14px',
+                border: '1px solid rgba(137,180,250,0.3)',
+              }}
+            >
+              <ProviderIcon size={9} color="var(--ctp-blue)" />
+              {session.provider}
+            </span>
+          )}
         </div>
         {session.title && (
           <div
@@ -500,7 +528,7 @@ export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.Re
             />
             {project.slug === selectedProjectSlug && sortedSessions.length > 0 && (
               <div style={{ backgroundColor: 'var(--ctp-mantle)' }}>
-                {sortedSessions.map((session: SessionSummary) => (
+                {sortedSessions.map((session: SessionSummaryWithProvider) => (
                   <SessionPickerRow
                     key={session.id}
                     session={session}

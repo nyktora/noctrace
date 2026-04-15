@@ -1,18 +1,22 @@
 /**
  * Cross-session Patterns rollup orchestrator.
- * Lists session JSONL files, applies mtime pre-filter, parses + caches each,
+ * Iterates registered providers, calls listSessions + readSession for each,
  * and folds results into a PatternsResponse.
+ *
+ * Phase B: uses the Provider registry instead of walking ~/.claude/projects/ directly.
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { parseJsonlContent } from '../shared/parser.js';
+import { listProviders } from '../shared/providers/index.js';
+import { createClaudeCodeProvider } from '../shared/providers/claude-code.js';
+import type { Provider } from '../shared/providers/index.js';
 import {
   buildSessionSummaryFromContent,
   type PatternSessionSummary,
 } from '../shared/session-summary.js';
 import type { SummaryCache } from './summary-cache.js';
-import type { PatternsResponse, HealthGrade } from '../shared/types.js';
+import type { PatternsResponse, HealthGrade, WaterfallRow } from '../shared/types.js';
 
 // ---------------------------------------------------------------------------
 // Window math
@@ -139,64 +143,29 @@ function deslugify(slug: string, username: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// File enumeration
+// Session record — replaces the old SessionFile struct
 // ---------------------------------------------------------------------------
 
-interface SessionFile {
+/**
+ * Lightweight record produced by iterating provider sessions.
+ * Mirrors the old SessionFile shape so the downstream aggregation code
+ * stays mostly unchanged.
+ */
+interface SessionRecord {
+  /** Cache key: `<providerId>:<rawSlug>` */
+  cacheKey: string;
+  /** Absolute path to the underlying JSONL file (used for mtime-based cache invalidation). */
   filePath: string;
+  /** Provider-native routing slug, e.g. 'my-project/sess-abc'. */
+  rawSlug: string;
+  /** Project directory slug (first component of rawSlug). */
   slug: string;
+  /** Session UUID (second component of rawSlug). */
   sessionId: string;
+  /** File mtime in Unix ms (from SessionMeta.endMs, which is mtime-derived). */
   mtimeMs: number;
-}
-
-/** List all *.jsonl session files under projectsDir with their mtime. */
-async function listSessionFiles(projectsDir: string): Promise<SessionFile[]> {
-  const result: SessionFile[] = [];
-
-  let slugs: string[];
-  try {
-    slugs = await fs.readdir(projectsDir);
-  } catch {
-    // Directory doesn't exist — graceful degradation
-    return result;
-  }
-
-  for (const slug of slugs) {
-    const slugPath = path.join(projectsDir, slug);
-    let slugStat;
-    try {
-      slugStat = await fs.stat(slugPath);
-    } catch {
-      continue;
-    }
-    if (!slugStat.isDirectory()) continue;
-
-    let files: string[];
-    try {
-      files = await fs.readdir(slugPath);
-    } catch {
-      continue;
-    }
-
-    for (const file of files) {
-      if (!file.endsWith('.jsonl')) continue;
-      const filePath = path.join(slugPath, file);
-      let fstat;
-      try {
-        fstat = await fs.stat(filePath);
-      } catch {
-        continue;
-      }
-      result.push({
-        filePath,
-        slug,
-        sessionId: file.replace(/\.jsonl$/, ''),
-        mtimeMs: fstat.mtimeMs,
-      });
-    }
-  }
-
-  return result;
+  /** Provider instance that owns this session. */
+  provider: Provider;
 }
 
 // ---------------------------------------------------------------------------
@@ -208,7 +177,8 @@ async function listSessionFiles(projectsDir: string): Promise<SessionFile[]> {
  *
  * @param window  - 'today' | '7d' | '30d'
  * @param cache   - mtime-invalidated summary cache
- * @param claudeHome - defaults to CLAUDE_HOME env or ~/.claude
+ * @param claudeHome - optional override; when provided a temporary claude-code
+ *   provider is created for that home directory (used in tests)
  * @param now     - injectable for tests; defaults to Date.now()
  */
 export async function computeRollup(
@@ -219,50 +189,90 @@ export async function computeRollup(
 ): Promise<PatternsResponse> {
   const nowMs = now ?? Date.now();
   const home = claudeHome ?? (process.env['CLAUDE_HOME'] ?? path.join(os.homedir(), '.claude'));
-  const projectsDir = path.join(home, 'projects');
   const username = os.userInfo().username;
 
   const bounds = computeWindow(window, nowMs);
   const { startMs, endMs, prevStartMs, prevEndMs } = bounds;
   const MS_PER_DAY = 86_400_000;
 
-  // List all session files
-  const allFiles = await listSessionFiles(projectsDir);
+  // Use a provider scoped to the requested claudeHome when an override is provided
+  // (tests pass a tmpHome); otherwise use the global registry.
+  const providers: Provider[] = claudeHome
+    ? [createClaudeCodeProvider(claudeHome)]
+    : listProviders();
 
-  // Pre-filter by mtime: include files whose mtime is within window + 1-day slack
-  // This is a fast pre-filter; we still check session startMs after parsing.
-  const preFilterStart = prevStartMs - MS_PER_DAY;
-  const currentCandidates = allFiles.filter(
-    (f) => f.mtimeMs >= preFilterStart && f.mtimeMs <= endMs + MS_PER_DAY,
-  );
+  // Collect session records from all providers
+  // We use a wider window for listing so the pre-filter + previous window both work.
+  const listWindow = {
+    startMs: prevStartMs - MS_PER_DAY,
+    endMs: endMs + MS_PER_DAY,
+  };
 
-  // Parse + cache each file
+  const allRecords: SessionRecord[] = [];
+
+  for (const provider of providers) {
+    let sessions;
+    try {
+      sessions = await provider.listSessions(listWindow);
+    } catch {
+      // If a provider fails to list, skip it gracefully
+      continue;
+    }
+
+    for (const meta of sessions) {
+      // Derive the file path from rawSlug for Claude Code cache-key purposes.
+      // rawSlug format: '<projectSlug>/<sessionId>'
+      const slashIdx = meta.rawSlug.indexOf('/');
+      if (slashIdx === -1) continue;
+      const slug = meta.rawSlug.slice(0, slashIdx);
+      const sessionId = meta.rawSlug.slice(slashIdx + 1);
+      const filePath = path.join(home, 'projects', slug, `${sessionId}.jsonl`);
+      const mtimeMs = meta.endMs ?? meta.startMs;
+
+      allRecords.push({
+        cacheKey: `${provider.id}:${meta.rawSlug}`,
+        filePath,
+        rawSlug: meta.rawSlug,
+        slug,
+        sessionId,
+        mtimeMs,
+        provider,
+      });
+    }
+  }
+
+  // Parse + cache each session
   const errors: Array<{ path: string; reason: string }> = [];
 
   const parsed = await runChunked(
-    currentCandidates.map((sf) => async () => {
-      const { summary, error } = await cache.getOrBuild(sf.filePath, async () => {
-        let content: string;
+    allRecords.map((sr) => async () => {
+      // Use the file path as cache key for mtime-based invalidation.
+      // The build function reads the file and delegates to the provider for parsing.
+      const { summary, error } = await cache.getOrBuild(sr.filePath, async () => {
+        // Read raw content for accurate compaction boundary counting.
+        let rawContent: string;
         try {
-          content = await fs.readFile(sf.filePath, 'utf8');
+          rawContent = await fs.readFile(sr.filePath, 'utf8');
         } catch (err) {
           throw new Error(err instanceof Error ? err.message : String(err));
         }
-        const rows = parseJsonlContent(content);
-        return buildSessionSummaryFromContent(rows, sf.sessionId, sf.slug, content);
+        // Use the provider to parse into WaterfallRow[] for consistency.
+        const session = await sr.provider.readSession(sr.rawSlug);
+        const rows = session.native as WaterfallRow[];
+        return buildSessionSummaryFromContent(rows, sr.sessionId, sr.slug, rawContent);
       });
-      return { sf, summary, error };
+      return { sr, summary, error };
     }),
     20,
   );
 
   // Collect errors and filter out failed parses
-  const summaries: Array<{ sf: SessionFile; summary: PatternSessionSummary }> = [];
+  const summaries: Array<{ sr: SessionRecord; summary: PatternSessionSummary }> = [];
   for (const item of parsed) {
     if (item.error && item.summary === null) {
-      errors.push({ path: item.sf.filePath, reason: item.error });
+      errors.push({ path: item.sr.filePath, reason: item.error });
     } else if (item.summary !== null) {
-      summaries.push({ sf: item.sf, summary: item.summary });
+      summaries.push({ sr: item.sr, summary: item.summary });
     }
   }
 

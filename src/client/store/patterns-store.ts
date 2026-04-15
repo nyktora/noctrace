@@ -53,6 +53,20 @@ export interface PatternsResponse {
     callsPrev: number;
   }>;
   errors: Array<{ path: string; reason: string }>;
+  /**
+   * Phase B / multi-provider: sessions excluded from health distribution and ROT leaderboard
+   * because their provider does not support contextTracking.
+   * Key is the provider displayName; value is the excluded session count.
+   * Absent (undefined) on pre-Phase-B servers — treat as empty.
+   */
+  healthExcludedByProvider?: Record<string, number>;
+  /**
+   * Phase B / multi-provider: sessions excluded from tool health grid because their provider
+   * does not expose full tool-call granularity (toolCallGranularity !== 'full').
+   * Key is the provider displayName; value is the excluded session count.
+   * Absent (undefined) on pre-Phase-B servers — treat as empty.
+   */
+  toolHealthExcludedByProvider?: Record<string, number>;
 }
 
 /** Patterns Zustand slice */

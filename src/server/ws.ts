@@ -1,6 +1,11 @@
 /**
  * WebSocket handler for real-time session event streaming.
  * Mounts at /ws. One watcher per connection, cleaned up on disconnect.
+ *
+ * Phase B: the top-level directory watcher that broadcasts session-created
+ * events is now driven by provider.watch() from the Provider registry.
+ * Per-connection file watchers (watchSession / watchSubAgent) remain as-is
+ * since they do incremental row parsing not yet part of the Provider interface.
  */
 import { WebSocketServer, WebSocket } from 'ws';
 import { spawn } from 'node:child_process';
@@ -12,6 +17,7 @@ import type { IncomingMessage } from 'node:http';
 import type { Server } from 'node:http';
 import { watchSession, watchSubAgent } from './watcher.js';
 import { extractAgentIds } from '../shared/parser.js';
+import { createClaudeCodeProvider } from '../shared/providers/claude-code.js';
 import type { WaterfallRow, ContextHealth, DriftAnalysis, HookEventMessage, CompactionBoundary, SubagentStartMessage } from '../shared/types.js';
 
 // ---------------------------------------------------------------------------
@@ -150,22 +156,15 @@ export function setupWebSocket(server: Server, claudeHome: string): WebSocketSer
   // Suppress unhandled WSS errors during port retry (EADDRINUSE propagates here)
   wss.on('error', () => {});
 
-  // Watch the projects directory for new .jsonl session files.
-  // When a new file appears, broadcast to all connected clients so they
-  // can refresh their session list without a manual page reload.
-  const projectsBase = path.join(claudeHome, 'projects');
-  const dirWatcher = chokidar.watch(projectsBase, {
-    persistent: true,
-    ignoreInitial: true,
-    depth: 1,
-  });
-
-  dirWatcher.on('add', (filePath: string) => {
-    if (!filePath.endsWith('.jsonl')) return;
-    // Derive the project slug from the parent directory name
-    const relative = path.relative(projectsBase, filePath);
-    const slug = path.dirname(relative);
-    if (!slug || slug === '.') return;
+  // Watch the projects directory via the provider's watch() interface.
+  // session-added events map to session-created WebSocket broadcasts.
+  const dirProvider = createClaudeCodeProvider(claudeHome);
+  const unsubscribeDir = dirProvider.watch((event) => {
+    if (event.kind !== 'session-added') return;
+    // sessionId for claude-code is '<projectSlug>/<fileId>'
+    const slashIdx = event.sessionId.indexOf('/');
+    const slug = slashIdx !== -1 ? event.sessionId.slice(0, slashIdx) : event.sessionId;
+    if (!slug) return;
 
     const msg: SessionCreatedMessage = { type: 'session-created', slug };
     const payload = JSON.stringify(msg);
@@ -176,12 +175,8 @@ export function setupWebSocket(server: Server, claudeHome: string): WebSocketSer
     }
   });
 
-  dirWatcher.on('error', (err) => {
-    console.warn('[noctrace] dir watcher error:', err instanceof Error ? err.message : String(err));
-  });
-
   wss.on('close', () => {
-    dirWatcher.close().catch(() => {});
+    unsubscribeDir();
   });
 
   wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { TipSeverity, WaterfallRow } from '../../shared/types.ts';
 import { useSessionStore } from '../store/session-store.ts';
+import { useCapabilities } from '../hooks/use-capabilities.ts';
 import { CloseIcon } from '../icons/close-icon.tsx';
 import { ErrorIcon } from '../icons/error-icon.tsx';
 import { SuccessIcon } from '../icons/success-icon.tsx';
@@ -110,8 +111,10 @@ const DEFAULT_HEIGHT = 220;
  */
 export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
   const selectRow = useSessionStore((s) => s.selectRow);
+  const capabilities = useCapabilities();
   const toolColor = getToolColor(row.toolName, row.status);
-  const heatColor = getContextHeatColor(row.contextFillPercent);
+  const effectiveFillPercent = capabilities.contextTracking ? row.contextFillPercent : 0;
+  const heatColor = getContextHeatColor(effectiveFillPercent);
 
   const [height, setHeight] = useState(DEFAULT_HEIGHT);
   const isDragging = useRef(false);
@@ -212,7 +215,8 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
           <span style={{ color: 'var(--ctp-subtext0)' }}>
             {formatDuration(row.duration)}
           </span>
-          {row.tokenDelta > 0 && (
+          {/* Token delta — only when provider has token accounting */}
+          {capabilities.tokenAccounting !== 'none' && row.tokenDelta > 0 && (
             <span
               style={{ color: row.tokenDelta > 5000 ? 'var(--ctp-yellow)' : 'var(--ctp-subtext0)' }}
               title={`${row.tokenDelta} tokens added to context`}
@@ -220,8 +224,8 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
               Δ {formatTokens(row.tokenDelta)}
             </span>
           )}
-          {/* Cost badge */}
-          {row.estimatedCost !== null && (
+          {/* Cost badge — only when provider has token accounting */}
+          {capabilities.tokenAccounting !== 'none' && row.estimatedCost !== null && (
             <span
               style={{ color: 'var(--ctp-green)' }}
               title={`Estimated cost (${row.modelName ?? 'sonnet'} pricing)`}
@@ -244,18 +248,21 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
               {row.modelName.replace(/^claude-/, '').replace(/-\d{8}$/, '')}
             </span>
           )}
-          {/* Context badge */}
-          <span
-            className="px-1.5 py-0.5 rounded text-xs font-mono"
-            style={{
-              border: `1px solid ${heatColor}`,
-              color: heatColor,
-              backgroundColor: `${heatColor}18`,
-              fontWeight: row.contextFillPercent >= 80 ? 700 : 400,
-            }}
-          >
-            {Math.min(row.contextFillPercent, 100).toFixed(0)}%{row.contextFillPercent >= 80 ? ' degraded' : ' ctx'}
-          </span>
+          {/* Context badge — only when provider tracks context fill */}
+          {capabilities.contextTracking && (
+            <span
+              className="px-1.5 py-0.5 rounded text-xs font-mono"
+              data-testid="detail-ctx-badge"
+              style={{
+                border: `1px solid ${heatColor}`,
+                color: heatColor,
+                backgroundColor: `${heatColor}18`,
+                fontWeight: effectiveFillPercent >= 80 ? 700 : 400,
+              }}
+            >
+              {Math.min(effectiveFillPercent, 100).toFixed(0)}%{effectiveFillPercent >= 80 ? ' degraded' : ' ctx'}
+            </span>
+          )}
         </div>
 
         <button

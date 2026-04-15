@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import type { WaterfallRow as WaterfallRowData } from '../../shared/types.ts';
 import type { ParsedFilter } from '../../shared/filter.ts';
 import { rowMatchesFilter } from '../../shared/filter.ts';
+import { useCapabilities } from '../hooks/use-capabilities.ts';
 import { HookIcon } from '../icons/hook-icon.tsx';
 import { TurnIcon } from '../icons/turn-icon.tsx';
 import { FastIcon } from '../icons/fast-icon.tsx';
@@ -136,6 +137,7 @@ export function WaterfallRowComponent({
   onFocusNeighbor,
 }: WaterfallRowProps): React.ReactElement {
   const slowThresholdMs = useSessionStore((s) => s.slowThresholdMs);
+  const capabilities = useCapabilities();
   const isSlow = row.duration !== null && row.duration > slowThresholdMs;
 
   const isAgent = row.type === 'agent';
@@ -146,8 +148,11 @@ export function WaterfallRowComponent({
   const indent = row.parentAgentId ? 24 : 0;
   const toolColor = getToolColor(row.toolName, row.status);
   const toolHex = resolveColor(toolColor);
-  const heatColor = getContextHeatColor(row.contextFillPercent);
-  const isDegraded = row.contextFillPercent >= 80;
+  // Context-tracking signals are only valid when the provider supports them.
+  // When contextTracking is false, treat fill as 0 so no degradation tinting or heat strips show.
+  const effectiveFillPercent = capabilities.contextTracking ? row.contextFillPercent : 0;
+  const heatColor = getContextHeatColor(effectiveFillPercent);
+  const isDegraded = capabilities.contextTracking && effectiveFillPercent >= 80;
   const matched = rowMatchesFilter(row, parsedFilter);
 
   // Join text tokens for highlighting (never use the raw filter string)
@@ -611,30 +616,33 @@ export function WaterfallRowComponent({
         </span>
       </div>
 
-      {/* Context % column */}
-      <div
-        className="hidden-mobile"
-        style={{
-          width: COL_CTX,
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          paddingRight: 4,
-          borderRight: '1px solid rgba(69,71,90,0.5)',
-        }}
-      >
-        <span
-          className="font-mono text-xs"
+      {/* Context % column — only when provider tracks context fill */}
+      {capabilities.contextTracking && (
+        <div
+          className="hidden-mobile"
+          data-testid="ctx-column"
           style={{
-            color: heatColor,
-            fontSize: 10,
-            fontWeight: isDegraded ? 700 : 400,
+            width: COL_CTX,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            paddingRight: 4,
+            borderRight: '1px solid rgba(69,71,90,0.5)',
           }}
         >
-          {row.contextFillPercent > 0 ? `${Math.min(row.contextFillPercent, 100).toFixed(0)}%` : ''}
-        </span>
-      </div>
+          <span
+            className="font-mono text-xs"
+            style={{
+              color: heatColor,
+              fontSize: 10,
+              fontWeight: isDegraded ? 700 : 400,
+            }}
+          >
+            {effectiveFillPercent > 0 ? `${Math.min(effectiveFillPercent, 100).toFixed(0)}%` : ''}
+          </span>
+        </div>
+      )}
 
       {/* Waterfall bar column */}
       <div

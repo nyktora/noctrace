@@ -7,6 +7,12 @@ import { ArrowDownIcon } from '../../icons/arrow-down-icon.tsx';
 /** Props for ToolHealthGrid */
 export interface ToolHealthGridProps {
   tools: PatternsResponse['toolHealth'];
+  /**
+   * Sessions excluded from this grid because their provider does not expose full
+   * tool-call granularity (toolCallGranularity !== 'full').
+   * Key: provider displayName, value: excluded count.
+   */
+  excludedByProvider?: Record<string, number>;
 }
 
 /** Format a 0..1 fail percentage as "3.4%" */
@@ -46,7 +52,8 @@ function p50Color(ms: number): string {
  * Fail % cell is color-coded: green <1%, yellow 1-5%, red >5%.
  * p95 latency cell is color-coded: green <1s, yellow 1-5s, red >5s.
  */
-export function ToolHealthGrid({ tools }: ToolHealthGridProps): React.ReactElement {
+export function ToolHealthGrid({ tools, excludedByProvider }: ToolHealthGridProps): React.ReactElement {
+  const excludedEntries = excludedByProvider ? Object.entries(excludedByProvider).filter(([, n]) => n > 0) : [];
   if (tools.length === 0) {
     return (
       <p
@@ -206,6 +213,29 @@ export function ToolHealthGrid({ tools }: ToolHealthGridProps): React.ReactEleme
           </div>
         );
       })}
+
+      {/* Exclusion note — shown when sessions with non-full tool granularity were excluded */}
+      {excludedEntries.length > 0 && (
+        <div
+          data-testid="tool-exclusion-note"
+          style={{
+            marginTop: 8,
+            padding: '4px 8px',
+            borderRadius: 4,
+            backgroundColor: 'rgba(88,91,112,0.2)',
+            border: '1px solid var(--ctp-surface1)',
+            fontSize: 10,
+            color: 'var(--ctp-overlay0)',
+            fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+          }}
+        >
+          {excludedEntries.map(([providerName, count]) => (
+            <span key={providerName}>
+              {count} session{count === 1 ? '' : 's'} excluded (provider: {providerName} does not expose full tool-call data)
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

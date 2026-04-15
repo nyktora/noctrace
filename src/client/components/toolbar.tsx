@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, useState } from 'react';
 
 import { useSessionStore } from '../store/session-store.ts';
+import { useCapabilities } from '../hooks/use-capabilities.ts';
 import { NavToggle } from './nav-toggle.tsx';
 import { HealthBadge } from './health-badge.tsx';
 import { SessionStats } from './session-stats.tsx';
@@ -69,6 +70,8 @@ export function Toolbar(): React.ReactElement {
     }
     return { agentCount: agents, totalTokens: tokens, sessionDuration: maxEnd - minStart, tipCount: tips, securityTipCount: securityTips, totalCost: hasCost ? cost : null };
   }, [rows]);
+
+  const capabilities = useCapabilities();
 
   const reliability = useMemo(() => computeReliability(rows), [rows]);
   const reliabilityColor = reliability.totalCalls === 0
@@ -192,11 +195,15 @@ export function Toolbar(): React.ReactElement {
             </div>
           )}
 
-          {/* Health grade badge — 20x20 compact circle */}
-          {health && <HealthBadge grade={health.grade} score={health.score} size={20} />}
+          {/* Health grade badge — only when provider tracks context fill */}
+          {capabilities.contextTracking && health && (
+            <span data-testid="toolbar-health-pill">
+              <HealthBadge grade={health.grade} score={health.score} size={20} />
+            </span>
+          )}
 
-          {/* Drift indicator */}
-          {drift && drift.driftFactor >= 1.5 && (
+          {/* Drift indicator — only when provider tracks context */}
+          {capabilities.contextTracking && drift && drift.driftFactor >= 1.5 && (
             <div className="flex items-center" style={{ gap: 3 }}>
               <DriftIcon size={12} color={driftColor} />
               <span
@@ -246,14 +253,17 @@ export function Toolbar(): React.ReactElement {
           {/* Warning icon */}
           <WarningIcon size={12} color="var(--ctp-overlay0)" />
 
-          {/* Token count */}
-          <span
-            className="font-mono"
-            style={{ color: 'var(--ctp-subtext0)' }}
-            title={`Total tokens consumed: ${totalTokens} (context growth + output)`}
-          >
-            {formatTokens(totalTokens)}
-          </span>
+          {/* Token count — only when provider has token accounting */}
+          {capabilities.tokenAccounting !== 'none' && (
+            <span
+              className="font-mono"
+              style={{ color: 'var(--ctp-subtext0)' }}
+              title={`Total tokens consumed: ${totalTokens} (context growth + output)`}
+              data-testid="toolbar-token-count"
+            >
+              {formatTokens(totalTokens)}
+            </span>
+          )}
 
           {/* Session duration */}
           {sessionDuration !== null && (
@@ -266,12 +276,13 @@ export function Toolbar(): React.ReactElement {
             </span>
           )}
 
-          {/* Session total cost */}
-          {totalCost !== null && (
+          {/* Session total cost — only when provider has token accounting */}
+          {capabilities.tokenAccounting !== 'none' && totalCost !== null && (
             <span
               className="font-mono"
               style={{ color: 'var(--ctp-green)', fontWeight: 600 }}
               title="Estimated session cost (based on public Claude API pricing)"
+              data-testid="toolbar-cost-pill"
             >
               {formatCost(totalCost)}
             </span>

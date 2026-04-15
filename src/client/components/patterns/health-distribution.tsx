@@ -8,6 +8,11 @@ import { ArrowDownIcon } from '../../icons/arrow-down-icon.tsx';
 export interface HealthDistributionProps {
   current: HealthGradeDist;
   previous: HealthGradeDist;
+  /**
+   * Sessions excluded from these bars because their provider does not track health grade.
+   * Key: provider displayName, value: excluded count. Shown as a note below the chart.
+   */
+  excludedByProvider?: Record<string, number>;
 }
 
 const GRADES = ['A', 'B', 'C', 'D', 'F'] as const;
@@ -26,7 +31,8 @@ const GRADE_COLORS: Record<Grade, string> = {
  * Current window is filled; previous window shows as a ghost outline bar.
  * Below each bar: count + delta arrow relative to previous window.
  */
-export function HealthDistribution({ current, previous }: HealthDistributionProps): React.ReactElement {
+export function HealthDistribution({ current, previous, excludedByProvider }: HealthDistributionProps): React.ReactElement {
+  const excludedEntries = excludedByProvider ? Object.entries(excludedByProvider).filter(([, n]) => n > 0) : [];
   // Compute the max count across both windows for scaling
   const maxCount = Math.max(
     ...GRADES.map((g) => Math.max(current[g], previous[g])),
@@ -36,6 +42,7 @@ export function HealthDistribution({ current, previous }: HealthDistributionProp
   const BAR_HEIGHT = 100; // px
 
   return (
+    <>
     <div
       style={{
         display: 'flex',
@@ -212,5 +219,29 @@ export function HealthDistribution({ current, previous }: HealthDistributionProp
         );
       })}
     </div>
+
+    {/* Exclusion note — shown when multi-provider sessions were excluded from this chart */}
+    {excludedEntries.length > 0 && (
+      <div
+        data-testid="health-exclusion-note"
+        style={{
+          marginTop: 8,
+          padding: '4px 8px',
+          borderRadius: 4,
+          backgroundColor: 'rgba(88,91,112,0.2)',
+          border: '1px solid var(--ctp-surface1)',
+          fontSize: 10,
+          color: 'var(--ctp-overlay0)',
+          fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+        }}
+      >
+        {excludedEntries.map(([providerName, count]) => (
+          <span key={providerName}>
+            {count} session{count === 1 ? '' : 's'} excluded (provider: {providerName} does not track health grade)
+          </span>
+        ))}
+      </div>
+    )}
+  </>
   );
 }

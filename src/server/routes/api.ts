@@ -1,13 +1,15 @@
 /**
  * REST API routes for project and session data.
- * All data is read from JSONL files on disk — no in-memory caching.
+ * All data is read from JSONL files on disk via the Provider registry.
+ * Phase B: session reads are routed through getProvider() instead of calling
+ * parseJsonlContent directly. Raw file content is still read separately for
+ * enrichments not yet in the Provider interface (compaction, drift, tips, etc.).
  */
 import express, { Router } from 'express';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
 import {
-  parseJsonlContent,
   parseCompactionBoundaries,
   extractSessionId,
   extractSessionTitle,
@@ -21,6 +23,9 @@ import { parseAssistantTurns, computeDrift } from '../../shared/drift.js';
 import { attachEfficiencyTips } from '../../shared/tips.js';
 import { attachSecurityTips } from '../../shared/security-tips.js';
 import { sessionToOtlp } from '../../shared/otlp-export.js';
+import { createClaudeCodeProvider } from '../../shared/providers/claude-code.js';
+import type { Provider } from '../../shared/providers/index.js';
+import type { WaterfallRow } from '../../shared/types.js';
 import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage, SessionRegisteredMessage, SessionUnregisteredMessage, AgentTeam, TeamMember, TeamTask, SubagentStartMessage } from '../../shared/types.js';
 
 /**
@@ -71,13 +76,20 @@ function assertWithinBase(resolved: string, base: string): void {
 /**
  * Build the Express router, scoped to a given Claude home directory.
  * `wss` is the WebSocketServer instance used to broadcast hook events to
- * all connected browser clients.
+ * all connected browser clients. Optional in tests that only exercise
+ * non-WebSocket endpoints.
  */
-export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router {
+export function buildApiRouter(claudeHome: string, wss?: WebSocketServer): Router {
   const router = Router();
   const projectsDir = path.join(claudeHome, 'projects');
   const teamsDir = path.join(claudeHome, 'teams');
   const tasksDir = path.join(claudeHome, 'tasks');
+
+  /**
+   * Provider scoped to this router's claudeHome.
+   * Used by session-read endpoints to route through the Provider abstraction.
+   */
+  const sessionProvider: Provider = createClaudeCodeProvider(claudeHome);
 
   /**
    * In-memory registry of MCP-registered session paths.
@@ -91,6 +103,7 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
 
   /** Broadcast a message to all connected WebSocket clients. */
   function broadcast(msg: SessionRegisteredMessage | SessionUnregisteredMessage): void {
+    if (!wss) return;
     const payload = JSON.stringify(msg);
     for (const client of wss.clients) {
       if (client.readyState === WebSocket.OPEN) {
@@ -437,15 +450,18 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
     }
 
     try {
+      // Use the provider to read session rows; fall back to 404 when not found.
+      let rows: WaterfallRow[];
       let content: string;
       try {
         content = await fs.readFile(filePath, 'utf8');
+        const session = await sessionProvider.readSession(`${slug}/${id}`);
+        rows = session.native as WaterfallRow[];
       } catch {
         res.status(404).json({ error: `Session not found: ${slug}/${id}` });
         return;
       }
 
-      const rows = parseJsonlContent(content);
       const sessionId = extractSessionId(content) ?? id;
       const otlp = sessionToOtlp(rows, sessionId);
 
@@ -477,15 +493,19 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
     }
 
     try {
+      // Use the provider to read session rows; fall back to 404 when not found.
+      let rows: WaterfallRow[];
       let content: string;
       try {
+        // Read raw content for compaction/drift/tips analysis (not in Provider interface yet)
         content = await fs.readFile(filePath, 'utf8');
+        const session = await sessionProvider.readSession(`${slug}/${id}`);
+        rows = session.native as WaterfallRow[];
       } catch {
         res.status(404).json({ error: `Session not found: ${slug}/${id}` });
         return;
       }
 
-      const rows = parseJsonlContent(content);
       const boundaries = parseCompactionBoundaries(content);
       const health = computeContextHealth(rows, boundaries.length);
       const sessionId = extractSessionId(content) ?? id;
@@ -712,7 +732,7 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
 
       // For SubagentStart events, broadcast a separate message type
       // so the client can show an in-progress agent row immediately
-      if (event.hook_event_name === 'SubagentStart' && event.agent_id) {
+      if (event.hook_event_name === 'SubagentStart' && event.agent_id && wss) {
         const subagentMsg: SubagentStartMessage = {
           type: 'subagent-start',
           agentId: event.agent_id,
@@ -730,9 +750,11 @@ export function buildApiRouter(claudeHome: string, wss: WebSocketServer): Router
       const message: HookEventMessage = { type: 'hook-event', event };
       const payload = JSON.stringify(message);
 
-      for (const client of wss.clients) {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(payload);
+      if (wss) {
+        for (const client of wss.clients) {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(payload);
+          }
         }
       }
 

@@ -268,17 +268,24 @@ export function PatternsView(): React.ReactElement {
             <HealthDistribution
               current={patternsData.healthDist.current}
               previous={patternsData.healthDist.previous}
+              excludedByProvider={patternsData.healthExcludedByProvider}
             />
           </PatternsPanel>
 
           {/* ROT Leaderboard */}
           <PatternsPanel title="Project ROT leaderboard">
-            <RotLeaderboard rows={patternsData.rotLeaderboard} />
+            <RotLeaderboard
+              rows={patternsData.rotLeaderboard}
+              excludedByProvider={patternsData.healthExcludedByProvider}
+            />
           </PatternsPanel>
 
           {/* Tool Health Grid */}
           <PatternsPanel title="Tool health">
-            <ToolHealthGrid tools={patternsData.toolHealth} />
+            <ToolHealthGrid
+              tools={patternsData.toolHealth}
+              excludedByProvider={patternsData.toolHealthExcludedByProvider}
+            />
           </PatternsPanel>
         </>
       )}

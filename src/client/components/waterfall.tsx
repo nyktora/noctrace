@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CompactionBoundary, WaterfallRow } from '../../shared/types.ts';
 import { parseFilterString } from '../../shared/filter.ts';
 import { useSessionStore } from '../store/session-store.ts';
+import { useCapabilities } from '../hooks/use-capabilities.ts';
 import { HealthBar } from './health-bar.tsx';
 import { WaterfallRowComponent, COL_CTX, COL_NAME, COL_NUM, COL_TIME, COL_TOKENS, COL_TYPE, ROW_HEIGHT } from './waterfall-row.tsx';
 import { WarningIcon } from '../icons/warning-icon.tsx';
@@ -70,6 +71,8 @@ export function Waterfall(): React.ReactElement {
   const setAutoScroll = useSessionStore((s) => s.setAutoScroll);
   const nameColWidth = useSessionStore((s) => s.nameColWidth);
   const setNameColWidth = useSessionStore((s) => s.setNameColWidth);
+
+  const capabilities = useCapabilities();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const waterfallColRef = useRef<HTMLDivElement>(null);
@@ -256,8 +259,8 @@ export function Waterfall(): React.ReactElement {
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ backgroundColor: 'var(--ctp-base)' }}>
-      {/* Health bar */}
-      {health && (
+      {/* Health bar — only when provider tracks context fill */}
+      {capabilities.contextTracking && health && (
         <HealthBar fillPercent={health.fillPercent} grade={health.grade} />
       )}
 
@@ -300,13 +303,16 @@ export function Waterfall(): React.ReactElement {
         <div style={{ width: COL_TOKENS, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 6, borderRight: '1px solid var(--ctp-surface0)' }}>
           Δ Tok
         </div>
-        <div
-          className="hidden-mobile"
-          style={{ width: COL_CTX, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid var(--ctp-surface0)' }}
-          title="Context fill % at execution"
-        >
-          <WarningIcon size={12} color="var(--ctp-overlay0)" />
-        </div>
+        {/* Ctx % column header — only when provider tracks context */}
+        {capabilities.contextTracking && (
+          <div
+            className="hidden-mobile"
+            style={{ width: COL_CTX, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid var(--ctp-surface0)' }}
+            title="Context fill % at execution"
+          >
+            <WarningIcon size={12} color="var(--ctp-overlay0)" />
+          </div>
+        )}
         {/* Waterfall time axis header */}
         <div
           ref={waterfallColRef}
@@ -364,6 +370,7 @@ export function Waterfall(): React.ReactElement {
           compactionBoundaries={compactionBoundaries}
           sessionStart={sessionStart}
           nameColWidth={nameColWidth}
+          showCtxColumn={capabilities.contextTracking}
         />
 
         <div style={{ height: topSpacer }} />
@@ -500,6 +507,8 @@ interface GridLinesProps {
   compactionBoundaries: CompactionBoundary[];
   sessionStart: number;
   nameColWidth: number;
+  /** When false, the Ctx % column is hidden and its width is excluded from leftOffset. */
+  showCtxColumn: boolean;
 }
 
 /** Vertical grid lines and compaction boundaries, rendered as absolute positioned divs */
@@ -512,8 +521,9 @@ function GridLines({
   compactionBoundaries,
   sessionStart,
   nameColWidth,
+  showCtxColumn,
 }: GridLinesProps): React.ReactElement {
-  const leftOffset = COL_NUM + nameColWidth + COL_TYPE + COL_TIME + COL_TOKENS + COL_CTX;
+  const leftOffset = COL_NUM + nameColWidth + COL_TYPE + COL_TIME + COL_TOKENS + (showCtxColumn ? COL_CTX : 0);
 
   return (
     <div

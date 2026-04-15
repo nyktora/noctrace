@@ -8,6 +8,11 @@ import { LinkIcon } from '../../icons/link-icon.tsx';
 /** Props for RotLeaderboard */
 export interface RotLeaderboardProps {
   rows: PatternsResponse['rotLeaderboard'];
+  /**
+   * Sessions excluded from this leaderboard because their provider does not track health grade.
+   * Key: provider displayName, value: excluded count.
+   */
+  excludedByProvider?: Record<string, number>;
 }
 
 /** Format a 0..1 percentage as "12.3%" */
@@ -27,9 +32,10 @@ function fmtPct(v: number): string {
  * sessions view becomes active, auto-select that project, then call
  * `clearScrollToProject()` to consume the hint.
  */
-export function RotLeaderboard({ rows }: RotLeaderboardProps): React.ReactElement {
+export function RotLeaderboard({ rows, excludedByProvider }: RotLeaderboardProps): React.ReactElement {
   const setView = usePatternsStore((s) => s.setView);
   const fetchSessions = useSessionStore((s) => s.fetchSessions);
+  const excludedEntries = excludedByProvider ? Object.entries(excludedByProvider).filter(([, n]) => n > 0) : [];
 
   const handleRowClick = (rawSlug: string): void => {
     // Set the hint so SessionPicker can auto-select this project
@@ -162,6 +168,29 @@ export function RotLeaderboard({ rows }: RotLeaderboardProps): React.ReactElemen
           </div>
         );
       })}
+
+      {/* Exclusion note — shown when multi-provider sessions were excluded */}
+      {excludedEntries.length > 0 && (
+        <div
+          data-testid="rot-exclusion-note"
+          style={{
+            marginTop: 8,
+            padding: '4px 8px',
+            borderRadius: 4,
+            backgroundColor: 'rgba(88,91,112,0.2)',
+            border: '1px solid var(--ctp-surface1)',
+            fontSize: 10,
+            color: 'var(--ctp-overlay0)',
+            fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+          }}
+        >
+          {excludedEntries.map(([providerName, count]) => (
+            <span key={providerName}>
+              {count} session{count === 1 ? '' : 's'} excluded (provider: {providerName} does not track health grade)
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

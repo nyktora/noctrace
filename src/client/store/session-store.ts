@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 
 import type { AgentTeam, CompactionBoundary, ContextHealth, DriftAnalysis, InstructionFile, ProjectSummary, SessionInitContext, SessionResultMetrics, SessionSummary, WaterfallRow } from '../../shared/types.ts';
+import type { ProviderCapabilities } from '../../shared/providers/provider.ts';
+import { CLAUDE_CODE_CAPABILITIES } from '../hooks/use-capabilities.ts';
 
 /** A single message in a resume conversation */
 export interface ResumeMessage {
@@ -21,6 +23,17 @@ export interface SessionStore {
   resultMetrics: SessionResultMetrics | null;
   initContext: SessionInitContext | null;
   teams: AgentTeam[];
+
+  /**
+   * Provider identifier for the currently-loaded session (e.g. 'claude-code').
+   * Null when no session is loaded or the server has not yet surfaced it (pre-Phase B).
+   */
+  sessionProvider: string | null;
+  /**
+   * Capabilities for the currently-loaded session's provider.
+   * Null until a session is loaded; callers should fall back to CLAUDE_CODE_CAPABILITIES.
+   */
+  sessionCapabilities: ProviderCapabilities | null;
 
   // MCP mode — populated when MCP processes register sessions
   registeredSessions: string[];
@@ -71,6 +84,11 @@ export interface SessionStore {
   fetchProjects: () => Promise<void>;
   fetchSessions: (slug: string) => Promise<void>;
   fetchSession: (slug: string, id: string) => Promise<void>;
+  /**
+   * Directly set provider identity and capabilities.
+   * Used by tests and Phase B integration to inject capabilities without a full fetchSession.
+   */
+  setSessionCapabilities: (provider: string, capabilities: ProviderCapabilities) => void;
   /** Fetch the list of MCP-registered session paths and update mcpMode. */
   fetchRegisteredSessions: () => Promise<void>;
   /** Fetch Agent Teams from the server. */
@@ -115,6 +133,9 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   resultMetrics: null,
   initContext: null,
   teams: [],
+
+  sessionProvider: null,
+  sessionCapabilities: null,
 
   registeredSessions: [],
   mcpMode: false,
@@ -228,7 +249,17 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       instructionsLoaded?: InstructionFile[];
       resultMetrics?: SessionResultMetrics;
       initContext?: SessionInitContext;
+      /** Phase B: provider identifier, e.g. 'claude-code'. Absent on older server versions. */
+      provider?: string;
+      /** Phase B: provider capabilities. Absent on older server versions. */
+      capabilities?: ProviderCapabilities;
     };
+
+    // Derive capabilities: use server-supplied caps if present; fall back to
+    // CLAUDE_CODE_CAPABILITIES when the server hasn't surfaced them yet (pre-Phase B).
+    const provider = data.provider ?? 'claude-code';
+    const capabilities = data.capabilities ?? CLAUDE_CODE_CAPABILITIES;
+
     set({
       rows: data.rows,
       health: data.health,
@@ -243,8 +274,13 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       zoomLevel: 1,
       panOffset: 0,
       autoScroll: true,
+      sessionProvider: provider,
+      sessionCapabilities: capabilities,
     });
   },
+
+  setSessionCapabilities: (provider, capabilities) =>
+    set({ sessionProvider: provider, sessionCapabilities: capabilities }),
 
   selectRow: (id) => set({ selectedRowId: id }),
 
