@@ -2,6 +2,17 @@
 
 All notable changes to noctrace will be documented in this file.
 
+## [1.4.1] - 2026-04-15
+
+Two bug fixes that have been latent since 0.9.0 when conversation turn rows were introduced. Surfaced after heavy-conversation sessions made them obvious.
+
+### Fixed
+- **Waterfall chronological ordering.** `parseJsonlContent` built the waterfall in five separate passes — tool-use rows, API-error rows, hook rows, user-turn rows, and assistant-text-turn rows — each appended to the result array. The function returned without a final sort, so turn rows always clustered at the end of the waterfall regardless of when they actually happened in the session. A final `sort((a, b) => a.startTime - b.startTime || (a.sequence ?? 0) - (b.sequence ?? 0))` is now applied to both `parseJsonlContent` and `parseSubAgentContent`. Rows now render in true time order
+- **Parity snapshots regenerated** against the corrected sort. The 1.3 byte-identical gate still holds, just against the correct output now
+
+### Added
+- **`Chat` toggle in the toolbar, default off.** User prompts and assistant text-only responses (the `type: 'turn'` rows) are hidden by default so the waterfall is dominated by actual tool activity. Click `Chat` to show the full session narrative; the choice persists to localStorage. Conversation-heavy sessions no longer drown out the tool-call story
+
 ## [1.4.0] - 2026-04-15
 
 First non-Claude-Code provider. Noctrace now traces OpenAI Codex CLI sessions automatically — point it at a machine that uses `codex exec`, `codex review`, or any other Codex subcommand and the sessions show up in the picker alongside Claude Code, same waterfall, same health grade, same real-time streaming.
