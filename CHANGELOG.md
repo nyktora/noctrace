@@ -2,6 +2,27 @@
 
 All notable changes to noctrace will be documented in this file.
 
+## [1.4.0] - 2026-04-15
+
+First non-Claude-Code provider. Noctrace now traces OpenAI Codex CLI sessions automatically — point it at a machine that uses `codex exec`, `codex review`, or any other Codex subcommand and the sessions show up in the picker alongside Claude Code, same waterfall, same health grade, same real-time streaming.
+
+### Added
+- **Codex CLI provider.** Reads `~/.codex/sessions/YYYY/MM/DD/rollout-<timestamp>-<uuid>.jsonl` files. Honors `CODEX_HOME` env override. chokidar-watched for real-time updates. Zero config — if `~/.codex/` exists, sessions appear. If not, nothing happens. Coexists with Claude Code; both show in the same session picker with provider badges
+- Full tool-call granularity: Codex's `FunctionCall`/`FunctionCallOutput` events are paired by `call_id` and rendered as waterfall rows identical in shape to Claude Code's
+- Per-turn timing via Codex's `TurnStarted`/`TurnComplete` event pair
+- Per-turn token accounting from the separate `TokenCount` events, folded into the matching turn
+- Sub-agent linking: Codex rollout files with `forked_from_id` set render as collapsible child rows under their parent session
+- Failure detection: `ExecCommandEnd` with nonzero `exit_code` or `timed_out: true` tints the row red and sets `isFailure`, matching Claude Code's failure treatment. Retroactive patching handles Codex's out-of-order record emission (output before exec metadata)
+- **29 new unit tests** (fixture-based, no real Codex data required). 430 tests total
+- Five handwritten fixture rollout files cover: simple session, multi-turn with interleaved tokens, sub-agent, failure cases (both exit-code and timeout), malformed mid-file JSON
+
+### Changed
+- `src/shared/providers/index.ts` — one new line: `registerProvider(createCodexProvider())`. That is the entire registration. The provider abstraction shipped in 1.3 paid for itself
+
+### Notes for future providers
+- Codex's cached-input-token field (`cached_input_tokens`) is silently dropped today because `WaterfallRow` has no `cachedInputTokens` slot. If you want that data surfaced, extend the type first, then wire it through both providers
+- `~/.claude/` de-slugification uses `replace(/-/g, '/')` which collapses legitimate hyphens in project paths (e.g., `my-project` → `my/project`). Pre-existing issue, flagged during Codex work, not yet fixed
+
 ## [1.3.0] - 2026-04-15
 
 Internal refactor that lays the foundation for multi-provider support. No user-visible behavior change for Claude Code users — the existing waterfall, Patterns view, session picker, health grades, and streaming all work identically. This release is the plumbing that 1.4 (Codex CLI) and 1.5 (GitHub Copilot) build on.
