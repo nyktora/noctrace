@@ -2,6 +2,29 @@
 
 All notable changes to noctrace will be documented in this file.
 
+## [1.3.0] - 2026-04-15
+
+Internal refactor that lays the foundation for multi-provider support. No user-visible behavior change for Claude Code users — the existing waterfall, Patterns view, session picker, health grades, and streaming all work identically. This release is the plumbing that 1.4 (Codex CLI) and 1.5 (GitHub Copilot) build on.
+
+### Added
+- **Provider abstraction** in `src/shared/providers/`. A single `Provider` interface that any agent source can implement: `listSessions`, `readSession`, `watch`. Claude Code is now `createClaudeCodeProvider()` — a drop-in that wraps the existing JSONL parser and directory-walk logic
+- **Normalized `AgentSession` schema** in `src/shared/session.ts`. Rich provider-specific data rides along in a `native` passthrough field so no fidelity is lost (the Claude Code waterfall renders from the same `WaterfallRow[]` it always did)
+- **`ProviderCapabilities` flags** gate every UI surface that used to assume "all signals exist." Context-fill %, health grade, cost pills, and tool latency columns now render conditionally based on what the provider can supply. Today all capabilities are `true` for Claude Code, so nothing visible changes. But 1.5 Copilot will have `contextTracking: false` + `tokenAccounting: 'none'`, and the UI will hide those signals cleanly instead of showing fabricated zeros
+- **Parity test** (`tests/shared/provider-parity.test.ts`) locks byte-identical output between the legacy parser and the new Claude Code provider adapter across six fixture sessions covering simple, sub-agent, error, compaction, failure, and API-error cases. Any future change that alters Claude Code behavior has to explicitly regenerate the parity snapshots — silent regressions are impossible
+- Provider registry (`registerProvider`, `getProvider`, `listProviders`) so future providers are a single-file drop-in with no core edits
+
+### Changed
+- `src/server/rollup.ts`, `src/server/routes/api.ts`, and `src/server/ws.ts` now consume the Provider interface instead of calling `parseSessionContent` and walking `~/.claude/projects/` directly
+- The chokidar file watcher moved from `src/server/watcher.ts` into the Claude Code provider itself (`src/shared/providers/claude-code.ts`) since the watched paths are Claude-Code-specific
+- Existing URL shape `/api/session/:slug/:id` preserved for backward compatibility — provider defaults to `claude-code` when no explicit provider is requested
+
+### Tests
+- 51 new tests across the three phases: provider interface + adapter + registry + parity (22), server integration through the new interface (9), and capability-gating across every UI surface (20). **401 tests total** (was 350)
+- New `tests/fixtures/parity/` directory holds six canonical Claude Code session snapshots; regenerate via `scripts/generate-parity-snapshots.mjs` only when the parser behavior intentionally changes
+
+### Fixed
+- Grid lines in the waterfall were misaligned by 34px when the Ctx % column was conditionally hidden (a scenario that didn't exist before 1.3 but is needed for 1.5 Copilot sessions). Caught during Phase C.
+
 ## [1.2.0] - 2026-04-14
 
 ### Added

@@ -172,6 +172,7 @@ All steps complete. Order followed during implementation:
 52. ✅ Docker module extraction (testable `src/server/docker.ts` with `DockerRunner` injection interface, 24 unit tests, shell-injection-hardened watcher spawn)
 53. ✅ Devcontainer support (`--devcontainer <path>` resolves via docker labels, reuses Docker watcher pipeline)
 54. ✅ Patterns view (cross-session rollup: health distribution, project rot leaderboard, tool health grid — `GET /api/patterns` with calendar-semantic windows + mtime-keyed stat-on-read cache)
+55. ✅ Provider abstraction refactor (1.3.0: `src/shared/providers/` interface + Claude Code adapter + normalized `AgentSession` schema + `ProviderCapabilities`-gated UI; parity test locks byte-identical Claude Code behavior — foundation for multi-provider 1.4/1.5)
 ### Remaining polish:
 - Loading state spinners
 - README with demo GIF
