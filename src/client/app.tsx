@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 
 import type { WaterfallRow } from '../shared/types.ts';
 import { useSessionStore } from './store/session-store.ts';
+import { usePatternsStore } from './store/patterns-store.ts';
 import { useSessionWs } from './hooks/use-session-ws.ts';
 import { ResumeContext } from './hooks/resume-context.ts';
 import { Toolbar } from './components/toolbar.tsx';
@@ -10,6 +11,7 @@ import { Waterfall } from './components/waterfall.tsx';
 import { DetailPanel } from './components/detail-panel.tsx';
 import { ResumeBar } from './components/resume-bar.tsx';
 import { SessionCompare } from './components/session-compare.tsx';
+import { PatternsView } from './views/patterns-view.tsx';
 import { MenuIcon } from './icons/menu-icon.tsx';
 import { CloseIcon } from './icons/close-icon.tsx';
 
@@ -36,6 +38,7 @@ export function App(): React.ReactElement {
   const selectedRowId = useSessionStore((s) => s.selectedRowId);
   const rows = useSessionStore((s) => s.rows);
   const compareMode = useSessionStore((s) => s.compareMode);
+  const view = usePatternsStore((s) => s.view);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -135,9 +138,11 @@ export function App(): React.ReactElement {
             <MenuIcon size={14} />
           </button>
 
-          {/* Waterfall + detail panel (or comparison view) */}
+          {/* Waterfall + detail panel (or comparison view) or Patterns view */}
           <div className="flex flex-col flex-1 overflow-hidden">
-            {compareMode ? (
+            {view === 'patterns' ? (
+              <PatternsView />
+            ) : compareMode ? (
               <SessionCompare />
             ) : (
               <>

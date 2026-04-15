@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import type { AgentTeam, ProjectSummary, SessionSummary, TeamMember } from '../../shared/types.ts';
 import { useSessionStore } from '../store/session-store.ts';
+import { usePatternsStore } from '../store/patterns-store.ts';
 import { formatRelativeTime } from '../utils/tool-colors.ts';
 import { CompareIcon } from '../icons/compare-icon.tsx';
 import { TeamIcon } from '../icons/team-icon.tsx';
@@ -393,9 +394,22 @@ export function SessionPicker({ onSessionSelect }: SessionPickerProps): React.Re
   const [showEmpty, setShowEmpty] = useState(false);
   const [showTeams, setShowTeams] = useState(true);
 
+  // Consume the scrollToProjectSlug hint set by the ROT leaderboard when the user
+  // clicks a project row from the Patterns view. Auto-selects that project and
+  // clears the hint so it isn't re-applied on subsequent renders.
+  const scrollToProjectSlug = usePatternsStore((s) => s.scrollToProjectSlug);
+  const clearScrollToProject = usePatternsStore((s) => s.clearScrollToProject);
+
   useEffect(() => {
     void fetchProjects();
   }, [fetchProjects]);
+
+  useEffect(() => {
+    if (scrollToProjectSlug !== null) {
+      void fetchSessions(scrollToProjectSlug);
+      clearScrollToProject();
+    }
+  }, [scrollToProjectSlug, fetchSessions, clearScrollToProject]);
 
   function handleProjectSelect(slug: string): void {
     void fetchSessions(slug);

@@ -7,6 +7,7 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildApiRouter } from './routes/api.js';
+import { buildPatternsRouter } from './routes/patterns.js';
 import { setupWebSocket } from './ws.js';
 import { getClaudeHome } from './config.js';
 
@@ -27,6 +28,7 @@ export function startServer(): Promise<number> {
 
   const wss = setupWebSocket(server, claudeHome);
   app.use('/api', buildApiRouter(claudeHome, wss));
+  app.use('/api/patterns', buildPatternsRouter(claudeHome));
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });

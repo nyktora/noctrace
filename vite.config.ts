@@ -17,4 +17,16 @@ export default defineConfig({
   build: {
     outDir: 'dist/client',
   },
+  test: {
+    // Include both .ts and .tsx test files
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+    // Client-side component tests run in a browser-like DOM environment.
+    // Files under tests/client/ use happy-dom; server/shared tests keep the
+    // default (node) environment.
+    environmentMatchGlobs: [
+      ['tests/client/**', 'happy-dom'],
+    ],
+    globals: false,
+    setupFiles: ['tests/client/setup.ts'],
+  },
 });

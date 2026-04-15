@@ -296,6 +296,58 @@ export interface TeamTask {
 }
 
 /**
+ * Response shape for the cross-session Patterns rollup view.
+ * Aggregates data across all sessions in ~/.claude/projects/ within a chosen window.
+ */
+export interface PatternsResponse {
+  window: {
+    kind: 'today' | '7d' | '30d';
+    /** Inclusive start, Unix ms */
+    startMs: number;
+    /** Exclusive end, Unix ms */
+    endMs: number;
+    /** Start of the immediately preceding window of the same size, Unix ms */
+    prevStartMs: number;
+    /** End of the preceding window (= startMs of current), Unix ms */
+    prevEndMs: number;
+    /** Human-readable label, e.g. "Apr 7 – Apr 14, 2026" */
+    label: string;
+  };
+  sessionCounts: { current: number; previous: number };
+  healthDist: {
+    current: { A: number; B: number; C: number; D: number; F: number };
+    previous: { A: number; B: number; C: number; D: number; F: number };
+  };
+  rotLeaderboard: Array<{
+    /** De-slugified project path, e.g. ~/dev/noctrace */
+    project: string;
+    /** Raw slug for client-side routing, e.g. -Users-lam-dev-noctrace */
+    rawSlug: string;
+    /** Total sessions in the current window */
+    sessions: number;
+    /** Sessions with D or F grade */
+    bad: number;
+    /** bad / sessions, range 0..1 */
+    badPct: number;
+    avgCompactions: number;
+    /** Session ID of the lowest-scoring session in this project, or null */
+    worstSessionId: string | null;
+  }>;
+  toolHealth: Array<{
+    tool: string;
+    calls: number;
+    failures: number;
+    /** failures / calls, range 0..1 */
+    failPct: number;
+    p50ms: number;
+    p95ms: number;
+    /** Calls in the previous window, for delta chart */
+    callsPrev: number;
+  }>;
+  errors: Array<{ path: string; reason: string }>;
+}
+
+/**
  * An Agent Team as defined in ~/.claude/teams/{team-name}/config.json.
  */
 export interface AgentTeam {

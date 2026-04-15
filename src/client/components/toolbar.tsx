@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, useState } from 'react';
 
 import { useSessionStore } from '../store/session-store.ts';
+import { NavToggle } from './nav-toggle.tsx';
 import { HealthBadge } from './health-badge.tsx';
 import { SessionStats } from './session-stats.tsx';
 import { ContextStartup } from './context-startup.tsx';
@@ -101,6 +102,9 @@ export function Toolbar(): React.ReactElement {
           noctrace
         </span>
       </div>
+
+      {/* View toggle: Sessions | Patterns */}
+      <NavToggle />
 
       {/* Filter input */}
       <div className="flex-1 flex items-center relative min-w-0">
