@@ -7,6 +7,7 @@
 import type { Provider, ProviderCapabilities, TimeWindow, SessionEvent } from './provider.js';
 import type { SessionMeta, AgentSession } from '../session.js';
 import { createClaudeCodeProvider } from './claude-code.js';
+import { createCodexProvider } from './codex.js';
 
 export type { Provider, ProviderCapabilities, TimeWindow, SessionEvent };
 export type { SessionMeta, AgentSession };
@@ -48,3 +49,7 @@ export function listProviders(): Provider[] {
 // Register the Claude Code provider with default settings.
 // The claudeHome path is resolved from CLAUDE_HOME env var or ~/.claude.
 registerProvider(createClaudeCodeProvider());
+
+// Register the Codex CLI provider.
+// The codexHome path is resolved from CODEX_HOME env var or ~/.codex.
+registerProvider(createCodexProvider());

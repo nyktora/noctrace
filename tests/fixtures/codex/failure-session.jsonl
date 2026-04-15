@@ -1,0 +1,12 @@
+{"type":"SessionMeta","timestamp":"2026-04-15T12:00:00.000Z","id":"thread-fail1","forked_from_id":null,"cwd":"/home/user/broken","source":"cli","cli_version":"0.1.0","model_provider":"openai","agent_nickname":null,"agent_role":null,"agent_path":null}
+{"type":"TurnContext","timestamp":"2026-04-15T12:00:00.100Z","turn_id":"turn-fail-1","model":"o4-mini","cwd":"/home/user/broken","approval_policy":"auto-edit","sandbox_policy":null,"effort":"high","user_instructions":"Build the project"}
+{"type":"EventMsg","timestamp":"2026-04-15T12:00:00.200Z","event":{"TurnStarted":{"turn_id":"turn-fail-1","started_at":"2026-04-15T12:00:00.200Z","model_context_window":128000}}}
+{"type":"ResponseItem","timestamp":"2026-04-15T12:00:01.000Z","item":{"role":"assistant","content":[{"type":"text","text":"Let me build the project."}]}}
+{"type":"ResponseItem","timestamp":"2026-04-15T12:00:01.100Z","item":{"name":"shell","arguments":"{\"command\":\"npm run build\"}","call_id":"call-fail-001","id":"resp-fail-001"}}
+{"type":"ResponseItem","timestamp":"2026-04-15T12:00:05.000Z","item":{"call_id":"call-fail-001","output":"ERROR: Cannot find module 'missing-dep'\nnpm ERR! code 1"}}
+{"type":"EventMsg","timestamp":"2026-04-15T12:00:05.100Z","event":{"ExecCommandEnd":{"call_id":"call-fail-001","exit_code":1,"stdout":"","stderr":"ERROR: Cannot find module 'missing-dep'\nnpm ERR! code 1","duration":3900,"timed_out":false}}}
+{"type":"EventMsg","timestamp":"2026-04-15T12:00:06.000Z","event":{"TurnComplete":{"turn_id":"turn-fail-1","duration_ms":5800}}}
+{"type":"EventMsg","timestamp":"2026-04-15T12:00:06.100Z","event":{"TokenCount":{"info":{"total_token_usage":{"input_tokens":900,"output_tokens":60,"cached_input_tokens":0,"reasoning_output_tokens":0,"total_tokens":960},"model_context_window":128000},"rate_limits":{}}}}
+{"type":"ResponseItem","timestamp":"2026-04-15T12:00:07.000Z","item":{"name":"shell","arguments":"{\"command\":\"timeout 1 sleep 100\"}","call_id":"call-fail-002","id":"resp-fail-002"}}
+{"type":"ResponseItem","timestamp":"2026-04-15T12:00:08.000Z","item":{"call_id":"call-fail-002","output":""}}
+{"type":"EventMsg","timestamp":"2026-04-15T12:00:08.100Z","event":{"ExecCommandEnd":{"call_id":"call-fail-002","exit_code":124,"stdout":"","stderr":"","duration":1000,"timed_out":true}}}

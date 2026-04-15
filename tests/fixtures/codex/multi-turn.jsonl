@@ -1,0 +1,17 @@
+{"type":"SessionMeta","timestamp":"2026-04-15T10:00:00.000Z","id":"thread-multi1","forked_from_id":null,"cwd":"/home/user/webapp","source":"cli","cli_version":"0.1.0","model_provider":"openai","agent_nickname":null,"agent_role":null,"agent_path":null}
+{"type":"TurnContext","timestamp":"2026-04-15T10:00:00.100Z","turn_id":"turn-1","model":"gpt-4o","cwd":"/home/user/webapp","approval_policy":"auto-edit","sandbox_policy":null,"effort":"medium","user_instructions":"Add a unit test"}
+{"type":"EventMsg","timestamp":"2026-04-15T10:00:00.200Z","event":{"TurnStarted":{"turn_id":"turn-1","started_at":"2026-04-15T10:00:00.200Z","model_context_window":128000}}}
+{"type":"ResponseItem","timestamp":"2026-04-15T10:00:01.000Z","item":{"role":"assistant","content":[{"type":"text","text":"I'll add a unit test. First let me read the existing tests."}]}}
+{"type":"ResponseItem","timestamp":"2026-04-15T10:00:01.100Z","item":{"name":"shell","arguments":"{\"command\":\"ls tests/\"}","call_id":"call-t1-001","id":"resp-t1-001"}}
+{"type":"ResponseItem","timestamp":"2026-04-15T10:00:02.000Z","item":{"call_id":"call-t1-001","output":"auth.test.ts\napi.test.ts"}}
+{"type":"EventMsg","timestamp":"2026-04-15T10:00:02.500Z","event":{"TurnComplete":{"turn_id":"turn-1","duration_ms":2300}}}
+{"type":"EventMsg","timestamp":"2026-04-15T10:00:02.600Z","event":{"TokenCount":{"info":{"total_token_usage":{"input_tokens":800,"output_tokens":120,"cached_input_tokens":200,"reasoning_output_tokens":0,"total_tokens":920},"model_context_window":128000},"rate_limits":{}}}}
+{"type":"TurnContext","timestamp":"2026-04-15T10:00:03.000Z","turn_id":"turn-2","model":"gpt-4o","cwd":"/home/user/webapp","approval_policy":"auto-edit","sandbox_policy":null,"effort":"medium","user_instructions":null}
+{"type":"EventMsg","timestamp":"2026-04-15T10:00:03.100Z","event":{"TurnStarted":{"turn_id":"turn-2","started_at":"2026-04-15T10:00:03.100Z","model_context_window":128000}}}
+{"type":"ResponseItem","timestamp":"2026-04-15T10:00:03.500Z","item":{"role":"assistant","content":[{"type":"text","text":"Now I'll write the test file."}]}}
+{"type":"ResponseItem","timestamp":"2026-04-15T10:00:03.600Z","item":{"name":"shell","arguments":"{\"command\":\"cat > tests/login.test.ts << 'EOF'\\nimport { login } from '../src/login';\\ntest('login', () => { expect(login()).toBe(true); });\\nEOF\"}","call_id":"call-t2-001","id":"resp-t2-001"}}
+{"type":"ResponseItem","timestamp":"2026-04-15T10:00:04.200Z","item":{"call_id":"call-t2-001","output":""}}
+{"type":"ResponseItem","timestamp":"2026-04-15T10:00:04.300Z","item":{"name":"shell","arguments":"{\"command\":\"npm test\"}","call_id":"call-t2-002","id":"resp-t2-002"}}
+{"type":"ResponseItem","timestamp":"2026-04-15T10:00:07.000Z","item":{"call_id":"call-t2-002","output":"PASS tests/login.test.ts\n1 test passed"}}
+{"type":"EventMsg","timestamp":"2026-04-15T10:00:07.500Z","event":{"TurnComplete":{"turn_id":"turn-2","duration_ms":4400}}}
+{"type":"EventMsg","timestamp":"2026-04-15T10:00:07.600Z","event":{"TokenCount":{"info":{"total_token_usage":{"input_tokens":1500,"output_tokens":200,"cached_input_tokens":400,"reasoning_output_tokens":0,"total_tokens":1700},"model_context_window":128000},"rate_limits":{}}}}

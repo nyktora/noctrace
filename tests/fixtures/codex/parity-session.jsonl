@@ -1,0 +1,10 @@
+{"type":"SessionMeta","timestamp":"2026-04-15T14:00:00.000Z","id":"thread-parity1","forked_from_id":null,"cwd":"/home/user/parity","source":"cli","cli_version":"0.1.0","model_provider":"openai","agent_nickname":null,"agent_role":null,"agent_path":null}
+{"type":"TurnContext","timestamp":"2026-04-15T14:00:00.100Z","turn_id":"turn-p-1","model":"o4-mini","cwd":"/home/user/parity","approval_policy":"auto-edit","sandbox_policy":null,"effort":"high","user_instructions":"Write a file and run tests"}
+{"type":"EventMsg","timestamp":"2026-04-15T14:00:00.200Z","event":{"TurnStarted":{"turn_id":"turn-p-1","started_at":"2026-04-15T14:00:00.200Z","model_context_window":128000}}}
+{"type":"ResponseItem","timestamp":"2026-04-15T14:00:01.000Z","item":{"role":"assistant","content":[{"type":"text","text":"I'll write a file then run the tests."}]}}
+{"type":"ResponseItem","timestamp":"2026-04-15T14:00:01.100Z","item":{"name":"shell","arguments":"{\"command\":\"echo 'hello' > output.txt\"}","call_id":"call-p-001","id":"resp-p-001"}}
+{"type":"ResponseItem","timestamp":"2026-04-15T14:00:02.000Z","item":{"call_id":"call-p-001","output":""}}
+{"type":"ResponseItem","timestamp":"2026-04-15T14:00:02.100Z","item":{"name":"shell","arguments":"{\"command\":\"npm test\"}","call_id":"call-p-002","id":"resp-p-002"}}
+{"type":"ResponseItem","timestamp":"2026-04-15T14:00:05.000Z","item":{"call_id":"call-p-002","output":"All tests passed"}}
+{"type":"EventMsg","timestamp":"2026-04-15T14:00:05.500Z","event":{"TurnComplete":{"turn_id":"turn-p-1","duration_ms":5300}}}
+{"type":"EventMsg","timestamp":"2026-04-15T14:00:05.600Z","event":{"TokenCount":{"info":{"total_token_usage":{"input_tokens":1000,"output_tokens":100,"cached_input_tokens":0,"reasoning_output_tokens":0,"total_tokens":1100},"model_context_window":128000},"rate_limits":{}}}}
