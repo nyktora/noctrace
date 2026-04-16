@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Noctrace: open-source waterfall visualizer for AI coding agents — Claude Code, Codex CLI, and Copilot Chat. Monitor tool calls, track tokens, detect context rot. Zero config.">
+  <meta name="description" content="Open-source DevTools for AI coding agents. Waterfall visualizer for Claude Code, Codex CLI, and Copilot Chat. Context health, token tracking, zero config. npx noctrace">
+  <meta name="robots" content="index, follow">
   <meta name="author" content="Nyktora Group">
   <meta name="theme-color" content="#1e1e2e">
   <meta property="og:title" content="Noctrace — AI Coding Agent Observability &amp; Workflow Visualizer">
@@ -23,7 +24,7 @@
   <meta name="indexnow-key" content="4d691bd276782520f8d95f96adb9508e">
   <link rel="canonical" href="https://nyktora.github.io/noctrace/">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <title>Noctrace — AI Coding Agent Observability &amp; Workflow Visualizer</title>
+  <title>Noctrace — AI Coding Agent Observability | Claude Code, Codex, Copilot</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -66,9 +67,9 @@
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    "name": "Noctrace",
+    "name": "Noctrace — AI Coding Agent Observability",
     "alternateName": "noctrace",
-    "description": "Open-source Chrome DevTools-style waterfall visualizer for AI coding agent workflows — supports Claude Code, Codex CLI, and GitHub Copilot Chat. Monitor tool calls, track token costs, detect context rot, and debug sub-agents in real time.",
+    "description": "Open-source Chrome DevTools-style waterfall visualizer for AI coding agent workflows — supports Claude Code, Codex CLI, and GitHub Copilot Chat. Monitor tool calls, track token costs, detect context rot and context health degradation, debug sub-agents in real time, and export OpenTelemetry traces.",
     "url": "https://nyktora.github.io/noctrace/",
     "applicationCategory": "DeveloperApplication",
     "applicationSubCategory": "AI Observability Tool",
@@ -85,7 +86,7 @@
       "price": "0",
       "priceCurrency": "USD"
     },
-    "keywords": "claude code, observability, waterfall, devtools, ai agent, anthropic, llm monitoring"
+    "keywords": "claude code observability, ai coding agent observability, claude code session viewer, claude code tool call visualizer, context health, context rot, ai agent waterfall timeline, codex cli observability, copilot agent monitoring, npx noctrace, ai agent devtools, vibe coding observability, claude code debugger, claude code log viewer, claude code session logs, claude code jsonl parser, claude code opentelemetry"
   }
   </script>
   <script type="application/ld+json">
@@ -104,34 +105,42 @@
     "mainEntity": [
       {
         "@type": "Question",
-        "name": "What is Noctrace?",
+        "name": "What is Claude Code observability?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Noctrace is an open-source, local-only waterfall visualizer for AI coding agent sessions — supports Claude Code, OpenAI Codex CLI, and GitHub Copilot Chat. It reads session logs and renders them as an interactive timeline showing tool calls, sub-agents, token usage, and context health — similar to Chrome DevTools Network tab."
+          "text": "Claude Code observability means being able to see exactly what your Claude Code AI coding agent is doing — which tool calls it made, how long each took, how many tokens were consumed, and whether the context window is degrading. Noctrace provides this observability as a free, open-source, local-only waterfall timeline dashboard, modeled after Chrome DevTools' Network tab."
         }
       },
       {
         "@type": "Question",
-        "name": "How do I install Noctrace?",
+        "name": "How do I monitor Claude Code sessions?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Run npx noctrace in your terminal. No installation required — it starts a local server and opens a browser tab. For permanent install: npm install -g noctrace."
+          "text": "Run npx noctrace in your terminal. Noctrace automatically reads Claude Code session logs from ~/.claude/projects/, parses the JSONL files, and renders every tool call as a horizontal timing bar on a shared time axis. No configuration is required. For real-time monitoring during an active session, run noctrace before or during your Claude Code session."
         }
       },
       {
         "@type": "Question",
-        "name": "Does Noctrace send data to the cloud?",
+        "name": "Does noctrace work with GitHub Copilot?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No. Noctrace is completely local-only. It reads session logs directly from your machine (~/.claude/, ~/.codex/, or VS Code workspaceStorage) and serves them on localhost. No external API calls, no analytics, no telemetry."
+          "text": "Yes. Noctrace v1.5 added support for GitHub Copilot Chat sessions from VS Code. It reads session files from VS Code workspaceStorage and renders them in the same waterfall timeline alongside Claude Code and Codex CLI sessions. Copilot sessions show a blue 'copilot' badge in the session picker. Token counts are not available for Copilot Chat sessions since Copilot does not expose that data."
         }
       },
       {
         "@type": "Question",
-        "name": "What Claude Code features does Noctrace visualize?",
+        "name": "What is context rot in AI coding agents?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Noctrace visualizes tool calls (Read, Write, Edit, Bash, Agent), sub-agent workflows, token usage per turn, context fill percentage, compaction boundaries, API errors, efficiency tips, security tips, and per-tool latency statistics."
+          "text": "Context rot is the progressive degradation of an AI coding agent's output quality as the context window fills up. When Claude Code's context fill exceeds roughly 80%, the agent starts forgetting earlier instructions, re-reading files it already processed, and producing contradictory or lower-quality edits. Noctrace makes context rot visible with red row tinting on high-fill tool calls, a heat strip showing fill over time, compaction boundary lines, re-read indicators, and a drift rate metric."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use noctrace with Codex CLI?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Noctrace automatically detects OpenAI Codex CLI sessions at ~/.codex/sessions/ and displays them alongside Claude Code sessions in the same waterfall view. Codex sessions show an orange 'codex' badge in the session picker. Full tool-call granularity with per-turn token accounting is supported."
         }
       }
     ]
@@ -142,7 +151,8 @@
   <div id="root"></div>
   <noscript>
   <div style="max-width:900px;margin:0 auto;padding:48px 24px;color:#c9d1d9;font-family:monospace;line-height:1.75;">
-    <h1>Noctrace — AI Coding Agent Observability &amp; Workflow Visualizer</h1>
+    <h1>Noctrace — Claude Code Observability &amp; AI Agent DevTools</h1>
+    <h2>AI Coding Agent Observability for Claude Code, Codex CLI, and GitHub Copilot</h2>
 
     <section>
       <p>Noctrace is a free, open-source, local-only observability dashboard for AI coding agent workflows — supporting Claude Code, OpenAI Codex CLI, and GitHub Copilot Chat. It reads session logs and renders them as an interactive waterfall timeline in your browser — with no cloud dependency, no telemetry, no database, and zero configuration required. Install it with a single command: <code>npx noctrace</code>.</p>
@@ -211,12 +221,22 @@
     </section>
 
     <section>
+      <h2>Supported AI Coding Agent Providers</h2>
+      <p>Noctrace auto-detects sessions from three AI coding tools. All appear in one unified session picker with per-provider badges. Zero configuration required for any provider.</p>
+      <ul>
+        <li><strong>Claude Code (Anthropic):</strong> reads JSONL session logs from <code>~/.claude/projects/</code>. Full Claude Code observability — context health scoring, token cost estimation, compaction tracking, sub-agent waterfall, tool call visualization, and OpenTelemetry export. This is the primary Claude Code session viewer and Claude Code log viewer.</li>
+        <li><strong>Codex CLI (OpenAI):</strong> reads <code>~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl</code> files. Codex CLI observability with per-turn token accounting and full tool-call granularity. Orange <code>codex</code> badge in the session picker. Honors the <code>CODEX_HOME</code> environment variable.</li>
+        <li><strong>GitHub Copilot Chat (new in v1.5):</strong> reads VS Code workspaceStorage session files from <code>~/Library/Application Support/Code/User/workspaceStorage/</code>. Copilot agent monitoring with 19 internal tool IDs mapped to familiar names (Read, Write, Edit, Bash, etc.). Blue <code>copilot</code> badge. Token counts are not available since Copilot Chat does not expose them.</li>
+      </ul>
+    </section>
+
+    <section>
       <h2>License and links</h2>
       <p>Noctrace is free and open source under the MIT license.</p>
       <ul>
         <li><a href="https://github.com/nyktora/noctrace">GitHub repository</a></li>
-        <li><a href="https://www.npmjs.com/package/noctrace">npm package</a></li>
-        <li><a href="https://nyktora.github.io/noctrace/docs.html">Full documentation</a></li>
+        <li><a href="https://www.npmjs.com/package/noctrace">npm package — install noctrace</a></li>
+        <li><a href="https://nyktora.github.io/noctrace/docs.html">Read the Claude Code observability guide — full documentation</a></li>
         <li><a href="https://github.com/nyktora/noctrace/blob/main/CHANGELOG.md">Changelog</a></li>
       </ul>
     </section>
@@ -833,6 +853,7 @@
           React.createElement("div",{style:{display:"flex",gap:16}},
             React.createElement("a",{href:"https://github.com/nyktora/noctrace",style:{color:DM}},"github"),
             React.createElement("a",{href:"https://npmjs.com/package/noctrace",style:{color:DM}},"npm"),
+            React.createElement("a",{href:"docs.html",style:{color:DM}},"docs"),
             React.createElement("a",{href:"https://github.com/nyktora/noctrace/blob/main/CHANGELOG.md",style:{color:DM}},"changelog")
           )
         )
