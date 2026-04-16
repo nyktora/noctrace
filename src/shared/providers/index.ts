@@ -8,6 +8,7 @@ import type { Provider, ProviderCapabilities, TimeWindow, SessionEvent } from '.
 import type { SessionMeta, AgentSession } from '../session.js';
 import { createClaudeCodeProvider } from './claude-code.js';
 import { createCodexProvider } from './codex.js';
+import { createCopilotProvider } from './copilot.js';
 
 export type { Provider, ProviderCapabilities, TimeWindow, SessionEvent };
 export type { SessionMeta, AgentSession };
@@ -53,3 +54,7 @@ registerProvider(createClaudeCodeProvider());
 // Register the Codex CLI provider.
 // The codexHome path is resolved from CODEX_HOME env var or ~/.codex.
 registerProvider(createCodexProvider());
+
+// Register the GitHub Copilot Chat provider.
+// The base path is resolved from COPILOT_HOME env var or ~/Library/Application Support/Code/User/workspaceStorage.
+registerProvider(createCopilotProvider());

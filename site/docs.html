@@ -9,7 +9,7 @@
   <meta property="og:title" content="Noctrace Documentation — Installation, Configuration &amp; Usage Guide">
   <meta property="og:description" content="Complete guide to Noctrace: installation, Claude Code hook setup, waterfall timeline usage, context health scoring, efficiency tips, sub-agent visualization, and troubleshooting.">
   <meta property="og:type" content="article">
-  <meta property="article:modified_time" content="2026-04-14T00:00:00Z">
+  <meta property="article:modified_time" content="2026-04-15T00:00:00Z">
   <meta property="og:url" content="https://nyktora.github.io/noctrace/docs.html">
   <meta property="og:site_name" content="Noctrace">
   <meta property="og:locale" content="en_US">
@@ -70,7 +70,7 @@
     "headline": "Noctrace Documentation — Installation, Configuration &amp; Usage Guide",
     "description": "Installation, configuration, waterfall view, context health, context rot detection, and troubleshooting guide for Noctrace.",
     "url": "https://nyktora.github.io/noctrace/docs.html",
-    "dateModified": "2026-04-14",
+    "dateModified": "2026-04-15",
     "proficiencyLevel": "Expert",
     "dependencies": "Node.js 20 LTS, Claude Code",
     "author": {"@id":"https://nyktora.github.io/noctrace/#organization"},
@@ -172,6 +172,16 @@
       </section>
 
       <section>
+        <h2>Supported providers</h2>
+        <p>Noctrace reads sessions from three AI coding tools automatically. All appear in the same session picker with provider badges.</p>
+        <ul>
+          <li><strong>Claude Code</strong> — reads <code>~/.claude/projects/</code> JSONL session logs. Full context health scoring, token cost estimation, and all waterfall features.</li>
+          <li><strong>OpenAI Codex CLI</strong> — reads <code>~/.codex/sessions/</code> rollout JSONL files. Orange <code>codex</code> badge. Full tool-call granularity with per-turn token accounting.</li>
+          <li><strong>GitHub Copilot Chat (new in v1.5)</strong> — reads VS Code workspaceStorage JSON session files at <code>~/Library/Application Support/Code/User/workspaceStorage/</code>. Blue <code>copilot</code> badge. 19 internal tool IDs mapped to familiar names (Read, Write, Edit, Bash, etc.). Token tracking not available — Copilot Chat does not expose token counts, so the health grade and cost columns are hidden for Copilot sessions.</li>
+        </ul>
+      </section>
+
+      <section>
         <h2>System requirements</h2>
         <p>Node.js 20 LTS or later. macOS, Linux, or Windows (WSL recommended). Any modern browser. An existing Claude Code installation. No API keys, no accounts, no cloud.</p>
       </section>
@@ -236,6 +246,7 @@
       {id:"troubleshoot",label:"Troubleshooting"},
       {id:"compat",label:"Compatibility"},
       {id:"contributing",label:"Contributing"},
+      {id:"providers",label:"Supported providers"},
     ];
 
     function Sec(props){

@@ -245,7 +245,15 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   },
 
   fetchSession: async (slug: string, id: string) => {
-    const res = await fetch(`/api/session/${encodeURIComponent(slug)}/${encodeURIComponent(id)}`);
+    // Pass provider query param for non-Claude Code sessions so the server
+    // routes the read through the correct provider.
+    const sessions = get().sessions;
+    const sessionInfo = sessions.find((s) => s.id === id);
+    const knownProvider = sessionInfo?.provider;
+    const providerParam = knownProvider && knownProvider !== 'claude-code'
+      ? `?provider=${encodeURIComponent(knownProvider)}`
+      : '';
+    const res = await fetch(`/api/session/${encodeURIComponent(slug)}/${encodeURIComponent(id)}${providerParam}`);
     if (!res.ok) return;
     const data = (await res.json()) as {
       rows: WaterfallRow[];
@@ -334,7 +342,14 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   clearResume: () => set({ resumeStatus: 'idle', resumeMessages: [] }),
 
   enterCompareMode: async (slug: string, sessionId: string) => {
-    const res = await fetch(`/api/session/${encodeURIComponent(slug)}/${encodeURIComponent(sessionId)}`);
+    // Pass provider query param for non-Claude Code sessions.
+    const sessions = get().sessions;
+    const sessionInfo = sessions.find((s) => s.id === sessionId);
+    const provider = sessionInfo?.provider;
+    const providerParam = provider && provider !== 'claude-code'
+      ? `?provider=${encodeURIComponent(provider)}`
+      : '';
+    const res = await fetch(`/api/session/${encodeURIComponent(slug)}/${encodeURIComponent(sessionId)}${providerParam}`);
     if (!res.ok) return;
     const data = (await res.json()) as {
       rows: WaterfallRow[];

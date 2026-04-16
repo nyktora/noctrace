@@ -2,6 +2,22 @@
 
 All notable changes to noctrace will be documented in this file.
 
+## [1.5.0] - 2026-04-15
+
+Third provider and full multi-provider API wiring. Noctrace now reads GitHub Copilot Chat sessions out of the box — no config, no tokens needed. The provider registry that shipped in 1.3 and proved itself with Codex in 1.4 now routes the entire API surface, so all three providers share a single session picker and a single waterfall.
+
+### Added
+- **GitHub Copilot Chat provider.** Reads VS Code workspaceStorage session files at `~/Library/Application Support/Code/User/workspaceStorage/{hash}/chatSessions/{uuid}.json`. Zero config — if VS Code and Copilot Chat are installed, sessions appear automatically. Copilot projects are identified with a blue "copilot" badge in the session picker
+- **19 Copilot tool name mappings.** Copilot's internal tool IDs are translated to the same familiar names used by the rest of the waterfall: `copilot_readFile` → Read, `run_in_terminal` → Bash, `create_file` → Write, `replace_string_in_file` → Edit, and 15 more. Unknown IDs pass through unchanged
+- **Full-rewrite file watching.** Copilot Chat session files are rewritten in full on each update (unlike Claude Code's append-only JSONL). The provider detects full-rewrite events and re-parses the entire file, keeping the waterfall in sync with VS Code's save cadence
+- **Phase B provider wiring.** `GET /api/projects` now merges project lists from all registered providers into a single response. `GET /api/sessions/:slug` routes non-Claude sessions through the provider that owns the slug. `GET /api/session/:slug/:id?provider=copilot` loads sessions through the correct provider with conditional enrichments (context health and token cost are skipped for Copilot since it exposes neither)
+- **Provider-tagged summaries.** `ProjectSummary` and `SessionSummary` carry a `provider` field so the session picker can render the correct badge (orange `codex`, blue `copilot`, or the existing default for Claude Code). Copilot projects use the `copilot:~/path` slug format to avoid collisions with Claude Code slugs
+- **71 new unit tests.** 501 tests total. Test coverage spans the Copilot provider parser, tool name mapping, full-rewrite watcher behavior, and multi-provider API route merging
+
+### Notes for future providers
+- Copilot's `ProviderCapabilities` has `contextTracking: false` and `tokenAccounting: 'none'`. The health grade ring, context fill column, and token cost column all hide cleanly for Copilot sessions — no fabricated zeros shown
+- The `copilot:` slug prefix convention is the pattern to follow for any future provider that reads from a path namespace that could collide with `~/.claude/`
+
 ## [1.4.1] - 2026-04-15
 
 Two bug fixes that have been latent since 0.9.0 when conversation turn rows were introduced. Surfaced after heavy-conversation sessions made them obvious.

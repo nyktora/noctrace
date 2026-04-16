@@ -1,0 +1,63 @@
+{
+  "version": 3,
+  "sessionId": "copilot-session-abc123",
+  "creationDate": 1770777277237,
+  "lastMessageDate": 1770779818454,
+  "customTitle": "Fix login bug",
+  "responderUsername": "GitHub Copilot",
+  "initialLocation": "panel",
+  "requests": [
+    {
+      "requestId": "req-001",
+      "timestamp": 1770777277237,
+      "modelId": "copilot/claude-opus-4.5",
+      "message": { "text": "Read the login.ts file", "parts": [] },
+      "response": [
+        {
+          "kind": "toolInvocationSerialized",
+          "toolId": "copilot_readFile",
+          "toolCallId": "tool-call-001",
+          "invocationMessage": "Reading login.ts...",
+          "pastTenseMessage": "Read login.ts",
+          "isComplete": true,
+          "isConfirmed": { "type": 1 },
+          "source": { "type": "internal", "label": "Built-In" }
+        }
+      ],
+      "result": {
+        "timings": {
+          "firstProgress": 500,
+          "totalElapsed": 2300
+        }
+      },
+      "agent": { "name": "GitHub Copilot" },
+      "modelState": { "value": 1, "completedAt": 1770777279537 }
+    },
+    {
+      "requestId": "req-002",
+      "timestamp": 1770777300000,
+      "modelId": "copilot/claude-opus-4.5",
+      "message": { "text": "Run the tests", "parts": [] },
+      "response": [
+        {
+          "kind": "toolInvocationSerialized",
+          "toolId": "run_in_terminal",
+          "toolCallId": "tool-call-002",
+          "invocationMessage": { "value": "Running npm test", "uris": {} },
+          "pastTenseMessage": { "value": "Ran npm test", "uris": {} },
+          "isComplete": true,
+          "isConfirmed": { "type": 1 },
+          "source": { "type": "internal", "label": "Built-In" }
+        }
+      ],
+      "result": {
+        "timings": {
+          "firstProgress": 200,
+          "totalElapsed": 8500
+        }
+      },
+      "agent": { "name": "GitHub Copilot" },
+      "modelState": { "value": 1, "completedAt": 1770777308500 }
+    }
+  ]
+}

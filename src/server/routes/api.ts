@@ -24,6 +24,7 @@ import { attachEfficiencyTips } from '../../shared/tips.js';
 import { attachSecurityTips } from '../../shared/security-tips.js';
 import { sessionToOtlp } from '../../shared/otlp-export.js';
 import { createClaudeCodeProvider } from '../../shared/providers/claude-code.js';
+import { listProviders, getProvider } from '../../shared/providers/index.js';
 import type { Provider } from '../../shared/providers/index.js';
 import type { WaterfallRow } from '../../shared/types.js';
 import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage, SessionRegisteredMessage, SessionUnregisteredMessage, AgentTeam, TeamMember, TeamTask, SubagentStartMessage } from '../../shared/types.js';
@@ -183,7 +184,41 @@ export function buildApiRouter(claudeHome: string, wss?: WebSocketServer): Route
           sessionCount,
           activeSessionCount,
           lastModified: latestMtime.toISOString(),
+          provider: 'claude-code',
         });
+      }
+
+      // Collect projects from non-Claude Code providers (Codex, Copilot, etc.)
+      const now = Date.now();
+      const windowBounds = { startMs: now - 90 * 86_400_000, endMs: now + 86_400_000 };
+
+      for (const p of listProviders()) {
+        if (p.id === 'claude-code') continue; // Already handled above
+        try {
+          const sessions = await p.listSessions(windowBounds);
+          // Group sessions by projectContext
+          const byProject = new Map<string, typeof sessions>();
+          for (const s of sessions) {
+            const key = s.projectContext;
+            if (!byProject.has(key)) byProject.set(key, []);
+            byProject.get(key)!.push(s);
+          }
+          for (const [context, sessList] of byProject) {
+            // Use provider:context as the slug to disambiguate from Claude Code projects
+            const slug = `${p.id}:${context}`;
+            const latestMtime = Math.max(...sessList.map((s) => s.endMs ?? s.startMs));
+            projects.push({
+              slug,
+              path: context,
+              sessionCount: sessList.length,
+              activeSessionCount: 0, // Non-Claude providers can't detect active sessions
+              lastModified: new Date(latestMtime).toISOString(),
+              provider: p.id,
+            });
+          }
+        } catch (err) {
+          console.warn(`[noctrace] ${p.id} provider listSessions failed:`, err instanceof Error ? err.message : String(err));
+        }
       }
 
       // Sort by most recently modified first
@@ -315,9 +350,52 @@ export function buildApiRouter(claudeHome: string, wss?: WebSocketServer): Route
 
   /**
    * List sessions for a specific project, sorted by lastModified descending.
+   * For non-Claude Code providers, the slug has a provider prefix: `{providerId}:{projectContext}`.
    */
   router.get('/sessions/:slug', async (req, res) => {
     const { slug } = req.params;
+
+    // Check if this is a non-Claude Code provider slug (e.g. "codex:~/dev/project")
+    const colonIdx = slug.indexOf(':');
+    if (colonIdx > 0) {
+      const providerId = slug.slice(0, colonIdx);
+      const projectContext = slug.slice(colonIdx + 1);
+      const p = getProvider(providerId);
+      if (!p) {
+        res.status(404).json({ error: `Unknown provider: ${providerId}` });
+        return;
+      }
+      try {
+        const now = Date.now();
+        const windowBounds = { startMs: now - 90 * 86_400_000, endMs: now + 86_400_000 };
+        const allSessions = await p.listSessions(windowBounds);
+        const filtered = allSessions.filter((s) => s.projectContext === projectContext);
+
+        const sessions: SessionSummary[] = filtered.map((meta) => ({
+          id: meta.rawSlug,
+          projectSlug: slug,
+          filePath: '',
+          startTime: new Date(meta.startMs).toISOString(),
+          lastModified: meta.endMs ? new Date(meta.endMs).toISOString() : new Date().toISOString(),
+          rowCount: 0,
+          isActive: false,
+          permissionMode: null,
+          isRemoteControlled: false,
+          driftFactor: null,
+          title: null,
+          provider: providerId,
+        }));
+
+        sessions.sort((a, b) => b.lastModified.localeCompare(a.lastModified));
+        res.json(sessions);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        res.status(500).json({ error: message });
+      }
+      return;
+    }
+
+    // Existing Claude Code logic — slug is a raw directory name
     const projectDir = path.join(projectsDir, slug);
 
     try {
@@ -417,6 +495,7 @@ export function buildApiRouter(claudeHome: string, wss?: WebSocketServer): Route
           isRemoteControlled,
           driftFactor,
           title: sessionTitle,
+          provider: 'claude-code',
         });
       }
 
@@ -437,9 +516,33 @@ export function buildApiRouter(claudeHome: string, wss?: WebSocketServer): Route
   /**
    * Export a session as OTLP/HTTP JSON trace format.
    * The response can be POSTed directly to any OTLP collector at /v1/traces.
+   * Accepts optional `?provider=` query param for non-Claude Code providers.
    */
   router.get('/session/:slug/:id/otlp', async (req, res) => {
     const { slug, id } = req.params;
+    const providerParam = req.query['provider'] as string | undefined;
+
+    // Route through the appropriate provider
+    const effectiveProvider = providerParam ? getProvider(providerParam) : sessionProvider;
+    if (!effectiveProvider) {
+      res.status(400).json({ error: `Unknown provider: ${providerParam ?? 'unknown'}` });
+      return;
+    }
+
+    // For non-Claude Code providers, use provider.readSession directly
+    if (effectiveProvider.id !== 'claude-code') {
+      try {
+        const session = await effectiveProvider.readSession(id);
+        const rows = session.native as WaterfallRow[];
+        const otlp = sessionToOtlp(rows, id);
+        res.setHeader('Content-Type', 'application/json');
+        res.json(otlp);
+      } catch {
+        res.status(404).json({ error: `Session not found: ${id}` });
+      }
+      return;
+    }
+
     const filePath = path.join(projectsDir, slug, `${id}.jsonl`);
 
     try {
@@ -480,9 +583,54 @@ export function buildApiRouter(claudeHome: string, wss?: WebSocketServer): Route
   /**
    * Read and parse a specific session file.
    * Returns rows, compaction boundaries, health score, and session ID.
+   * Accepts optional `?provider=` query param for non-Claude Code providers.
    */
   router.get('/session/:slug/:id', async (req, res) => {
     const { slug, id } = req.params;
+    const providerParam = req.query['provider'] as string | undefined;
+
+    // Route through the appropriate provider
+    const effectiveProvider = providerParam ? getProvider(providerParam) : sessionProvider;
+    if (!effectiveProvider) {
+      res.status(400).json({ error: `Unknown provider: ${providerParam ?? 'unknown'}` });
+      return;
+    }
+
+    // Non-Claude Code provider path: minimal enrichments (no compaction, drift, tips, etc.)
+    if (effectiveProvider.id !== 'claude-code') {
+      try {
+        let rows: WaterfallRow[];
+        try {
+          const session = await effectiveProvider.readSession(id);
+          rows = session.native as WaterfallRow[];
+        } catch {
+          res.status(404).json({ error: `Session not found: ${id}` });
+          return;
+        }
+
+        const health = computeContextHealth(rows, 0);
+
+        res.json({
+          rows,
+          compactionBoundaries: [],
+          health,
+          sessionId: id,
+          drift: null,
+          tipCount: 0,
+          instructionsLoaded: [],
+          resultMetrics: null,
+          initContext: null,
+          provider: effectiveProvider.id,
+          capabilities: effectiveProvider.capabilities,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        res.status(500).json({ error: message });
+      }
+      return;
+    }
+
+    // Claude Code path: full enrichments
     const filePath = path.join(projectsDir, slug, `${id}.jsonl`);
 
     try {
@@ -582,7 +730,19 @@ export function buildApiRouter(claudeHome: string, wss?: WebSocketServer): Route
       }
       const tipCount = countTips(rows);
 
-      res.json({ rows, compactionBoundaries: boundaries, health, sessionId, drift, tipCount, instructionsLoaded, resultMetrics, initContext });
+      res.json({
+        rows,
+        compactionBoundaries: boundaries,
+        health,
+        sessionId,
+        drift,
+        tipCount,
+        instructionsLoaded,
+        resultMetrics,
+        initContext,
+        provider: 'claude-code',
+        capabilities: sessionProvider.capabilities,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: message });

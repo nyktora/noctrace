@@ -76,10 +76,10 @@
     "license": "https://opensource.org/licenses/MIT",
     "codeRepository": "https://github.com/nyktora/noctrace",
     "downloadUrl": "https://www.npmjs.com/package/noctrace",
-    "softwareVersion": "1.4.1",
+    "softwareVersion": "1.5.0",
     "author": {"@id":"https://nyktora.github.io/noctrace/#organization"},
     "screenshot": "https://nyktora.github.io/noctrace/og-image.png",
-    "featureList": "Waterfall timeline, Context health scoring, Sub-agent visibility, Token cost estimation, Context rot detection, Efficiency tips, Security tips, Loop detection, Advanced filtering, Session comparison, Real-time streaming, Docker support, OTel export, MCP session registry",
+    "featureList": "Waterfall timeline, Context health scoring, Sub-agent visibility, Token cost estimation, Context rot detection, Efficiency tips, Security tips, Loop detection, Advanced filtering, Session comparison, Real-time streaming, Docker support, OTel export, MCP session registry, GitHub Copilot Chat provider, Codex CLI provider, Multi-provider session picker",
     "offers": {
       "@type": "Offer",
       "price": "0",
@@ -176,6 +176,8 @@
         <li><strong>Context Startup flyout:</strong> shows which CLAUDE.md and instruction files loaded at session start with estimated token counts, so you can see what filled your context before the first tool call.</li>
         <li><strong>Hook lifecycle rows:</strong> PostToolUse, SubagentStart, and SubagentStop events from Claude Code hooks render as distinct teal timeline rows.</li>
         <li><strong>Resizable Name column:</strong> drag the column header edge to resize, stored in state across sessions.</li>
+        <li><strong>GitHub Copilot Chat provider (new in v1.5):</strong> sessions from VS Code Copilot Chat appear automatically alongside Claude Code and Codex sessions. 19 internal tool IDs are mapped to familiar names (Read, Write, Edit, Bash, etc.). Copilot projects show a blue "copilot" badge in the session picker.</li>
+        <li><strong>Multi-provider session picker (new in v1.4+):</strong> Claude Code, OpenAI Codex CLI, and GitHub Copilot Chat sessions all appear in one unified view with per-provider badges. Zero configuration — each provider auto-detects its session directory.</li>
       </ul>
     </section>
 
@@ -451,7 +453,7 @@
         React.createElement("nav",{style:{position:"sticky",top:0,zIndex:100,background:BG+"ee",backdropFilter:"blur(8px)",borderBottom:"1px solid "+BD,height:44,display:"flex",alignItems:"center",padding:"0 24px",fontSize:12}},
           React.createElement("a",{href:"/noctrace/",style:{display:"flex",alignItems:"center",gap:6,textDecoration:"none",cursor:"pointer"}},React.createElement(Logo,null),React.createElement("span",{style:{color:MV,fontWeight:700,fontSize:13}},"noctrace")),
           React.createElement("span",{style:{color:DM,margin:"0 10px"}},"/"),
-          React.createElement("span",{style:{fontSize:10,color:DM,border:"1px solid "+BD,padding:"1px 6px",borderRadius:2}},"v1.4.1"),
+          React.createElement("span",{style:{fontSize:10,color:DM,border:"1px solid "+BD,padding:"1px 6px",borderRadius:2}},"v1.5.0"),
           React.createElement("div",{style:{flex:1}}),
           React.createElement("div",{className:"noctrace-nav-links",style:{display:"flex",gap:20,alignItems:"center"}},
             React.createElement("a",{href:"#rot",className:"noctrace-nav-link noctrace-nav-hide-xs",style:{color:DM,fontSize:11,textDecoration:"none"}},"context rot"),

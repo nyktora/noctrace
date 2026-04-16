@@ -1,0 +1,39 @@
+{
+  "version": 3,
+  "sessionId": "copilot-session-think1",
+  "creationDate": 1770777277237,
+  "lastMessageDate": 1770779818454,
+  "customTitle": "Architecture discussion",
+  "responderUsername": "GitHub Copilot",
+  "initialLocation": "panel",
+  "requests": [
+    {
+      "requestId": "req-think-001",
+      "timestamp": 1770777277237,
+      "modelId": "copilot/claude-opus-4.5",
+      "message": { "text": "Design the authentication system", "parts": [] },
+      "response": [
+        {
+          "kind": "thinking",
+          "value": "I need to consider the trade-offs between JWT and session-based auth."
+        },
+        {
+          "kind": "toolInvocationSerialized",
+          "toolId": "copilot_readFile",
+          "toolCallId": "tool-call-think-001",
+          "invocationMessage": "Reading auth config",
+          "isComplete": true,
+          "source": { "type": "internal", "label": "Built-In" }
+        }
+      ],
+      "result": {
+        "timings": {
+          "firstProgress": 300,
+          "totalElapsed": 5000
+        }
+      },
+      "agent": { "name": "GitHub Copilot" },
+      "modelState": { "value": 1, "completedAt": 1770777282237 }
+    }
+  ]
+}

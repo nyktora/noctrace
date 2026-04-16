@@ -51,6 +51,13 @@ function worktreeParentPath(slug: string): string {
 /** Extract the last meaningful path segment as the project display name */
 function projectDisplayName(slug: string): string {
   if (isWorktreeSlug(slug)) return worktreeDisplayName(slug);
+  // Provider-prefixed slugs: "codex:~/dev/project" or "copilot:/Users/lam/dev/project"
+  const colonIdx = slug.indexOf(':');
+  if (colonIdx > 0) {
+    const contextPath = slug.slice(colonIdx + 1);
+    const segments = contextPath.replace(/\\/g, '/').split('/');
+    return segments[segments.length - 1] || contextPath;
+  }
   // slug looks like "-Users-lam-dev-noctrace" → split on hyphens, take last segment
   const parts = slug.replace(/^-/, '').split('-');
   // Find the last non-empty segment
@@ -60,6 +67,14 @@ function projectDisplayName(slug: string): string {
 /** Format the parent path (everything before the project name) */
 function projectParentPath(slug: string): string {
   if (isWorktreeSlug(slug)) return worktreeParentPath(slug);
+  // Provider-prefixed slugs: return the parent dir of the context path
+  const colonIdx = slug.indexOf(':');
+  if (colonIdx > 0) {
+    const contextPath = slug.slice(colonIdx + 1);
+    const segments = contextPath.replace(/\\/g, '/').split('/');
+    if (segments.length <= 1) return contextPath;
+    return segments.slice(0, -1).join('/');
+  }
   const parts = slug.replace(/^-/, '').split('-');
   if (parts.length <= 1) return '';
   return '~/' + parts.slice(0, -1).join('/');
@@ -266,7 +281,27 @@ function ProjectRow({ project, isSelected, onSelect }: ProjectRowProps): React.R
       }}
       title={project.path}
     >
-      <div className="truncate font-semibold" style={{ fontSize: 12 }}>{name}</div>
+      <div className="flex items-center gap-1.5 truncate">
+        <span className="font-semibold truncate" style={{ fontSize: 12 }}>{name}</span>
+        {project.provider && project.provider !== 'claude-code' && (
+          <span
+            className="shrink-0 font-mono"
+            title={`Provider: ${project.provider}`}
+            style={{
+              fontSize: 8,
+              fontWeight: 600,
+              padding: '0px 3px',
+              borderRadius: 3,
+              backgroundColor: 'rgba(137,180,250,0.15)',
+              color: 'var(--ctp-blue)',
+              lineHeight: '14px',
+              border: '1px solid rgba(137,180,250,0.3)',
+            }}
+          >
+            {project.provider}
+          </span>
+        )}
+      </div>
       <div className="flex justify-between mt-0.5" style={{ color: 'var(--ctp-overlay0)', fontWeight: 'normal', fontSize: 10 }}>
         <span className="truncate" style={{ maxWidth: '60%' }}>{parent}</span>
         <span className="shrink-0">{project.sessionCount}</span>

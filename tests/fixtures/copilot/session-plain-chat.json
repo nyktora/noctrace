@@ -1,0 +1,30 @@
+{
+  "version": 3,
+  "sessionId": "copilot-session-chat1",
+  "creationDate": 1770777277237,
+  "lastMessageDate": 1770779818454,
+  "customTitle": "How to use async/await",
+  "responderUsername": "GitHub Copilot",
+  "initialLocation": "panel",
+  "requests": [
+    {
+      "requestId": "req-chat-001",
+      "timestamp": 1770777277237,
+      "modelId": "copilot/gpt-4.1",
+      "message": { "text": "What is the difference between async/await and promises?", "parts": [] },
+      "response": [
+        {
+          "kind": "textEditGroup"
+        }
+      ],
+      "result": {
+        "timings": {
+          "firstProgress": 100,
+          "totalElapsed": 3200
+        }
+      },
+      "agent": { "name": "GitHub Copilot" },
+      "modelState": { "value": 1, "completedAt": 1770777280437 }
+    }
+  ]
+}

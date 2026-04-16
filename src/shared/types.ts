@@ -97,6 +97,8 @@ export interface ProjectSummary {
   sessionCount: number;
   activeSessionCount: number;
   lastModified: string;
+  /** Provider id that owns this project, e.g. 'claude-code', 'codex', 'copilot'. Optional for backwards compat. */
+  provider?: string;
 }
 
 /** Permission mode for a session */
@@ -116,6 +118,8 @@ export interface SessionSummary {
   driftFactor: number | null;  // null if < 5 turns
   /** Human-readable session title set via Claude Code UI or hooks. Null if not set. */
   title: string | null;
+  /** Provider id that owns this session, e.g. 'claude-code', 'codex', 'copilot'. Optional for backwards compat. */
+  provider?: string;
 }
 
 /** Metadata about a sub-agent session file, linking it to the parent tool_use that spawned it */

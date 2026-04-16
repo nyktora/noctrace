@@ -174,6 +174,8 @@ All steps complete. Order followed during implementation:
 54. ✅ Patterns view (cross-session rollup: health distribution, project rot leaderboard, tool health grid — `GET /api/patterns` with calendar-semantic windows + mtime-keyed stat-on-read cache)
 55. ✅ Provider abstraction refactor (1.3.0: `src/shared/providers/` interface + Claude Code adapter + normalized `AgentSession` schema + `ProviderCapabilities`-gated UI; parity test locks byte-identical Claude Code behavior — foundation for multi-provider 1.4/1.5)
 56. ✅ Codex CLI provider (1.4.0: reads `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`, pairs FunctionCall/FunctionCallOutput by call_id, folds separate TokenCount events into turns, honors `CODEX_HOME`, chokidar real-time; single-file drop-in proving the 1.3 abstraction)
+57. ✅ GitHub Copilot Chat provider (1.5.0: reads VS Code workspaceStorage JSON, 19 tool mappings, full-rewrite file watching; third provider proving the abstraction)
+58. ✅ Phase B provider wiring (1.5.0: multi-provider GET /api/projects + /api/sessions + /api/session; provider-tagged ProjectSummary/SessionSummary; conditional enrichments; Copilot projects in session picker with blue badges)
 ### Remaining polish:
 - Loading state spinners
 - README with demo GIF

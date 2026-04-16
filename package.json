@@ -1,6 +1,6 @@
 {
   "name": "noctrace",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Claude Code observability — DevTools-style waterfall visualizer for AI agent workflows, token tracking, and context health monitoring",
   "type": "module",
   "license": "MIT",

@@ -1,0 +1,29 @@
+{
+  "version": 3,
+  "sessionId": "copilot-session-incomplete1",
+  "creationDate": 1770777277237,
+  "lastMessageDate": 1770777277237,
+  "customTitle": null,
+  "responderUsername": "GitHub Copilot",
+  "initialLocation": "panel",
+  "requests": [
+    {
+      "requestId": "req-inc-001",
+      "timestamp": 1770777277237,
+      "modelId": "copilot/claude-opus-4.5",
+      "message": { "text": "Search for all TODO comments", "parts": [] },
+      "response": [
+        {
+          "kind": "toolInvocationSerialized",
+          "toolId": "copilot_findTextInFiles",
+          "toolCallId": "tool-call-inc-001",
+          "invocationMessage": "Searching for TODO comments",
+          "isComplete": false,
+          "source": { "type": "internal", "label": "Built-In" }
+        }
+      ],
+      "agent": { "name": "GitHub Copilot" },
+      "modelState": { "value": 0 }
+    }
+  ]
+}
