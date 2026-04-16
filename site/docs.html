@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Complete guide to Noctrace: installation, Claude Code hook setup, waterfall timeline usage, context health scoring, efficiency tips, sub-agent visualization, and troubleshooting.">
+  <meta name="description" content="Complete guide to Noctrace: installation, setup for Claude Code, Codex CLI, and Copilot Chat, waterfall timeline usage, context health scoring, efficiency tips, and troubleshooting.">
   <meta name="author" content="Nyktora Group">
   <meta name="theme-color" content="#1e1e2e">
   <meta property="og:title" content="Noctrace Documentation — Installation, Configuration &amp; Usage Guide">
-  <meta property="og:description" content="Complete guide to Noctrace: installation, Claude Code hook setup, waterfall timeline usage, context health scoring, efficiency tips, sub-agent visualization, and troubleshooting.">
+  <meta property="og:description" content="Complete guide to Noctrace: installation, setup for Claude Code, Codex CLI, and Copilot Chat, waterfall timeline usage, context health scoring, efficiency tips, and troubleshooting.">
   <meta property="og:type" content="article">
   <meta property="article:modified_time" content="2026-04-15T00:00:00Z">
   <meta property="og:url" content="https://nyktora.github.io/noctrace/docs.html">
@@ -16,10 +16,10 @@
   <meta property="og:image" content="https://nyktora.github.io/noctrace/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Noctrace - Chrome DevTools-style waterfall visualizer for Claude Code agent workflows">
+  <meta property="og:image:alt" content="Noctrace - Chrome DevTools-style waterfall visualizer for AI coding agent workflows">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Noctrace Documentation — Installation, Configuration &amp; Usage Guide">
-  <meta name="twitter:description" content="Complete guide to Noctrace: installation, Claude Code hook setup, waterfall timeline usage, context health scoring, efficiency tips, sub-agent visualization, and troubleshooting.">
+  <meta name="twitter:description" content="Complete guide to Noctrace: installation, setup for Claude Code, Codex CLI, and Copilot Chat, waterfall timeline usage, context health scoring, efficiency tips, and troubleshooting.">
   <meta name="twitter:image" content="https://nyktora.github.io/noctrace/og-image.png">
   <meta name="indexnow-key" content="4d691bd276782520f8d95f96adb9508e">
   <link rel="canonical" href="https://nyktora.github.io/noctrace/docs.html">
@@ -68,11 +68,11 @@
     "@type": "TechArticle",
     "name": "Noctrace Documentation",
     "headline": "Noctrace Documentation — Installation, Configuration &amp; Usage Guide",
-    "description": "Installation, configuration, waterfall view, context health, context rot detection, and troubleshooting guide for Noctrace.",
+    "description": "Installation, configuration, waterfall view, context health, context rot detection, and troubleshooting guide for Noctrace — supports Claude Code, Codex CLI, and GitHub Copilot Chat.",
     "url": "https://nyktora.github.io/noctrace/docs.html",
     "dateModified": "2026-04-15",
     "proficiencyLevel": "Expert",
-    "dependencies": "Node.js 20 LTS, Claude Code",
+    "dependencies": "Node.js 20 LTS, Claude Code / Codex CLI / GitHub Copilot Chat",
     "author": {"@id":"https://nyktora.github.io/noctrace/#organization"},
     "publisher": {"@type":"Organization","name":"Nyktora Group","url":"https://github.com/nyktora"},
     "isPartOf": {"@id":"https://nyktora.github.io/noctrace/#website"}
@@ -97,13 +97,13 @@
 
       <section>
         <h2>What is Noctrace?</h2>
-        <p>Noctrace is a free, open-source, local-only observability dashboard for Claude Code agent workflows. It reads the JSONL session logs that Claude Code writes to <code>~/.claude/projects/</code> and renders them as an interactive waterfall timeline in your browser — no cloud dependency, no telemetry, no database, and zero configuration required. The interface is modeled after Chrome DevTools' Network tab: every tool call is a horizontal timing bar on a shared time axis.</p>
-        <p>Noctrace runs as a single Node.js process. It starts a local Express 5 server on port 4117, serves a React SPA, and opens a WebSocket connection so the waterfall updates in real time as your Claude Code session progresses. All data stays on your machine.</p>
+        <p>Noctrace is a free, open-source, local-only observability dashboard for AI coding agent workflows — supporting Claude Code, OpenAI Codex CLI, and GitHub Copilot Chat. It reads session logs from each provider and renders them as an interactive waterfall timeline in your browser — no cloud dependency, no telemetry, no database, and zero configuration required. The interface is modeled after Chrome DevTools' Network tab: every tool call is a horizontal timing bar on a shared time axis.</p>
+        <p>Noctrace runs as a single Node.js process. It starts a local Express 5 server on port 4117, serves a React SPA, and opens a WebSocket connection so the waterfall updates in real time as your session progresses. All data stays on your machine.</p>
       </section>
 
       <section>
         <h2>Installation</h2>
-        <p><strong>Option 1 — Try without installing (recommended for first use):</strong> run <code>npx noctrace</code> in your terminal. This downloads noctrace temporarily and starts the dashboard. Requires Node.js 20 LTS or later.</p>
+        <p><strong>Option 1 — Try without installing (recommended for first use):</strong> run <code>npx noctrace</code> in your terminal. This downloads noctrace temporarily and starts the dashboard. Requires Node.js 20 LTS or later and at least one AI coding tool with sessions on disk.</p>
         <p><strong>Option 2 — Install globally:</strong></p>
         <p><code>npm install -g noctrace</code></p>
         <p>Then run <code>noctrace --enable</code> to register Noctrace as an MCP server in Claude Code. After this, the dashboard opens automatically whenever a new Claude Code session starts. To stop auto-starting, run <code>noctrace --disable</code>.</p>
@@ -113,7 +113,7 @@
 
       <section>
         <h2>Quick start</h2>
-        <p>Before starting Noctrace, make sure Claude Code has been used at least once so that session logs exist at <code>~/.claude/projects/</code>. Then run <code>npx noctrace</code>. A browser tab opens at <code>http://localhost:4117</code>. Select a project from the left sidebar and pick a session — the waterfall renders immediately. For live updates, keep both Claude Code and Noctrace running simultaneously.</p>
+        <p>Before starting Noctrace, make sure at least one AI coding tool has been used so that session logs exist on disk. Then run <code>npx noctrace</code>. A browser tab opens at <code>http://localhost:4117</code>. Select a project from the left sidebar and pick a session — the waterfall renders immediately. For live updates, keep both your AI coding tool and Noctrace running simultaneously.</p>
         <p>If port 4117 is taken, Noctrace tries the next available port automatically and prints the URL it bound to. To pin a port, use the <code>PORT</code> environment variable: <code>PORT=3001 npx noctrace</code>.</p>
       </section>
 
@@ -165,7 +165,7 @@
 
       <section>
         <h2>Troubleshooting</h2>
-        <p><strong>"No projects found" on startup:</strong> Claude Code must have been used at least once. Check that <code>~/.claude/projects/</code> exists and contains at least one <code>.jsonl</code> file.</p>
+        <p><strong>"No projects found" on startup:</strong> At least one AI coding tool must have been used. Check that <code>~/.claude/projects/</code> (Claude Code), <code>~/.codex/sessions/</code> (Codex CLI), or VS Code workspaceStorage (Copilot Chat) exists and contains session files.</p>
         <p><strong>Waterfall shows no rows:</strong> select a session from the sidebar. Sessions containing only system records with no tool calls will render a blank waterfall. Choose a session with coding activity.</p>
         <p><strong>Real-time updates not appearing:</strong> for live updates, both Claude Code and Noctrace must be running simultaneously. If the session ended before Noctrace started, the completed session renders statically.</p>
         <p><strong>Browser doesn't open automatically:</strong> some environments (WSL, SSH sessions, headless Linux) cannot open browsers. Noctrace still starts the server — navigate to <code>http://localhost:4117</code> manually.</p>
@@ -183,7 +183,7 @@
 
       <section>
         <h2>System requirements</h2>
-        <p>Node.js 20 LTS or later. macOS, Linux, or Windows (WSL recommended). Any modern browser. An existing Claude Code installation. No API keys, no accounts, no cloud.</p>
+        <p>Node.js 20 LTS or later. macOS, Linux, or Windows (WSL recommended). Any modern browser. At least one of: Claude Code, Codex CLI, or GitHub Copilot Chat. No API keys, no accounts, no cloud.</p>
       </section>
 
       <p><a href="https://github.com/nyktora/noctrace">GitHub repository</a> | <a href="https://www.npmjs.com/package/noctrace">npm package</a> | <a href="./">Back to home</a> | <a href="https://github.com/nyktora/noctrace/blob/main/CHANGELOG.md">Changelog</a></p>
@@ -351,7 +351,7 @@
 
             /* INSTALL */
             React.createElement(Sec,{id:"install",title:"Installation"},
-              React.createElement(P,null,"Noctrace requires ",React.createElement(InlineCode,null,"Node.js 20+")," and an existing Claude Code installation (session logs at ",React.createElement(InlineCode,null,"~/.claude/"),")."),
+              React.createElement(P,null,"Noctrace requires ",React.createElement(InlineCode,null,"Node.js 20+")," and at least one AI coding tool — Claude Code (",React.createElement(InlineCode,null,"~/.claude/"),"), Codex CLI (",React.createElement(InlineCode,null,"~/.codex/"),"), or GitHub Copilot Chat."),
 
               React.createElement("div",{style:{fontSize:11,color:TXB,marginBottom:6,fontWeight:700}},"Option 1 — Install globally (recommended)"),
               React.createElement(Code,null,React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npm install -g noctrace")),
@@ -370,17 +370,17 @@
 
             /* QUICKSTART */
             React.createElement(Sec,{id:"quickstart",title:"Quick start"},
-              React.createElement(P,null,"Noctrace is zero-config. It reads Claude Code session logs directly from disk."),
+              React.createElement(P,null,"Noctrace is zero-config. It auto-detects sessions from Claude Code, Codex CLI, and Copilot Chat."),
               React.createElement(Code,null,
-                React.createElement("span",{style:{color:DM}},"# 1. Make sure Claude Code has run at least one session"),"\n",
-                React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"ls ~/.claude/projects/"),"\n\n",
+                React.createElement("span",{style:{color:DM}},"# 1. Make sure at least one AI coding tool has been used"),"\n",
+                React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"ls ~/.claude/projects/")," ",React.createElement("span",{style:{color:DM}},"# or ~/.codex/sessions/"),"\n\n",
                 React.createElement("span",{style:{color:DM}},"# 2. Start noctrace"),"\n",
                 React.createElement("span",{style:{color:GN}},"$")," ",React.createElement("span",{style:{color:TXM}},"npx noctrace"),"\n\n",
                 React.createElement("span",{style:{color:DM}},"# 3. Browser opens at http://localhost:4117"),"\n",
                 React.createElement("span",{style:{color:DM}},"# Select a project from the sidebar, pick a session"),"\n",
                 React.createElement("span",{style:{color:DM}},"# The waterfall renders immediately")
               ),
-              React.createElement(P,null,"To watch a live session, start noctrace ",React.createElement("em",null,"before")," or ",React.createElement("em",null,"during")," a Claude Code session. The waterfall updates in real time as new tool calls are logged.")
+              React.createElement(P,null,"To watch a live session, start noctrace ",React.createElement("em",null,"before")," or ",React.createElement("em",null,"during")," an active session. The waterfall updates in real time as new tool calls are logged.")
             ),
 
             /* CLI OPTIONS */
@@ -730,7 +730,7 @@
             React.createElement(Sec,{id:"troubleshoot",title:"Troubleshooting"},
               React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:2,marginBottom:16}},
                 [
-                  {q:'"No projects found" on startup',a:"Make sure Claude Code has been used at least once. Session logs are stored at ~/.claude/projects/ — if this directory doesn't exist or is empty, noctrace has nothing to display."},
+                  {q:'"No projects found" on startup',a:"Make sure at least one AI coding tool has been used. Session logs are stored at ~/.claude/projects/ (Claude Code), ~/.codex/sessions/ (Codex CLI), or VS Code workspaceStorage (Copilot Chat) — if none exist, noctrace has nothing to display."},
                   {q:"Waterfall shows no rows",a:"Select a session from the sidebar. If the session file is empty or contains only system records (no tool calls), the waterfall will be blank. Try a session with actual coding activity."},
                   {q:"Real-time updates aren't appearing",a:"Noctrace watches the JSONL file for changes. If you started noctrace after the session ended, it renders the completed session. For live updates, keep both Claude Code and noctrace running simultaneously."},
                   {q:"Port 4117 is already in use",a:"Noctrace will automatically try the next available port (up to 10 attempts) and print the URL it bound to. To pin a specific port, use the PORT env var: PORT=3001 npx noctrace"},
@@ -751,7 +751,7 @@
                 headers:["Requirement","Version"],
                 rows:[
                   ["Node.js","20 LTS or later"],
-                  ["Claude Code","Any version that writes JSONL logs to ~/.claude/projects/"],
+                  ["Claude Code / Codex CLI / Copilot Chat","Any version that writes session logs to the expected directories"],
                   ["OS","macOS, Linux, Windows (WSL recommended)"],
                   ["Browser","Any modern browser (Chrome, Firefox, Safari, Edge)"],
                 ]

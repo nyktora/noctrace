@@ -3,12 +3,12 @@
 </p>
 
 <p align="center">
-  Open-source observability for <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a> agent workflows.
+  Open-source observability for AI coding agent workflows — supports <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>, <a href="https://github.com/openai/codex">Codex CLI</a>, and <a href="https://github.com/features/copilot">GitHub Copilot Chat</a>.
   Chrome DevTools Network-tab-style waterfall visualizer that monitors tool calls, tracks token usage, and detects context rot — all locally, with zero config.
   <br /><br />
-  Noctrace reads Claude Code JSONL session logs from <code>~/.claude/projects/</code> and renders them as an interactive waterfall timeline.
+  Noctrace auto-detects sessions from all three providers and renders them as an interactive waterfall timeline.
   See every tool call, sub-agent spawn, token cost, and context window fill level at a glance.
-  Built for developers using Anthropic's Claude Code who want to understand what their AI agents are actually doing.
+  Built for developers who want to understand what their AI agents are actually doing.
 </p>
 
 <p align="center">
@@ -25,16 +25,16 @@
 
 ## Why Noctrace?
 
-Claude Code's terminal output is opaque. Tool calls show summaries like "Read 3 files" and "Edited 2 files" — no paths, no timing, no concurrency visibility. When sub-agents spawn sub-agents, you're flying blind.
+AI agent terminal outputs are opaque. Tool calls show summaries like "Read 3 files" and "Edited 2 files" — no paths, no timing, no concurrency visibility. When sub-agents spawn sub-agents, you're flying blind.
 
-Noctrace reads Claude Code's session logs from `~/.claude/projects/` and renders them as an interactive waterfall timeline — the same visual paradigm that makes Chrome DevTools' Network tab instantly readable.
+Noctrace auto-detects sessions from Claude Code, Codex CLI, and Copilot Chat and renders them as an interactive waterfall timeline — the same visual paradigm that makes Chrome DevTools' Network tab instantly readable.
 
 - **Waterfall timeline** — See tool calls laid out on a time axis, just like Chrome DevTools Network tab
 - **Sub-agent visibility** — Expandable agent rows show nested tool calls from Explore, Plan, and custom agents
 - **Context health scoring** — A-F grade based on context fill, compaction frequency, re-reads, and error acceleration
-- **Token cost tracking** — Per-row USD estimates using Claude's per-model pricing (Opus, Sonnet, Haiku)
+- **Token cost tracking** — Per-row USD estimates using per-model pricing (Opus, Sonnet, Haiku for Claude; GPT-4o for Codex)
 - **Efficiency and security tips** — Automatic detection of wasteful patterns and security anti-patterns
-- **Zero config** — Just run `npx noctrace` and it reads your local Claude Code session logs
+- **Zero config** — Just run `npx noctrace` and it auto-detects sessions from all supported providers
 
 ## Install
 
@@ -42,7 +42,7 @@ Noctrace reads Claude Code's session logs from `~/.claude/projects/` and renders
 npx noctrace
 ```
 
-That's it. No config required. Noctrace starts a local server, opens your browser, and begins reading Claude Code session logs from `~/.claude/projects/` immediately.
+That's it. No config required. Noctrace starts a local server, opens your browser, and auto-detects sessions from Claude Code, Codex CLI, and Copilot Chat immediately.
 
 ```bash
 # Or install globally
@@ -57,6 +57,18 @@ claude plugin install nyktora/noctrace
 ```
 
 Requires Node.js 20+. Optional `--install-hooks` flag enables real-time hook events from Claude Code.
+
+## Supported providers
+
+Noctrace reads sessions from multiple AI coding tools automatically — no configuration required for any of them:
+
+| Provider | Source | Badge |
+|---|---|---|
+| **Claude Code** | `~/.claude/projects/` JSONL session logs | (default) |
+| **OpenAI Codex CLI** | `~/.codex/sessions/` rollout JSONL files | orange `codex` |
+| **GitHub Copilot Chat** | VS Code workspaceStorage JSON session files | blue `copilot` |
+
+All three show up in the same session picker. Context health scoring and token cost are available for Claude Code and Codex sessions. Copilot sessions show the waterfall timeline and tool call detail panel; token tracking is not available because Copilot Chat does not expose token counts.
 
 ## Features
 
@@ -172,18 +184,6 @@ npm run dev       # starts server + Vite dev server
 - **Client**: React 19, Vite 8, Tailwind CSS 4, Zustand 5
 - **Tests**: Vitest 4
 - **Language**: TypeScript 5.9 (strict mode)
-
-## Supported providers
-
-Noctrace reads sessions from multiple AI coding tools automatically — no configuration required for any of them:
-
-| Provider | Source | Badge |
-|---|---|---|
-| **Claude Code** | `~/.claude/projects/` JSONL session logs | (default) |
-| **OpenAI Codex CLI** | `~/.codex/sessions/` rollout JSONL files | orange `codex` |
-| **GitHub Copilot Chat** | VS Code workspaceStorage JSON session files | blue `copilot` |
-
-All three show up in the same session picker. Context health scoring and token cost are available for Claude Code and Codex sessions. Copilot sessions show the waterfall timeline and tool call detail panel; token tracking is not available because Copilot Chat does not expose token counts.
 
 ## Compatibility
 

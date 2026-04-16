@@ -1,17 +1,24 @@
 # Noctrace
 
-Chrome DevTools Network-tab-style real-time waterfall visualizer for Claude Code agent workflows. Open source, local-only, zero config.
+Chrome DevTools Network-tab-style real-time waterfall visualizer for AI coding agent workflows (Claude Code, Codex CLI, GitHub Copilot Chat). Open source, local-only, zero config.
 
 ## Project Overview
 
-Noctrace passively reads Claude Code session JSONL logs from `~/.claude/projects/` and renders them as an interactive waterfall timeline in a browser tab. Agents appear as collapsible row groups, tool calls as nested rows with colored timing bars on a shared time axis.
+Noctrace passively reads session logs from Claude Code (`~/.claude/projects/`), Codex CLI (`~/.codex/sessions/`), and GitHub Copilot Chat (VS Code workspaceStorage) and renders them as an interactive waterfall timeline in a browser tab. Agents appear as collapsible row groups, tool calls as nested rows with colored timing bars on a shared time axis.
 
 ### JSONL Log Paths
 
+**Claude Code:**
 - **Main session**: `~/.claude/projects/<project-slug>/<session-id>.jsonl`
 - **Sub-agent sessions**: `~/.claude/projects/<project-slug>/<session-id>/subagents/agent-<agent-id>.jsonl`
 
 Main and sub-agent logs are parsed by separate functions (`parseSessionContent` and `parseSubAgentContent`). Sub-agent rows are attached as children of their parent agent row in the API route, after both are independently parsed. Any per-row computation (like token deltas) must be done in **both** parsers.
+
+**Codex CLI:**
+- **Sessions**: `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` (override with `CODEX_HOME`)
+
+**GitHub Copilot Chat:**
+- **Sessions**: VS Code `workspaceStorage/*/GitHub.copilot-chat/` JSON session files
 
 ## Tech Stack
 

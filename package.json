@@ -1,7 +1,7 @@
 {
   "name": "noctrace",
   "version": "1.5.0",
-  "description": "Claude Code observability — DevTools-style waterfall visualizer for AI agent workflows, token tracking, and context health monitoring",
+  "description": "AI coding agent observability — DevTools-style waterfall visualizer for Claude Code, Codex CLI, and GitHub Copilot Chat",
   "type": "module",
   "license": "MIT",
   "author": "Nyktora Group LLC",
