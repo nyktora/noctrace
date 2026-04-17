@@ -617,3 +617,154 @@ describe('API error row detection (stop_failure)', () => {
     expect(simpleRows.filter((r) => r.type === 'api-error')).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Hook event routing (hook_event_name field)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a minimal JSONL string with a hook_started + hook_response pair for testing.
+ */
+function makeHookPair(hookEventName: string, extraFields: Record<string, unknown> = {}): string {
+  const startedRecord = {
+    type: 'system',
+    subtype: 'hook_started',
+    uuid: 'hook-uuid-1',
+    sessionId: 'sess-hook',
+    timestamp: '2026-01-01T10:00:00.000Z',
+    hook_name: hookEventName,
+    hook_id: 'hid-1',
+    hook_event_name: hookEventName,
+    ...extraFields,
+  };
+  const responseRecord = {
+    type: 'system',
+    subtype: 'hook_response',
+    uuid: 'hook-uuid-2',
+    sessionId: 'sess-hook',
+    timestamp: '2026-01-01T10:00:01.000Z',
+    hook_name: hookEventName,
+    hook_id: 'hid-1',
+  };
+  return `${JSON.stringify(startedRecord)}\n${JSON.stringify(responseRecord)}`;
+}
+
+describe('hook event routing — hook_event_name field', () => {
+  it('PostCompact produces label "Compaction Complete" with success status', () => {
+    const rows = parseJsonlContent(makeHookPair('PostCompact'));
+    const hookRow = rows.find((r) => r.type === 'hook');
+    expect(hookRow).toBeDefined();
+    expect(hookRow!.toolName).toBe('PostCompact');
+    expect(hookRow!.label).toBe('Compaction Complete');
+    expect(hookRow!.status).toBe('success');
+    expect(hookRow!.isFailure).toBe(false);
+  });
+
+  it('StopFailure produces error status, isFailure=true, and includes error_type in label', () => {
+    const rows = parseJsonlContent(makeHookPair('StopFailure', { error_type: 'timeout' }));
+    const hookRow = rows.find((r) => r.type === 'hook');
+    expect(hookRow).toBeDefined();
+    expect(hookRow!.toolName).toBe('StopFailure');
+    expect(hookRow!.label).toBe('Stop Failure: timeout');
+    expect(hookRow!.status).toBe('error');
+    expect(hookRow!.isFailure).toBe(true);
+  });
+
+  it('StopFailure without error_type falls back to "unknown" in label', () => {
+    const rows = parseJsonlContent(makeHookPair('StopFailure'));
+    const hookRow = rows.find((r) => r.type === 'hook');
+    expect(hookRow!.label).toBe('Stop Failure: unknown');
+  });
+
+  it('TaskCreated includes task_subject in label', () => {
+    const rows = parseJsonlContent(makeHookPair('TaskCreated', { task_subject: 'Fix the bug' }));
+    const hookRow = rows.find((r) => r.type === 'hook');
+    expect(hookRow!.toolName).toBe('TaskCreated');
+    expect(hookRow!.label).toBe('Task Created: Fix the bug');
+    expect(hookRow!.status).toBe('success');
+    expect(hookRow!.isFailure).toBe(false);
+  });
+
+  it('TaskCreated without task_subject uses bare "Task Created" label', () => {
+    const rows = parseJsonlContent(makeHookPair('TaskCreated'));
+    const hookRow = rows.find((r) => r.type === 'hook');
+    expect(hookRow!.label).toBe('Task Created');
+  });
+
+  it('TaskCompleted includes task_subject in label', () => {
+    const rows = parseJsonlContent(makeHookPair('TaskCompleted', { task_subject: 'Write tests' }));
+    const hookRow = rows.find((r) => r.type === 'hook');
+    expect(hookRow!.toolName).toBe('TaskCompleted');
+    expect(hookRow!.label).toBe('Task Completed: Write tests');
+    expect(hookRow!.status).toBe('success');
+  });
+
+  it('TeammateIdle includes teammate_name in label', () => {
+    const rows = parseJsonlContent(makeHookPair('TeammateIdle', { teammate_name: 'alice' }));
+    const hookRow = rows.find((r) => r.type === 'hook');
+    expect(hookRow!.toolName).toBe('TeammateIdle');
+    expect(hookRow!.label).toBe('Teammate Idle: alice');
+    expect(hookRow!.status).toBe('success');
+  });
+
+  it('PermissionDenied has status=error and includes tool_name in label', () => {
+    const rows = parseJsonlContent(makeHookPair('PermissionDenied', { tool_name: 'Bash' }));
+    const hookRow = rows.find((r) => r.type === 'hook');
+    expect(hookRow!.toolName).toBe('PermissionDenied');
+    expect(hookRow!.label).toBe('Permission Denied: Bash');
+    expect(hookRow!.status).toBe('error');
+    expect(hookRow!.isFailure).toBe(false);
+  });
+
+  it('WorktreeCreate includes worktree_name in label', () => {
+    const rows = parseJsonlContent(makeHookPair('WorktreeCreate', { worktree_name: 'feature/auth' }));
+    const hookRow = rows.find((r) => r.type === 'hook');
+    expect(hookRow!.toolName).toBe('WorktreeCreate');
+    expect(hookRow!.label).toBe('Worktree Created: feature/auth');
+    expect(hookRow!.status).toBe('success');
+  });
+
+  it('WorktreeRemove includes worktree_name in label', () => {
+    const rows = parseJsonlContent(makeHookPair('WorktreeRemove', { worktree_name: 'feature/auth' }));
+    const hookRow = rows.find((r) => r.type === 'hook');
+    expect(hookRow!.toolName).toBe('WorktreeRemove');
+    expect(hookRow!.label).toBe('Worktree Removed: feature/auth');
+  });
+
+  it('unknown hook_event_name falls back to "Hook: {name}" label', () => {
+    const rows = parseJsonlContent(makeHookPair('SomeNewFutureEvent'));
+    const hookRow = rows.find((r) => r.type === 'hook');
+    expect(hookRow!.toolName).toBe('SomeNewFutureEvent');
+    expect(hookRow!.label).toBe('Hook: SomeNewFutureEvent');
+    expect(hookRow!.status).toBe('success');
+    expect(hookRow!.isFailure).toBe(false);
+  });
+
+  it('hook without hook_event_name falls back to hook_name for label', () => {
+    // A hook record with no hook_event_name — legacy behaviour must be preserved
+    const startedRecord = {
+      type: 'system',
+      subtype: 'hook_started',
+      uuid: 'hook-legacy-1',
+      sessionId: 'sess-legacy',
+      timestamp: '2026-01-01T10:00:00.000Z',
+      hook_name: 'PostToolUse',
+      hook_id: 'hid-legacy',
+    };
+    const responseRecord = {
+      type: 'system',
+      subtype: 'hook_response',
+      uuid: 'hook-legacy-2',
+      sessionId: 'sess-legacy',
+      timestamp: '2026-01-01T10:00:01.000Z',
+      hook_name: 'PostToolUse',
+      hook_id: 'hid-legacy',
+    };
+    const content = `${JSON.stringify(startedRecord)}\n${JSON.stringify(responseRecord)}`;
+    const rows = parseJsonlContent(content);
+    const hookRow = rows.find((r) => r.type === 'hook');
+    expect(hookRow!.toolName).toBe('PostToolUse');
+    expect(hookRow!.label).toBe('Hook: PostToolUse');
+    expect(hookRow!.status).toBe('success');
+  });
+});

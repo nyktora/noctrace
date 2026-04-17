@@ -97,5 +97,82 @@
         }
       ]
     }
+  ],
+  "StopFailure": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST \"${NOCTRACE_URL:-http://localhost:4117}/api/hooks\" -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "TaskCreated": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST \"${NOCTRACE_URL:-http://localhost:4117}/api/hooks\" -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "TaskCompleted": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST \"${NOCTRACE_URL:-http://localhost:4117}/api/hooks\" -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "TeammateIdle": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST \"${NOCTRACE_URL:-http://localhost:4117}/api/hooks\" -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "PermissionDenied": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST \"${NOCTRACE_URL:-http://localhost:4117}/api/hooks\" -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "WorktreeCreate": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST \"${NOCTRACE_URL:-http://localhost:4117}/api/hooks\" -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "WorktreeRemove": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "curl -s -X POST \"${NOCTRACE_URL:-http://localhost:4117}/api/hooks\" -H 'Content-Type: application/json' --data-raw \"$(cat)\"",
+          "async": true
+        }
+      ]
+    }
   ]
 }

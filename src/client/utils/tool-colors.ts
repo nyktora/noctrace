@@ -18,6 +18,15 @@ export function getToolColor(toolName: string, status?: string): string {
   if (name === 'userprompt') return 'var(--ctp-blue)';
   if (name === 'assistantresponse') return 'var(--ctp-lavender)';
   if (name.startsWith('mcp__')) return 'var(--ctp-teal)';
+  // Hook event types
+  if (name === 'postcompact') return 'var(--ctp-green)';
+  if (name === 'stopfailure') return 'var(--color-error)';
+  if (name === 'taskcreated') return 'var(--ctp-blue)';
+  if (name === 'taskcompleted') return 'var(--ctp-green)';
+  if (name === 'teammateidle') return 'var(--ctp-yellow)';
+  if (name === 'permissiondenied') return 'var(--ctp-peach)';
+  if (name === 'worktreecreate') return 'var(--ctp-mauve)';
+  if (name === 'worktreeremove') return 'var(--ctp-mauve)';
 
   return 'var(--ctp-overlay0)';
 }
@@ -37,6 +46,10 @@ const COLOR_HEX: Record<string, string> = {
   'var(--ctp-teal)': '#94e2d5',
   'var(--ctp-blue)': '#89b4fa',
   'var(--ctp-lavender)': '#b4befe',
+  'var(--ctp-green)': '#a6e3a1',
+  'var(--ctp-yellow)': '#f9e2af',
+  'var(--ctp-peach)': '#fab387',
+  'var(--ctp-mauve)': '#cba6f7',
 };
 
 /** Resolves a CSS variable color string to its hex value */

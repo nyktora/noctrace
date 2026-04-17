@@ -64,7 +64,7 @@ const SUDO_CMD = /^sudo\s/;
 const BINARY_DOWNLOAD = /curl[^&\n]*-o[^&\n]*\.(sh|bin|exe)|wget[^&\n]*\.(sh|bin|exe|deb|rpm)/;
 
 /** Tool names that operate on files (Write / Edit / MultiEdit). */
-const FILE_WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit']);
+const FILE_WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 
 /** Maximum number of output characters to scan (performance guard). */
 const OUTPUT_SCAN_LIMIT = 3000;

@@ -241,9 +241,11 @@ export function ContextStartup({ onClose }: ContextStartupProps): React.ReactEle
                   padding: '1px 5px',
                   color: initContext.effort === 'low' ? 'var(--ctp-base)' :
                     initContext.effort === 'high' ? 'var(--ctp-base)' :
+                    initContext.effort === 'xhigh' ? 'var(--ctp-base)' :
                     initContext.effort === 'max' ? 'var(--ctp-base)' : 'var(--ctp-text)',
                   backgroundColor: initContext.effort === 'low' ? 'var(--ctp-green)' :
                     initContext.effort === 'high' ? 'var(--ctp-yellow)' :
+                    initContext.effort === 'xhigh' ? 'var(--ctp-peach)' :
                     initContext.effort === 'max' ? 'var(--ctp-red)' : 'var(--ctp-surface0)',
                 }}
               >

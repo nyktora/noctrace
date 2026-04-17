@@ -250,6 +250,81 @@ function classifyAssistantError(errorField: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Hook event routing
+// ---------------------------------------------------------------------------
+
+interface HookEventMeta {
+  hookToolName: string;
+  hookLabel: string;
+  hookIsFailure: boolean;
+  hookStatus: 'success' | 'error' | 'running';
+}
+
+/**
+ * Resolves display name, label, failure flag, and status for a hook lifecycle row.
+ * When hook_event_name is present, uses rich labels; otherwise falls back to
+ * "Hook: {hookName}" for backwards compatibility with unknown event types.
+ */
+function resolveHookEventMeta(
+  hookEventName: string | null,
+  hookName: string,
+  startRaw: Record<string, unknown>,
+  responseRaw: Record<string, unknown>,
+): HookEventMeta {
+  if (!hookEventName) {
+    return { hookToolName: hookName, hookLabel: `Hook: ${hookName}`, hookIsFailure: false, hookStatus: 'success' };
+  }
+
+  // Helper to extract a string field from start or response payload
+  const str = (key: string): string | null => {
+    const v = startRaw[key] ?? responseRaw[key];
+    return typeof v === 'string' ? v : null;
+  };
+
+  switch (hookEventName) {
+    case 'PostCompact':
+      return { hookToolName: 'PostCompact', hookLabel: 'Compaction Complete', hookIsFailure: false, hookStatus: 'success' };
+    case 'StopFailure': {
+      const errorType = str('error_type') ?? str('error') ?? 'unknown';
+      return { hookToolName: 'StopFailure', hookLabel: `Stop Failure: ${errorType}`, hookIsFailure: true, hookStatus: 'error' };
+    }
+    case 'TaskCreated': {
+      const subject = str('task_subject') ?? str('subject') ?? '';
+      const label = subject ? `Task Created: ${subject}` : 'Task Created';
+      return { hookToolName: 'TaskCreated', hookLabel: label, hookIsFailure: false, hookStatus: 'success' };
+    }
+    case 'TaskCompleted': {
+      const subject = str('task_subject') ?? str('subject') ?? '';
+      const label = subject ? `Task Completed: ${subject}` : 'Task Completed';
+      return { hookToolName: 'TaskCompleted', hookLabel: label, hookIsFailure: false, hookStatus: 'success' };
+    }
+    case 'TeammateIdle': {
+      const teammate = str('teammate_name') ?? str('teammate') ?? '';
+      const label = teammate ? `Teammate Idle: ${teammate}` : 'Teammate Idle';
+      return { hookToolName: 'TeammateIdle', hookLabel: label, hookIsFailure: false, hookStatus: 'success' };
+    }
+    case 'PermissionDenied': {
+      const toolNameField = str('tool_name') ?? str('tool') ?? '';
+      const label = toolNameField ? `Permission Denied: ${toolNameField}` : 'Permission Denied';
+      return { hookToolName: 'PermissionDenied', hookLabel: label, hookIsFailure: false, hookStatus: 'error' };
+    }
+    case 'WorktreeCreate': {
+      const worktree = str('worktree_name') ?? str('worktree') ?? '';
+      const label = worktree ? `Worktree Created: ${worktree}` : 'Worktree Created';
+      return { hookToolName: 'WorktreeCreate', hookLabel: label, hookIsFailure: false, hookStatus: 'success' };
+    }
+    case 'WorktreeRemove': {
+      const worktree = str('worktree_name') ?? str('worktree') ?? '';
+      const label = worktree ? `Worktree Removed: ${worktree}` : 'Worktree Removed';
+      return { hookToolName: 'WorktreeRemove', hookLabel: label, hookIsFailure: false, hookStatus: 'success' };
+    }
+    default:
+      // Unknown hook_event_name — fall back to generic "Hook: {name}" label
+      return { hookToolName: hookEventName, hookLabel: `Hook: ${hookEventName}`, hookIsFailure: false, hookStatus: 'success' };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -719,6 +794,8 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
 
   // Detect hook lifecycle events from system records
   const hookStartMap = new Map<string, number>(); // hookKey → startTime
+  // Also store the raw record so hook_event_name can be read on response
+  const hookStartRecordMap = new Map<string, Record<string, unknown>>();
   for (const rec of records) {
     if (rec.type !== 'system') continue;
     const sr = rec as SystemRecord;
@@ -731,18 +808,33 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
 
     if (subtype === 'hook_started') {
       hookStartMap.set(hookId, ts);
+      hookStartRecordMap.set(hookId, raw);
     } else if (subtype === 'hook_response') {
       const startTs = hookStartMap.get(hookId) ?? ts;
+      const startRaw = hookStartRecordMap.get(hookId) ?? raw;
       const duration = ts - startTs;
+
+      // Resolve richer label and toolName from hook_event_name if present
+      const hookEventName = typeof startRaw['hook_event_name'] === 'string'
+        ? startRaw['hook_event_name']
+        : (typeof raw['hook_event_name'] === 'string' ? raw['hook_event_name'] : null);
+
+      const { hookToolName, hookLabel, hookIsFailure, hookStatus } = resolveHookEventMeta(
+        hookEventName,
+        hookName,
+        startRaw,
+        raw,
+      );
+
       top.push({
         id: `hook-${hookId}`,
         type: 'hook',
-        toolName: hookName,
-        label: `Hook: ${hookName}`,
+        toolName: hookToolName,
+        label: hookLabel,
         startTime: startTs,
         endTime: ts,
         duration,
-        status: 'success',
+        status: hookStatus,
         parentAgentId: null,
         input: {},
         output: null,
@@ -751,7 +843,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
         tokenDelta: 0,
         contextFillPercent: 0,
         isReread: false,
-        isFailure: false,
+        isFailure: hookIsFailure,
         children: [],
         tips: [],
         modelName: null,

@@ -249,7 +249,18 @@ export function WaterfallRowComponent({
   }
 
   // Hook rows render as muted teal banners for hook lifecycle events.
+  // Error-type hook events (StopFailure, PermissionDenied) use a red tint instead.
   if (isHook) {
+    const isHookError = row.status === 'error';
+    const hookBgBase = isHookError ? 'rgba(243,139,168,0.08)' : 'rgba(148,226,213,0.06)';
+    const hookBgHover = isHookError ? 'rgba(243,139,168,0.14)' : 'rgba(148,226,213,0.12)';
+    const hookBgSelected = isHookError ? 'rgba(243,139,168,0.18)' : 'rgba(148,226,213,0.18)';
+    const hookBorderColor = isHookError ? 'rgba(243,139,168,0.25)' : 'rgba(148,226,213,0.15)';
+    const hookAccentColor = isHookError ? 'var(--ctp-red)' : 'var(--ctp-teal)';
+    const hookIcon = isHookError
+      ? <FailureIcon size={12} color={hookAccentColor} />
+      : <HookIcon size={12} color={hookAccentColor} />;
+
     return (
       <div
         role="row"
@@ -262,24 +273,24 @@ export function WaterfallRowComponent({
           display: 'flex',
           alignItems: 'center',
           height: ROW_HEIGHT,
-          backgroundColor: isSelected ? 'rgba(148,226,213,0.18)' : 'rgba(148,226,213,0.06)',
+          backgroundColor: isSelected ? hookBgSelected : hookBgBase,
           opacity: matched ? 1 : 0.25,
           cursor: 'pointer',
           transition: 'background-color 80ms',
-          borderBottom: '1px solid rgba(148,226,213,0.15)',
+          borderBottom: `1px solid ${hookBorderColor}`,
           gap: 8,
           paddingLeft: 8,
           paddingRight: 12,
         }}
         onMouseEnter={(e) => {
-          if (!isSelected) (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(148,226,213,0.12)';
+          if (!isSelected) (e.currentTarget as HTMLDivElement).style.backgroundColor = hookBgHover;
         }}
         onMouseLeave={(e) => {
-          if (!isSelected) (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(148,226,213,0.06)';
+          if (!isSelected) (e.currentTarget as HTMLDivElement).style.backgroundColor = hookBgBase;
         }}
       >
-        <HookIcon size={12} color="var(--ctp-teal)" />
-        <span className="font-mono" style={{ color: 'var(--ctp-teal)', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>
+        {hookIcon}
+        <span className="font-mono" style={{ color: hookAccentColor, fontSize: 10, fontWeight: 600, flexShrink: 0 }}>
           hook
         </span>
         <span className="font-mono truncate" style={{ color: 'var(--ctp-subtext0)', fontSize: 10, flex: 1 }} title={row.label}>

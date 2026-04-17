@@ -13,7 +13,7 @@ import type { WaterfallRow, EfficiencyTip } from './types.js';
 const SEARCH_TOOLS = new Set(['Grep', 'Glob', 'Read', 'LS']);
 
 /** Tool names that count as write/edit operations (break a fan-out streak). */
-const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit']);
+const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 
 /**
  * Append a tip to a row, skipping duplicates by tip id.

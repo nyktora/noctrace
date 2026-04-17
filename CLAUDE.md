@@ -183,6 +183,7 @@ All steps complete. Order followed during implementation:
 56. ✅ Codex CLI provider (1.4.0: reads `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`, pairs FunctionCall/FunctionCallOutput by call_id, folds separate TokenCount events into turns, honors `CODEX_HOME`, chokidar real-time; single-file drop-in proving the 1.3 abstraction)
 57. ✅ GitHub Copilot Chat provider (1.5.0: reads VS Code workspaceStorage JSON, 19 tool mappings, full-rewrite file watching; third provider proving the abstraction)
 58. ✅ Phase B provider wiring (1.5.0: multi-provider GET /api/projects + /api/sessions + /api/session; provider-tagged ProjectSummary/SessionSummary; conditional enrichments; Copilot projects in session picker with blue badges)
+59. ✅ Enhanced hook event routing (1.5.1: PostCompact, StopFailure, TaskCreated/Completed, TeammateIdle, PermissionDenied, WorktreeCreate/Remove — distinct labels, icons, colors; NotebookEdit in write-tool sets)
 ### Remaining polish:
 - Loading state spinners
 - README with demo GIF
