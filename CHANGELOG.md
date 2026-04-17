@@ -2,6 +2,20 @@
 
 All notable changes to noctrace will be documented in this file.
 
+## [1.5.1] - 2026-04-17
+
+### Added
+- **8 new hook event types** with distinct rendering: PostCompact (green, compaction complete), StopFailure (red with structured `error_type`), TaskCreated/TaskCompleted (task lifecycle for Agent Teams), TeammateIdle (amber idle gap detection), PermissionDenied (red auto-mode denial with tool name), WorktreeCreate/WorktreeRemove (purple worktree lifecycle)
+- StopFailure and PermissionDenied rows render with error styling and failure icons instead of the generic teal hook appearance
+- Hook payloads now extract `hook_event_name`, `error_type`, `task_subject`, `teammate_name`, `tool_name`, `worktree_name` for rich labels
+- `NotebookEdit` recognized as a write tool in efficiency and security tips
+- `xhigh` effort level styled in Context Startup flyout (peach, between high and max)
+- 12 new tests (513 total)
+
+### Changed
+- `--install-hooks` now registers StopFailure, TaskCreated, TaskCompleted, TeammateIdle events
+- `hooks/hooks.json` includes all 7 new hook event definitions
+
 ## [1.5.0] - 2026-04-15
 
 Third provider and full multi-provider API wiring. Noctrace now reads GitHub Copilot Chat sessions out of the box — no config, no tokens needed. The provider registry that shipped in 1.3 and proved itself with Codex in 1.4 now routes the entire API surface, so all three providers share a single session picker and a single waterfall.
