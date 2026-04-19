@@ -137,6 +137,7 @@ export function useSessionWs(): {
             output: null,
             inputTokens: 0,
             outputTokens: 0,
+            cacheReadTokens: 0,
             tokenDelta: 0,
             contextFillPercent: 0,
             isReread: false,
@@ -150,6 +151,7 @@ export function useSessionWs(): {
             sequence: null,
             isFastMode: false,
             parentToolUseId: null,
+            tokenAttribution: null,
           };
           // Add as a top-level running row — it will be replaced when
           // the real agent row arrives from the JSONL parser.

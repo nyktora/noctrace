@@ -119,6 +119,7 @@ const TOOL_NAME_MAP: Record<string, string> = {
   copilot_searchCodebase: 'Grep',
   vscode_editFile_internal: 'Edit',
   runSubagent: 'Agent',
+  find_symbol: 'Symbol',
 };
 
 // ---------------------------------------------------------------------------
@@ -279,6 +280,7 @@ export function parseCopilotContent(jsonString: string): WaterfallRow[] {
           output: null,
           inputTokens: 0,
           outputTokens: 0,
+          cacheReadTokens: 0,
           tokenDelta: 0,
           contextFillPercent: 0,
           isReread: false,
@@ -292,6 +294,7 @@ export function parseCopilotContent(jsonString: string): WaterfallRow[] {
           sequence: sequence++,
           isFastMode: false,
           parentToolUseId: null,
+          tokenAttribution: null,
         };
 
         rows.push(row);
@@ -318,6 +321,7 @@ export function parseCopilotContent(jsonString: string): WaterfallRow[] {
           output: null,
           inputTokens: 0,
           outputTokens: 0,
+          cacheReadTokens: 0,
           tokenDelta: 0,
           contextFillPercent: 0,
           isReread: false,
@@ -331,6 +335,7 @@ export function parseCopilotContent(jsonString: string): WaterfallRow[] {
           sequence: sequence++,
           isFastMode: false,
           parentToolUseId: null,
+          tokenAttribution: null,
         };
 
         rows.push(row);
@@ -356,6 +361,7 @@ export function parseCopilotContent(jsonString: string): WaterfallRow[] {
         output: null,
         inputTokens: 0,
         outputTokens: 0,
+        cacheReadTokens: 0,
         tokenDelta: 0,
         contextFillPercent: 0,
         isReread: false,
@@ -369,6 +375,7 @@ export function parseCopilotContent(jsonString: string): WaterfallRow[] {
         sequence: sequence++,
         isFastMode: false,
         parentToolUseId: null,
+        tokenAttribution: null,
       };
 
       rows.push(row);

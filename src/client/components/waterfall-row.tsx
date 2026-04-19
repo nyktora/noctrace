@@ -611,9 +611,24 @@ export function WaterfallRowComponent({
           alignItems: 'center',
           justifyContent: 'flex-end',
           paddingRight: 6,
+          gap: 3,
           borderRight: '1px solid rgba(69,71,90,0.5)',
         }}
       >
+        {/* Cache indicator dot — shown when tokens were served from cache */}
+        {capabilities.tokenAccounting !== 'none' && row.cacheReadTokens > 0 && (
+          <span
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              backgroundColor: 'var(--ctp-yellow)',
+              opacity: 0.8,
+              flexShrink: 0,
+            }}
+            title={`${formatTokens(row.cacheReadTokens)} tokens from cache`}
+          />
+        )}
         <span
           className="font-mono text-xs"
           style={{

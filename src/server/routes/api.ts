@@ -26,8 +26,9 @@ import { sessionToOtlp } from '../../shared/otlp-export.js';
 import { createClaudeCodeProvider } from '../../shared/providers/claude-code.js';
 import { listProviders, getProvider } from '../../shared/providers/index.js';
 import type { Provider } from '../../shared/providers/index.js';
+import type { SessionMeta } from '../../shared/session.js';
 import type { WaterfallRow } from '../../shared/types.js';
-import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage, SessionRegisteredMessage, SessionUnregisteredMessage, AgentTeam, TeamMember, TeamTask, SubagentStartMessage } from '../../shared/types.js';
+import type { ProjectSummary, SessionSummary, HookEvent, HookEventMessage, SessionRegisteredMessage, SessionUnregisteredMessage, AgentTeam, TeamMember, TeamTask, SubagentStartMessage, SearchResult } from '../../shared/types.js';
 
 /**
  * Read ~/.claude/sessions/*.json and return a Set of sessionIds
@@ -1006,5 +1007,265 @@ export function buildApiRouter(claudeHome: string, wss?: WebSocketServer): Route
   });
 
   // ---------------------------------------------------------------------------
+  // GET /api/search
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Cross-session full-text search.
+   * Scans session files from all registered providers for a query string.
+   * Uses a fast raw string check before full JSONL parsing to keep latency low.
+   *
+   * Query params:
+   *   q        — search query (min 3 chars, required)
+   *   limit    — max results to return (default 50)
+   *   provider — optional: restrict to a single provider id
+   */
+  router.get('/search', async (req, res) => {
+    const q = typeof req.query['q'] === 'string' ? req.query['q'].trim() : '';
+    const limitParam = typeof req.query['limit'] === 'string' ? parseInt(req.query['limit'], 10) : 50;
+    const providerFilter = typeof req.query['provider'] === 'string' ? req.query['provider'] : null;
+
+    if (q.length < 3) {
+      res.status(400).json({ error: 'Query must be at least 3 characters' });
+      return;
+    }
+
+    const limit = isNaN(limitParam) || limitParam < 1 ? 50 : Math.min(limitParam, 200);
+    const results: SearchResult[] = [];
+
+    // Search within the last 30 days
+    const now = Date.now();
+    const windowBounds = { startMs: now - 30 * 86_400_000, endMs: now + 86_400_000 };
+
+    const qLower = q.toLowerCase();
+
+    try {
+      for (const p of listProviders()) {
+        if (results.length >= limit) break;
+        if (providerFilter !== null && p.id !== providerFilter) continue;
+
+        let sessions;
+        try {
+          sessions = await p.listSessions(windowBounds);
+        } catch {
+          continue;
+        }
+
+        for (const meta of sessions) {
+          if (results.length >= limit) break;
+
+          // Determine the file path for this session
+          let filePath: string | null = null;
+          if (p.id === 'claude-code') {
+            // rawSlug is '<projectSlug>/<sessionId>'
+            const parts = meta.rawSlug.split('/');
+            if (parts.length >= 2) {
+              filePath = path.join(projectsDir, parts[0], `${parts[1]}.jsonl`);
+            }
+          }
+
+          // For non-Claude Code providers that don't expose a file path,
+          // we skip raw-string pre-check and use the parsed rows directly
+          if (filePath !== null) {
+            // Fast path: raw string check before full parse
+            let raw: string;
+            try {
+              raw = await fs.readFile(filePath, 'utf8');
+            } catch {
+              continue;
+            }
+            if (!raw.toLowerCase().includes(qLower)) continue;
+
+            // Session matches — do line-level search
+            const lines = raw.split('\n');
+            const sessionResults = extractSearchMatches(lines, q, meta, p.id, limit - results.length);
+            results.push(...sessionResults);
+          } else {
+            // Non-file providers: parse and search through rows
+            let session;
+            try {
+              session = await p.readSession(meta.rawSlug);
+            } catch {
+              continue;
+            }
+            const rows = session.native as WaterfallRow[];
+            for (const row of rows) {
+              if (results.length >= limit) break;
+              const haystack = buildRowSearchText(row);
+              if (!haystack.toLowerCase().includes(qLower)) continue;
+              const matchLine = findMatchLine(haystack, q);
+              results.push({
+                provider: p.id,
+                projectContext: meta.projectContext,
+                sessionId: meta.rawSlug,
+                sessionStart: new Date(meta.startMs).toISOString(),
+                rowId: row.id,
+                toolName: row.toolName,
+                matchLine: matchLine.slice(0, 200),
+                matchContext: haystack.slice(0, 500),
+              });
+            }
+          }
+        }
+      }
+
+      res.json({ results });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
   return router;
+}
+
+// ---------------------------------------------------------------------------
+// Search helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a single searchable text blob from a WaterfallRow's label, toolName, and output.
+ */
+function buildRowSearchText(row: WaterfallRow): string {
+  const parts: string[] = [row.toolName, row.label];
+  if (row.output) parts.push(row.output);
+  // Include key input fields
+  for (const [, v] of Object.entries(row.input)) {
+    if (typeof v === 'string') parts.push(v);
+  }
+  return parts.join('\n');
+}
+
+/**
+ * Find the line within text that contains the query (case-insensitive).
+ * Returns the full line, or the first 200 chars of text if no line break found.
+ */
+function findMatchLine(text: string, query: string): string {
+  const lower = text.toLowerCase();
+  const qLower = query.toLowerCase();
+  const idx = lower.indexOf(qLower);
+  if (idx === -1) return text.slice(0, 200);
+  const start = text.lastIndexOf('\n', idx);
+  const end = text.indexOf('\n', idx);
+  return text.slice(start < 0 ? 0 : start + 1, end < 0 ? text.length : end);
+}
+
+/**
+ * Scan JSONL lines for query matches and return up to maxResults SearchResult entries.
+ * Operates on raw text lines to avoid re-parsing JSON for lines that don't match.
+ */
+function extractSearchMatches(
+  lines: string[],
+  query: string,
+  meta: SessionMeta,
+  providerId: string,
+  maxResults: number,
+): SearchResult[] {
+  const results: SearchResult[] = [];
+  const qLower = query.toLowerCase();
+
+  for (const line of lines) {
+    if (results.length >= maxResults) break;
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (!trimmed.toLowerCase().includes(qLower)) continue;
+
+    // Parse the JSONL line to extract structured fields
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    } catch {
+      // Malformed line — skip
+      continue;
+    }
+
+    // Only surface tool result lines (assistant with tool_use blocks) and user messages
+    const recordType = typeof parsed['type'] === 'string' ? parsed['type'] : '';
+    if (recordType !== 'assistant' && recordType !== 'user') continue;
+
+    // Extract a row id and tool name from the record
+    let rowId = '';
+    let toolName = '';
+    let matchContext = '';
+
+    if (recordType === 'assistant') {
+      const message = parsed['message'] as Record<string, unknown> | undefined;
+      const content = message ? (message['content'] as unknown[]) : (parsed['content'] as unknown[]);
+      if (Array.isArray(content)) {
+        for (const block of content) {
+          if (typeof block !== 'object' || block === null) continue;
+          const b = block as Record<string, unknown>;
+          if (b['type'] === 'tool_use') {
+            rowId = typeof b['id'] === 'string' ? b['id'] : '';
+            toolName = typeof b['name'] === 'string' ? b['name'] : '';
+            const inputStr = JSON.stringify(b['input'] ?? {});
+            if (inputStr.toLowerCase().includes(qLower)) {
+              matchContext = inputStr.slice(0, 500);
+              break;
+            }
+          } else if (b['type'] === 'text') {
+            const text = typeof b['text'] === 'string' ? b['text'] : '';
+            if (text.toLowerCase().includes(qLower)) {
+              toolName = 'assistant';
+              matchContext = text.slice(0, 500);
+              break;
+            }
+          }
+        }
+      }
+    } else if (recordType === 'user') {
+      const message = parsed['message'] as Record<string, unknown> | undefined;
+      const content = message ? (message['content'] as unknown[]) : (parsed['content'] as unknown[]);
+      if (Array.isArray(content)) {
+        for (const block of content) {
+          if (typeof block !== 'object' || block === null) continue;
+          const b = block as Record<string, unknown>;
+          if (b['type'] === 'tool_result') {
+            const blockContent = b['content'];
+            let text = '';
+            if (typeof blockContent === 'string') {
+              text = blockContent;
+            } else if (Array.isArray(blockContent)) {
+              text = blockContent
+                .filter((c): c is Record<string, unknown> => typeof c === 'object' && c !== null)
+                .map((c) => (typeof c['text'] === 'string' ? c['text'] : ''))
+                .join('\n');
+            }
+            if (text.toLowerCase().includes(qLower)) {
+              rowId = typeof b['tool_use_id'] === 'string' ? b['tool_use_id'] : '';
+              toolName = 'tool_result';
+              matchContext = text.slice(0, 500);
+              break;
+            }
+          } else if (b['type'] === 'text') {
+            const text = typeof b['text'] === 'string' ? b['text'] : '';
+            if (text.toLowerCase().includes(qLower)) {
+              toolName = 'user';
+              matchContext = text.slice(0, 500);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (!matchContext && trimmed.toLowerCase().includes(qLower)) {
+      matchContext = trimmed.slice(0, 500);
+    }
+    if (!matchContext) continue;
+
+    results.push({
+      provider: providerId,
+      projectContext: meta.projectContext,
+      sessionId: meta.rawSlug,
+      sessionStart: new Date(meta.startMs).toISOString(),
+      rowId,
+      toolName: toolName || recordType,
+      matchLine: findMatchLine(matchContext, query).slice(0, 200),
+      matchContext,
+    });
+  }
+
+  return results;
 }

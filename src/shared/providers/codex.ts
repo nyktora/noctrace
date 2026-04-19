@@ -83,6 +83,7 @@ interface TurnTokenData {
   contextWindow: number;
 }
 
+
 // ---------------------------------------------------------------------------
 // Capability descriptor
 // ---------------------------------------------------------------------------
@@ -279,6 +280,7 @@ export function parseCodexContent(content: string): WaterfallRow[] {
           output: null,
           inputTokens: tokens?.inputTokens ?? 0,
           outputTokens: tokens?.outputTokens ?? 0,
+          cacheReadTokens: tokens?.cachedInputTokens ?? 0,
           tokenDelta: 0,
           contextFillPercent: fillPct,
           isReread: false,
@@ -292,6 +294,7 @@ export function parseCodexContent(content: string): WaterfallRow[] {
           sequence: sequence++,
           isFastMode: false,
           parentToolUseId: null,
+          tokenAttribution: null,
         };
 
         rows.push(row);

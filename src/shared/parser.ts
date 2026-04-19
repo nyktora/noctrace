@@ -2,7 +2,7 @@
  * JSONL parser for Claude Code session logs.
  * Pure module: no file I/O, no side effects.
  */
-import type { WaterfallRow } from './types.js';
+import type { WaterfallRow, TokenAttribution } from './types.js';
 import { getPricing, computeCost } from './token-cost.js';
 
 // Re-export from session-metadata (moved to reduce file size)
@@ -126,6 +126,7 @@ interface PendingRow {
   sequence: number | null;
   isFastMode: boolean;
   parentToolUseId: string | null;
+  tokenAttribution: TokenAttribution | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -217,6 +218,70 @@ function isToolFailure(output: string): boolean {
     lower.includes('tool execution failed') ||
     lower.includes('failed to execute')
   );
+}
+
+/**
+ * Estimate per-turn token attribution from assistant content blocks.
+ * Uses character length / 4 as a rough token estimate for each block.
+ * Returns null when inputTokens is 0 (no token data available).
+ */
+function computeAttribution(
+  content: ContentBlock[],
+  inputTokens: number,
+  outputTokens: number,
+  cacheReadTokens: number,
+): TokenAttribution | null {
+  if (inputTokens === 0 && outputTokens === 0) return null;
+
+  // Estimate tokens from content block character lengths (char / 4 heuristic)
+  let thinkingChars = 0;
+  let toolInputChars = 0;
+
+  for (const block of content) {
+    if (block.type === 'thinking') {
+      thinkingChars += block.thinking.length;
+    } else if (block.type === 'tool_use') {
+      try {
+        toolInputChars += JSON.stringify(block.input).length;
+      } catch {
+        toolInputChars += 100; // fallback
+      }
+    }
+  }
+
+  const thinkingEst = Math.round(thinkingChars / 4);
+  const toolInputEst = Math.round(toolInputChars / 4);
+
+  // outputTokens covers the assistant's full response (text + tool_use + thinking)
+  // We can't split output tokens per-block precisely — attribute them proportionally
+  const totalContentEst = thinkingEst + toolInputEst + 1; // +1 to avoid div/0
+  const thinkingOut = outputTokens > 0
+    ? Math.round((thinkingEst / totalContentEst) * outputTokens * (thinkingEst > 0 ? 1 : 0))
+    : 0;
+  const toolOut = outputTokens > 0
+    ? Math.round((toolInputEst / totalContentEst) * outputTokens * (toolInputEst > 0 ? 1 : 0))
+    : 0;
+
+  // inputTokens is the full context window snapshot; cacheReadTokens is the cached portion.
+  // The remainder of inputTokens is roughly: system prompt + user messages + tool outputs in context.
+  const uncachedInput = Math.max(0, inputTokens - cacheReadTokens);
+  // We attribute uncachedInput minus what we can estimate for user/tool content as system prompt.
+  // Without per-block input counts, we use a simple model:
+  //   system = ~40% of uncached input (typical for sessions with loaded CLAUDE.md files)
+  //   userText + toolOutput = remainder
+  const systemEst = Math.round(uncachedInput * 0.4);
+  const userAndToolEst = Math.max(0, uncachedInput - systemEst);
+  const toolOutputEst = Math.round(userAndToolEst * 0.7);
+  const userTextEst = Math.max(0, userAndToolEst - toolOutputEst);
+
+  return {
+    thinking: thinkingOut,
+    toolInput: toolOut,
+    toolOutput: toolOutputEst,
+    systemPrompt: systemEst,
+    userText: userTextEst,
+    cacheRead: cacheReadTokens,
+  };
 }
 
 /**
@@ -514,6 +579,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
         sequence,
         isFastMode,
         parentToolUseId,
+        tokenAttribution: computeAttribution(ar.message.content, inputTokens, outputTokens, cacheReadTokens),
       });
     }
   }
@@ -571,6 +637,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       output: p.output,
       inputTokens: p.inputTokens,
       outputTokens: p.outputTokens,
+      cacheReadTokens: p.cacheReadTokens,
       tokenDelta: 0,
       contextFillPercent: p.contextFillPercent,
       isReread: p.isReread,
@@ -584,6 +651,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       sequence: p.sequence,
       isFastMode: p.isFastMode,
       parentToolUseId: p.parentToolUseId,
+      tokenAttribution: p.tokenAttribution,
     });
   }
 
@@ -614,6 +682,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       output: res ? res.output : null,
       inputTokens: sp.inputTokens,
       outputTokens: sp.outputTokens,
+      cacheReadTokens: 0,
       tokenDelta: 0,
       contextFillPercent: ctxFill,
       isReread,
@@ -627,6 +696,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       sequence: null,
       isFastMode: false,
       parentToolUseId: null,
+      tokenAttribution: null,
     });
   }
 
@@ -736,6 +806,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       output: errorMsg,
       inputTokens: 0,
       outputTokens: 0,
+      cacheReadTokens: 0,
       tokenDelta: 0,
       contextFillPercent: 0,
       isReread: false,
@@ -749,6 +820,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       sequence: null,
       isFastMode: false,
       parentToolUseId: null,
+      tokenAttribution: null,
     });
   }
 
@@ -776,6 +848,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       output: ar.message.error,
       inputTokens: 0,
       outputTokens: 0,
+      cacheReadTokens: 0,
       tokenDelta: 0,
       contextFillPercent: 0,
       isReread: false,
@@ -789,6 +862,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       sequence: typeof ar.sequence === 'number' ? ar.sequence : null,
       isFastMode: false,
       parentToolUseId: null,
+      tokenAttribution: null,
     });
   }
 
@@ -840,6 +914,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
         output: null,
         inputTokens: 0,
         outputTokens: 0,
+        cacheReadTokens: 0,
         tokenDelta: 0,
         contextFillPercent: 0,
         isReread: false,
@@ -853,6 +928,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
         sequence: typeof (sr as SystemRecord).sequence === 'number' ? ((sr as SystemRecord).sequence as number) : null,
         isFastMode: false,
         parentToolUseId: null,
+        tokenAttribution: null,
       });
     }
   }
@@ -886,6 +962,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       output: text,
       inputTokens: 0,
       outputTokens: 0,
+      cacheReadTokens: 0,
       tokenDelta: 0,
       contextFillPercent: 0,
       isReread: false,
@@ -899,6 +976,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       sequence: null,
       isFastMode: false,
       parentToolUseId: null,
+      tokenAttribution: null,
     });
   }
 
@@ -919,9 +997,10 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
     const ts = new Date(ar.timestamp).getTime();
     const truncated = fullText.length > 120 ? fullText.slice(0, 117) + '...' : fullText;
     const usage = ar.message.usage;
+    const asstCacheRead = usage?.cache_read_input_tokens ?? 0;
     const inputTokens = (usage?.input_tokens ?? 0)
       + (usage?.cache_creation_input_tokens ?? 0)
-      + (usage?.cache_read_input_tokens ?? 0);
+      + asstCacheRead;
     const outputTokens = usage?.output_tokens ?? 0;
     const modelName = typeof ar.message.model === 'string' ? ar.message.model : null;
 
@@ -939,6 +1018,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       output: fullText,
       inputTokens,
       outputTokens,
+      cacheReadTokens: asstCacheRead,
       tokenDelta: 0,
       contextFillPercent: (inputTokens / effectiveWindow) * 100,
       isReread: false,
@@ -952,6 +1032,7 @@ export function parseJsonlContent(content: string): WaterfallRow[] {
       sequence: typeof ar.sequence === 'number' ? ar.sequence : null,
       isFastMode: ar.message.speed === 'fast',
       parentToolUseId: null,
+      tokenAttribution: computeAttribution(ar.message.content, inputTokens, outputTokens, asstCacheRead),
     });
   }
 
@@ -1094,6 +1175,7 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
         output: res ? res.output : null,
         inputTokens,
         outputTokens,
+        cacheReadTokens,
         tokenDelta: 0,
         contextFillPercent,
         isReread,
@@ -1107,6 +1189,7 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
         sequence: null,
         isFastMode: false,
         parentToolUseId: null,
+        tokenAttribution: computeAttribution(ar.message.content, inputTokens, outputTokens, cacheReadTokens),
       });
     }
   }
@@ -1142,6 +1225,7 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
       output: errorMsg,
       inputTokens: 0,
       outputTokens: 0,
+      cacheReadTokens: 0,
       tokenDelta: 0,
       contextFillPercent: 0,
       isReread: false,
@@ -1155,6 +1239,7 @@ export function parseSubAgentContent(content: string): WaterfallRow[] {
       sequence: null,
       isFastMode: false,
       parentToolUseId: null,
+      tokenAttribution: null,
     });
   }
 

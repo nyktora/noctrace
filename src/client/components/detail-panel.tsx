@@ -12,6 +12,8 @@ import { ShieldIcon } from '../icons/shield-icon.tsx';
 import { formatDuration, formatTokens, getContextHeatColor, getToolColor } from '../utils/tool-colors.ts';
 import { formatCost } from '../../shared/token-cost.ts';
 import { looksLikeMarkdown, renderMarkdown } from '../utils/markdown.ts';
+import { renderToolContent } from './tool-renderers.tsx';
+import { TokenAttributionBar } from './token-attribution.tsx';
 
 /** Props for DetailPanel */
 export interface DetailPanelProps {
@@ -224,6 +226,21 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
               Δ {formatTokens(row.tokenDelta)}
             </span>
           )}
+          {/* Cache badge — shown when tokens were served from cache */}
+          {capabilities.tokenAccounting !== 'none' && row.cacheReadTokens > 0 && (
+            <span
+              className="px-1.5 py-0.5 rounded font-mono"
+              style={{
+                backgroundColor: 'rgba(249,226,175,0.12)',
+                color: 'var(--ctp-yellow)',
+                fontSize: 9,
+                border: '1px solid rgba(249,226,175,0.25)',
+              }}
+              title={`${row.cacheReadTokens} tokens served from cache`}
+            >
+              {formatTokens(row.cacheReadTokens)} cached
+            </span>
+          )}
           {/* Cost badge — only when provider has token accounting */}
           {capabilities.tokenAccounting !== 'none' && row.estimatedCost !== null && (
             <span
@@ -387,6 +404,11 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
         );
       })()}
 
+      {/* Token attribution bar — only when provider has token accounting and row has attribution data */}
+      {capabilities.tokenAccounting !== 'none' && row.tokenAttribution !== null && (
+        <TokenAttributionBar attribution={row.tokenAttribution} />
+      )}
+
       {/* Two-column content */}
       <div className="flex flex-1 overflow-hidden">
         <div
@@ -403,7 +425,7 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
           >
             <span>Input</span>
           </div>
-          <MarkdownOrPre text={renderInput(row.input)} />
+          {renderToolContent(row, 'input') ?? <MarkdownOrPre text={renderInput(row.input)} />}
         </div>
         <div className="flex-1 overflow-auto">
           <div
@@ -416,10 +438,12 @@ export function DetailPanel({ row }: DetailPanelProps): React.ReactElement {
           >
             <span>Output</span>
           </div>
-          <MarkdownOrPre
-            text={row.output ?? '(no output)'}
-            errorColor={row.status === 'error' ? 'var(--color-error)' : undefined}
-          />
+          {renderToolContent(row, 'output') ?? (
+            <MarkdownOrPre
+              text={row.output ?? '(no output)'}
+              errorColor={row.status === 'error' ? 'var(--color-error)' : undefined}
+            />
+          )}
         </div>
       </div>
     </div>

@@ -24,6 +24,25 @@ export type RowStatus = 'running' | 'success' | 'error';
 export type HealthGrade = 'A' | 'B' | 'C' | 'D' | 'F';
 
 /**
+ * Per-turn token attribution breakdown (rough estimates, char/4 heuristic).
+ * Used to show WHERE tokens went within an assistant turn.
+ */
+export interface TokenAttribution {
+  /** Extended thinking tokens (from thinking blocks). */
+  thinking: number;
+  /** Tool call input content tokens (from tool_use blocks). */
+  toolInput: number;
+  /** Tool result output tokens (from tool_result blocks in the context). */
+  toolOutput: number;
+  /** Estimated system/instruction tokens (attributed to the remainder of inputTokens). */
+  systemPrompt: number;
+  /** User message tokens. */
+  userText: number;
+  /** Tokens served from the prompt cache. */
+  cacheRead: number;
+}
+
+/**
  * A single row in the waterfall timeline.
  * Represents either a tool call, an agent spawn, or an API-level error event.
  */
@@ -41,6 +60,8 @@ export interface WaterfallRow {
   output: string | null;
   inputTokens: number;
   outputTokens: number;
+  /** Tokens served from the prompt cache for this turn (cache_read_input_tokens). */
+  cacheReadTokens: number;
   tokenDelta: number;
   contextFillPercent: number;
   isReread: boolean;
@@ -64,6 +85,8 @@ export interface WaterfallRow {
   isFastMode: boolean;
   /** Canonical parent tool_use ID from parent_tool_use_id field. Null when absent. */
   parentToolUseId: string | null;
+  /** Per-turn token attribution breakdown. Null when token data is unavailable. */
+  tokenAttribution: TokenAttribution | null;
 }
 
 /**
@@ -349,6 +372,29 @@ export interface PatternsResponse {
     callsPrev: number;
   }>;
   errors: Array<{ path: string; reason: string }>;
+}
+
+/**
+ * A single result from the cross-session full-text search endpoint.
+ * Returned by GET /api/search?q=<query>.
+ */
+export interface SearchResult {
+  /** Provider id, e.g. 'claude-code', 'codex'. */
+  provider: string;
+  /** Human-readable project path, e.g. '~/dev/noctrace'. */
+  projectContext: string;
+  /** Raw slug for navigation, e.g. '-Users-lam-dev-noctrace'. */
+  sessionId: string;
+  /** ISO 8601 start time of the session. */
+  sessionStart: string;
+  /** Waterfall row id that matched. */
+  rowId: string;
+  /** Tool name of the matching row, e.g. 'Bash', 'Read'. */
+  toolName: string;
+  /** The line containing the match (truncated to 200 chars). */
+  matchLine: string;
+  /** Surrounding context around the match (truncated to 500 chars). */
+  matchContext: string;
 }
 
 /**

@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 
 import { useSessionStore } from '../store/session-store.ts';
 import { useCapabilities } from '../hooks/use-capabilities.ts';
@@ -7,6 +7,7 @@ import { HealthBadge } from './health-badge.tsx';
 import { SessionStats } from './session-stats.tsx';
 import { ContextStartup } from './context-startup.tsx';
 import { ReliabilityPanel } from './reliability-panel.tsx';
+import { SearchResults } from './search-results.tsx';
 import { FilterIcon } from '../icons/filter-icon.tsx';
 import { WaterfallIcon } from '../icons/waterfall-icon.tsx';
 import { WarningIcon } from '../icons/warning-icon.tsx';
@@ -16,6 +17,7 @@ import { ShieldIcon } from '../icons/shield-icon.tsx';
 import { StatsIcon } from '../icons/stats-icon.tsx';
 import { ContextIcon } from '../icons/context-icon.tsx';
 import { ReliabilityIcon } from '../icons/reliability-icon.tsx';
+import { SearchIcon } from '../icons/search-icon.tsx';
 import { formatTokens, formatDuration } from '../utils/tool-colors.ts';
 import { formatCost } from '../../shared/token-cost.ts';
 import { computeReliability } from '../../shared/reliability.ts';
@@ -39,7 +41,39 @@ export function Toolbar(): React.ReactElement {
   const toggleReliability = useSessionStore((s) => s.toggleReliability);
   const instructionsLoaded = useSessionStore((s) => s.instructionsLoaded);
 
+  const showSearchResults = useSessionStore((s) => s.showSearchResults);
+  const searchAllSessions = useSessionStore((s) => s.searchAllSessions);
+  const clearSearch = useSessionStore((s) => s.clearSearch);
+
   const [showContextStartup, setShowContextStartup] = useState(false);
+  const [searchInputValue, setSearchInputValue] = useState('');
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close search panel on outside click
+  useEffect(() => {
+    if (!showSearchResults) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        clearSearch();
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showSearchResults, clearSearch]);
+
+  const handleSearchSubmit = useCallback(() => {
+    if (searchInputValue.trim().length >= 3) {
+      void searchAllSessions(searchInputValue.trim());
+    }
+  }, [searchInputValue, searchAllSessions]);
+
+  const handleSearchKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') handleSearchSubmit();
+      if (e.key === 'Escape') { clearSearch(); setSearchInputValue(''); }
+    },
+    [handleSearchSubmit, clearSearch],
+  );
 
   const handleCloseStats = useCallback(() => {
     if (showSessionStats) toggleSessionStats();
@@ -55,9 +89,10 @@ export function Toolbar(): React.ReactElement {
     : drift.driftFactor >= 2 ? 'var(--ctp-yellow)'
     : 'var(--ctp-green)';
 
-  const { agentCount, totalTokens, sessionDuration, tipCount, securityTipCount, totalCost } = useMemo(() => {
-    if (rows.length === 0) return { agentCount: 0, totalTokens: 0, sessionDuration: null as number | null, tipCount: 0, securityTipCount: 0, totalCost: null as number | null };
+  const { agentCount, totalTokens, sessionDuration, tipCount, securityTipCount, totalCost, cacheHitPct } = useMemo(() => {
+    if (rows.length === 0) return { agentCount: 0, totalTokens: 0, sessionDuration: null as number | null, tipCount: 0, securityTipCount: 0, totalCost: null as number | null, cacheHitPct: null as number | null };
     let agents = 0, tokens = 0, tips = 0, securityTips = 0, cost = 0, hasCost = false, minStart = Infinity, maxEnd = -Infinity;
+    let totalCacheRead = 0, totalInput = 0;
     for (const r of rows) {
       if (r.type === 'agent') agents++;
       tokens += r.tokenDelta + r.outputTokens;
@@ -69,8 +104,14 @@ export function Toolbar(): React.ReactElement {
       const end = r.endTime ?? r.startTime;
       if (end > maxEnd) maxEnd = end;
       if (r.startTime < minStart) minStart = r.startTime;
+      // Track cache tokens for hit rate (only rows with actual input token data)
+      if (r.inputTokens > 0) {
+        totalInput += r.inputTokens;
+        totalCacheRead += r.cacheReadTokens;
+      }
     }
-    return { agentCount: agents, totalTokens: tokens, sessionDuration: maxEnd - minStart, tipCount: tips, securityTipCount: securityTips, totalCost: hasCost ? cost : null };
+    const hitPct = totalInput > 0 ? (totalCacheRead / totalInput) * 100 : null;
+    return { agentCount: agents, totalTokens: tokens, sessionDuration: maxEnd - minStart, tipCount: tips, securityTipCount: securityTips, totalCost: hasCost ? cost : null, cacheHitPct: hitPct };
   }, [rows]);
 
   const capabilities = useCapabilities();
@@ -111,39 +152,84 @@ export function Toolbar(): React.ReactElement {
       {/* View toggle: Sessions | Patterns */}
       <NavToggle />
 
-      {/* Filter input */}
-      <div className="flex-1 flex items-center relative min-w-0">
-        <div
-          className="absolute left-2 pointer-events-none"
-          style={{ color: 'var(--ctp-overlay0)' }}
-        >
-          <FilterIcon size={12} />
-        </div>
-        <input
-          type="text"
-          value={filterText}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="Filter (type:bash >5s tokens:>1k error)"
-          className="w-full text-xs font-mono pl-7 pr-3 py-1 rounded"
-          style={{
-            backgroundColor: 'var(--ctp-surface0)',
-            border: '1px solid var(--ctp-surface1)',
-            color: 'var(--ctp-text)',
-            outline: 'none',
-            height: 22,
-          }}
-          spellCheck={false}
-        />
-        {filterText && (
-          <button
-            type="button"
-            onClick={() => setFilter('')}
-            className="absolute right-2 text-xs"
+      {/* Filter input + Search All — share a flex group with relative positioning for search panel */}
+      <div className="flex-1 flex items-center gap-1.5 min-w-0 relative" ref={searchContainerRef}>
+        {/* Local filter input */}
+        <div className="flex-1 flex items-center relative min-w-0">
+          <div
+            className="absolute left-2 pointer-events-none"
             style={{ color: 'var(--ctp-overlay0)' }}
           >
-            ×
+            <FilterIcon size={12} />
+          </div>
+          <input
+            type="text"
+            value={filterText}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter (type:bash >5s tokens:>1k error)"
+            className="w-full text-xs font-mono pl-7 pr-3 py-1 rounded"
+            style={{
+              backgroundColor: 'var(--ctp-surface0)',
+              border: '1px solid var(--ctp-surface1)',
+              color: 'var(--ctp-text)',
+              outline: 'none',
+              height: 22,
+            }}
+            spellCheck={false}
+          />
+          {filterText && (
+            <button
+              type="button"
+              onClick={() => setFilter('')}
+              className="absolute right-2 text-xs"
+              style={{ color: 'var(--ctp-overlay0)' }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {/* Search All Sessions input + button */}
+        <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
+          <input
+            type="text"
+            value={searchInputValue}
+            onChange={(e) => setSearchInputValue(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            placeholder="Search all..."
+            className="text-xs font-mono pl-2 pr-2 py-1 rounded"
+            style={{
+              backgroundColor: 'var(--ctp-surface0)',
+              border: showSearchResults ? '1px solid var(--ctp-blue)' : '1px solid var(--ctp-surface1)',
+              color: 'var(--ctp-text)',
+              outline: 'none',
+              height: 22,
+              width: 110,
+            }}
+            spellCheck={false}
+            title="Search across all sessions (Enter to search)"
+          />
+          <button
+            type="button"
+            onClick={handleSearchSubmit}
+            title="Search all sessions"
+            className="flex items-center justify-center rounded"
+            style={{
+              width: 22,
+              height: 22,
+              flexShrink: 0,
+              background: showSearchResults ? 'var(--ctp-blue)' : 'var(--ctp-surface0)',
+              border: showSearchResults ? '1px solid var(--ctp-blue)' : '1px solid var(--ctp-surface1)',
+              cursor: 'pointer',
+              color: showSearchResults ? 'var(--ctp-base)' : 'var(--ctp-overlay0)',
+            }}
+          >
+            <SearchIcon size={11} color={showSearchResults ? 'var(--ctp-base)' : 'var(--ctp-overlay0)'} />
           </button>
-        )}
+        </div>
+
+        {/* Search results panel — absolutely positioned below the filter+search row */}
+        {showSearchResults && <SearchResults onClose={clearSearch} />}
       </div>
 
       {/* Auto-scroll toggle */}
@@ -281,6 +367,18 @@ export function Toolbar(): React.ReactElement {
               data-testid="toolbar-token-count"
             >
               {formatTokens(totalTokens)}
+            </span>
+          )}
+
+          {/* Cache hit rate — only when provider has token accounting and data is available */}
+          {capabilities.tokenAccounting !== 'none' && cacheHitPct !== null && cacheHitPct > 0 && (
+            <span
+              className="font-mono"
+              style={{ color: cacheHitPct >= 50 ? 'var(--ctp-yellow)' : 'var(--ctp-subtext0)', fontWeight: cacheHitPct >= 50 ? 600 : 400 }}
+              title={`Cache hit rate: ${cacheHitPct.toFixed(1)}% of input tokens served from cache`}
+              data-testid="toolbar-cache-pill"
+            >
+              {cacheHitPct.toFixed(0)}% cache
             </span>
           )}
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { AgentTeam, CompactionBoundary, ContextHealth, DriftAnalysis, InstructionFile, ProjectSummary, SessionInitContext, SessionResultMetrics, SessionSummary, WaterfallRow } from '../../shared/types.ts';
+import type { AgentTeam, CompactionBoundary, ContextHealth, DriftAnalysis, InstructionFile, ProjectSummary, SearchResult, SessionInitContext, SessionResultMetrics, SessionSummary, WaterfallRow } from '../../shared/types.ts';
 import type { ProviderCapabilities } from '../../shared/providers/provider.ts';
 import { CLAUDE_CODE_CAPABILITIES } from '../hooks/use-capabilities.ts';
 
@@ -81,6 +81,12 @@ export interface SessionStore {
   compareDrift: DriftAnalysis | null;
   compareCompactionBoundaries: CompactionBoundary[];
 
+  // Cross-session search
+  searchResults: SearchResult[];
+  searchQuery: string;
+  searchLoading: boolean;
+  showSearchResults: boolean;
+
   // Actions
   fetchProjects: () => Promise<void>;
   fetchSessions: (slug: string) => Promise<void>;
@@ -121,6 +127,10 @@ export interface SessionStore {
   enterCompareMode: (slug: string, sessionId: string) => Promise<void>;
   /** Exit compare mode and clear all compare state. */
   exitCompareMode: () => void;
+  /** Search across all sessions for a query string. */
+  searchAllSessions: (query: string) => Promise<void>;
+  /** Clear search results and hide the search panel. */
+  clearSearch: () => void;
 }
 
 /** Global session store powered by Zustand */
@@ -173,6 +183,11 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   compareHealth: null,
   compareDrift: null,
   compareCompactionBoundaries: [],
+
+  searchResults: [],
+  searchQuery: '',
+  searchLoading: false,
+  showSearchResults: false,
 
   fetchRegisteredSessions: async () => {
     const res = await fetch('/api/sessions/registered');
@@ -417,6 +432,24 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       pendingSubAgentChildren: nextPending,
     });
   },
+
+  searchAllSessions: async (query: string) => {
+    if (query.trim().length < 3) return;
+    set({ searchLoading: true, searchQuery: query, showSearchResults: true, searchResults: [] });
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      if (!res.ok) {
+        set({ searchLoading: false });
+        return;
+      }
+      const data = (await res.json()) as { results: SearchResult[] };
+      set({ searchResults: data.results ?? [], searchLoading: false });
+    } catch {
+      set({ searchLoading: false });
+    }
+  },
+
+  clearSearch: () => set({ searchResults: [], searchQuery: '', showSearchResults: false, searchLoading: false }),
 
   updateSubAgentChildren: (toolUseId, agentId, children) => {
     const rows = get().rows;
