@@ -1,6 +1,6 @@
 {
   "name": "noctrace",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Chrome DevTools Network-tab-style waterfall visualizer for AI coding agent workflows — supports Claude Code, Codex CLI, and GitHub Copilot Chat",
   "author": "Nyktora Group LLC",
   "license": "MIT",

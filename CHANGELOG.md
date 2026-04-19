@@ -2,6 +2,18 @@
 
 All notable changes to noctrace will be documented in this file.
 
+## [1.6.0] - 2026-04-18
+
+Five features informed by the first `/auto-scan` competitive intelligence run. Closes the biggest gaps vs claude-devtools (token attribution, tool renderers) and claude-view (cross-session search).
+
+### Added
+- **Per-turn token attribution.** See where tokens went each turn: thinking, tool I/O, system prompt, user text, cache reads. Stacked bar chart in the detail panel (pure CSS, no charting library). Estimates based on content block sizes
+- **Cache hit rate metric.** `cacheReadTokens` extracted from JSONL `cache_read_input_tokens`. Toolbar shows "XX% cache" pill (yellow when >= 50%). Yellow dot on cached rows. Works for Claude Code and Codex; Copilot shows nothing (no cache data exposed)
+- **Cross-session full-text search.** "Search all..." input in the toolbar (or Cmd+Shift+F). `GET /api/search?q=` scans all sessions from all providers (last 30 days). Raw string pre-check before JSONL parsing for speed. Results flyout with click-to-navigate: jumps to the session and highlights the matching row
+- **Tool-specific detail renderers.** Edit/Write show inline diffs with red/green background. Read shows syntax-highlighted code with line numbers. Bash shows terminal-styled command + output with error lines tinted red. Glob/Grep show file lists with icons. Unknown tools fall back to the existing plain text/markdown rendering
+- **Copilot `find_symbol` tool mapping.** New Copilot tool ID mapped to "Symbol" display name
+- **`/auto-scan` skill.** Scans Claude Code, Copilot, and Codex releases + 7 competitor tools for new observability opportunities. Writes prioritized feature reports to `docs/research/`
+
 ## [1.5.1] - 2026-04-17
 
 ### Added
