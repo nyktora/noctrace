@@ -80,7 +80,7 @@
     "softwareVersion": "1.6.0",
     "author": {"@id":"https://nyktora.github.io/noctrace/#organization"},
     "screenshot": "https://nyktora.github.io/noctrace/og-image.png",
-    "featureList": "Waterfall timeline, Context health scoring, Sub-agent visibility, Token cost estimation, Context rot detection, Efficiency tips, Security tips, Loop detection, Advanced filtering, Session comparison, Real-time streaming, Docker support, OTel export, MCP session registry, GitHub Copilot Chat provider, Codex CLI provider, Multi-provider session picker",
+    "featureList": "Waterfall timeline, Context health scoring, Sub-agent visibility, Token cost estimation, Context rot detection, Efficiency tips, Security tips, Loop detection, Advanced filtering, Session comparison, Real-time streaming, Docker support, OTel export, MCP session registry, GitHub Copilot Chat provider, Codex CLI provider, Multi-provider session picker, Per-turn token attribution, Cache hit rate metric, Cross-session full-text search, Tool-specific detail renderers",
     "offers": {
       "@type": "Offer",
       "price": "0",
@@ -186,8 +186,12 @@
         <li><strong>Context Startup flyout:</strong> shows which CLAUDE.md and instruction files loaded at session start with estimated token counts, so you can see what filled your context before the first tool call.</li>
         <li><strong>Hook lifecycle rows:</strong> PostToolUse, SubagentStart, and SubagentStop events from Claude Code hooks render as distinct teal timeline rows.</li>
         <li><strong>Resizable Name column:</strong> drag the column header edge to resize, stored in state across sessions.</li>
-        <li><strong>GitHub Copilot Chat provider (new in v1.5):</strong> sessions from VS Code Copilot Chat appear automatically alongside Claude Code and Codex sessions. 19 internal tool IDs are mapped to familiar names (Read, Write, Edit, Bash, etc.). Copilot projects show a blue "copilot" badge in the session picker.</li>
+        <li><strong>GitHub Copilot Chat provider (new in v1.5):</strong> sessions from VS Code Copilot Chat appear automatically alongside Claude Code and Codex sessions. 20 internal tool IDs are mapped to familiar names (Read, Write, Edit, Bash, etc.). Copilot projects show a blue "copilot" badge in the session picker.</li>
         <li><strong>Multi-provider session picker (new in v1.4+):</strong> Claude Code, OpenAI Codex CLI, and GitHub Copilot Chat sessions all appear in one unified view with per-provider badges. Zero configuration — each provider auto-detects its session directory.</li>
+        <li><strong>Per-turn token attribution (new in v1.6):</strong> stacked bar chart in the detail panel showing where tokens went each turn — thinking, tool I/O, system prompt, user text, cache reads.</li>
+        <li><strong>Cache hit rate metric (new in v1.6):</strong> toolbar shows cache hit percentage pill (yellow when &gt;= 50%). Yellow dot on cached rows. Extracted from JSONL <code>cache_read_input_tokens</code>.</li>
+        <li><strong>Cross-session full-text search (new in v1.6):</strong> Cmd+Shift+F or "Search all..." in the toolbar. Scans all sessions from all providers (last 30 days). Click results to navigate directly to the matching row.</li>
+        <li><strong>Tool-specific detail renderers (new in v1.6):</strong> Edit/Write show inline diffs, Read shows syntax-highlighted code with line numbers, Bash shows terminal-styled output with error lines tinted red, Glob/Grep show file lists with icons.</li>
       </ul>
     </section>
 
@@ -226,7 +230,7 @@
       <ul>
         <li><strong>Claude Code (Anthropic):</strong> reads JSONL session logs from <code>~/.claude/projects/</code>. Full Claude Code observability — context health scoring, token cost estimation, compaction tracking, sub-agent waterfall, tool call visualization, and OpenTelemetry export. This is the primary Claude Code session viewer and Claude Code log viewer.</li>
         <li><strong>Codex CLI (OpenAI):</strong> reads <code>~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl</code> files. Codex CLI observability with per-turn token accounting and full tool-call granularity. Orange <code>codex</code> badge in the session picker. Honors the <code>CODEX_HOME</code> environment variable.</li>
-        <li><strong>GitHub Copilot Chat (new in v1.5):</strong> reads VS Code workspaceStorage session files from <code>~/Library/Application Support/Code/User/workspaceStorage/</code>. Copilot agent monitoring with 19 internal tool IDs mapped to familiar names (Read, Write, Edit, Bash, etc.). Blue <code>copilot</code> badge. Token counts are not available since Copilot Chat does not expose them.</li>
+        <li><strong>GitHub Copilot Chat (new in v1.5):</strong> reads VS Code workspaceStorage session files from <code>~/Library/Application Support/Code/User/workspaceStorage/</code>. Copilot agent monitoring with 20 internal tool IDs mapped to familiar names (Read, Write, Edit, Bash, etc.). Blue <code>copilot</code> badge. Token counts are not available since Copilot Chat does not expose them.</li>
       </ul>
     </section>
 
@@ -498,7 +502,7 @@
           React.createElement("span",{className:"noctrace-banner-pill",style:{
             fontSize:9,padding:"2px 6px",borderRadius:2,
             background:TL+"22",color:TL,fontWeight:700,letterSpacing:"0.5px",flexShrink:0,
-          }},"NEW IN v1.4"),
+          }},"NEW IN v1.6"),
           React.createElement("svg",{className:"noctrace-banner-icon",width:14,height:14,viewBox:"0 0 14 14",style:{flexShrink:0}},
             React.createElement("g",{fill:"none",stroke:TL,strokeWidth:"0.9"},
               React.createElement("rect",{x:"0.8",y:"7",width:"2.6",height:"2.6"}),
@@ -509,8 +513,8 @@
               React.createElement("path",{d:"M10.5 5.2 Q 12.8 5.2 12.8 7.5 L 10.5 9.8",strokeLinecap:"round"})
             )
           ),
-          React.createElement("span",{className:"noctrace-banner-desc",style:{color:TXB}},"Multi-agent — now tracing Codex CLI sessions alongside Claude Code, same waterfall, zero config."),
-          React.createElement("code",{className:"noctrace-banner-code",style:{color:TXM,background:SF2,padding:"1px 6px",borderRadius:2,fontSize:10,border:"1px solid "+BD}},"~/.codex/sessions/"),
+          React.createElement("span",{className:"noctrace-banner-desc",style:{color:TXB}},"Token attribution, cache hit rate, cross-session search, tool-specific renderers — v1.6 closes the biggest gaps vs the field."),
+          React.createElement("code",{className:"noctrace-banner-code",style:{color:TXM,background:SF2,padding:"1px 6px",borderRadius:2,fontSize:10,border:"1px solid "+BD}},"npx noctrace"),
           React.createElement("span",{style:{color:TL,fontSize:11,display:"flex",alignItems:"center",gap:3,flexShrink:0}},"docs ",React.createElement("span",null,"\u2192"))
         ),
 
@@ -530,7 +534,7 @@
           React.createElement("p",{style:{color:TX,fontSize:13,maxWidth:520,marginBottom:24,lineHeight:1.75,animation:"fadeUp 0.4s ease 0.3s both"}},
             "Chrome DevTools ",
             React.createElement("code",{style:{color:TXB,background:SF2,padding:"1px 5px",borderRadius:2}},"Network"),
-            " tab for Claude Code. Waterfall timelines, token tracking, and ",
+            " tab for Claude Code, Codex CLI, and GitHub Copilot. Waterfall timelines, token tracking, and ",
             React.createElement("span",{style:{color:RD,fontWeight:600}},"context rot"),
             " detection — so you can see when your session starts degrading."
           ),

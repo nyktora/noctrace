@@ -10,7 +10,7 @@
   <meta property="og:title" content="Noctrace Documentation — Claude Code Debugger &amp; Session Log Viewer">
   <meta property="og:description" content="Install and configure Noctrace for Claude Code, Codex CLI, and Copilot Chat. Debug AI agent sessions, parse JSONL logs, monitor context health, export OpenTelemetry traces.">
   <meta property="og:type" content="article">
-  <meta property="article:modified_time" content="2026-04-15T00:00:00Z">
+  <meta property="article:modified_time" content="2026-04-18T00:00:00Z">
   <meta property="og:url" content="https://nyktora.github.io/noctrace/docs.html">
   <meta property="og:site_name" content="Noctrace">
   <meta property="og:locale" content="en_US">
@@ -72,7 +72,7 @@
     "description": "Complete guide to installing and using Noctrace for Claude Code session log analysis, Codex CLI session monitoring, and GitHub Copilot Chat visualization. Covers JSONL parsing, context health scoring, context rot detection, context compaction tracking, OpenTelemetry export, efficiency tips, and security analysis.",
     "keywords": "claude code debugger, claude code log viewer, claude code session logs, claude code jsonl parser, codex cli session viewer, claude code opentelemetry, claude code context compaction, npm install noctrace, claude code observability, ai agent monitoring",
     "url": "https://nyktora.github.io/noctrace/docs.html",
-    "dateModified": "2026-04-15",
+    "dateModified": "2026-04-18",
     "proficiencyLevel": "Expert",
     "dependencies": "Node.js 20 LTS, Claude Code / Codex CLI / GitHub Copilot Chat",
     "author": {"@id":"https://nyktora.github.io/noctrace/#organization"},
@@ -169,7 +169,17 @@
 
       <section>
         <h2>GitHub Copilot Chat Visualization</h2>
-        <p>Noctrace v1.5 added a GitHub Copilot Chat provider. It reads VS Code Copilot Chat session files from <code>~/Library/Application Support/Code/User/workspaceStorage/</code> (macOS) or the equivalent path on Linux and Windows. The Copilot parser maps 19 internal Copilot tool IDs to human-readable names (Read, Write, Edit, Bash, etc.) so they appear consistently alongside Claude Code and Codex tool calls. Copilot sessions show a blue <code>copilot</code> badge. Token counts and cost estimates are not available for Copilot Chat sessions since Copilot Chat does not expose token usage data.</p>
+        <p>Noctrace v1.5 added a GitHub Copilot Chat provider. It reads VS Code Copilot Chat session files from <code>~/Library/Application Support/Code/User/workspaceStorage/</code> (macOS) or the equivalent path on Linux and Windows. The Copilot parser maps 20 internal Copilot tool IDs to human-readable names (Read, Write, Edit, Bash, etc.) so they appear consistently alongside Claude Code and Codex tool calls. Copilot sessions show a blue <code>copilot</code> badge. Token counts and cost estimates are not available for Copilot Chat sessions since Copilot Chat does not expose token usage data.</p>
+      </section>
+
+      <section>
+        <h2>New in v1.6.0</h2>
+        <ul>
+          <li><strong>Per-turn token attribution:</strong> stacked bar chart in the detail panel showing where tokens went each turn — thinking, tool I/O, system prompt, user text, cache reads. Estimates based on content block sizes.</li>
+          <li><strong>Cache hit rate metric:</strong> <code>cacheReadTokens</code> extracted from JSONL <code>cache_read_input_tokens</code>. Toolbar shows a cache hit percentage pill (yellow when &gt;= 50%). Yellow dot on cached rows. Works for Claude Code and Codex; Copilot shows nothing (no cache data exposed).</li>
+          <li><strong>Cross-session full-text search:</strong> "Search all..." input in the toolbar (or Cmd+Shift+F). <code>GET /api/search?q=</code> scans all sessions from all providers (last 30 days). Results flyout with click-to-navigate jumps to the session and highlights the matching row.</li>
+          <li><strong>Tool-specific detail renderers:</strong> Edit/Write show inline diffs with red/green background. Read shows syntax-highlighted code with line numbers. Bash shows terminal-styled command + output with error lines tinted red. Glob/Grep show file lists with icons. Unknown tools fall back to the existing plain text/markdown rendering.</li>
+        </ul>
       </section>
 
       <section>
@@ -232,7 +242,7 @@
         <ul>
           <li><strong>Claude Code</strong> — reads <code>~/.claude/projects/</code> JSONL session logs. Full context health scoring, token cost estimation, and all waterfall features.</li>
           <li><strong>OpenAI Codex CLI</strong> — reads <code>~/.codex/sessions/</code> rollout JSONL files. Orange <code>codex</code> badge. Full tool-call granularity with per-turn token accounting.</li>
-          <li><strong>GitHub Copilot Chat (new in v1.5)</strong> — reads VS Code workspaceStorage JSON session files at <code>~/Library/Application Support/Code/User/workspaceStorage/</code>. Blue <code>copilot</code> badge. 19 internal tool IDs mapped to familiar names (Read, Write, Edit, Bash, etc.). Token tracking not available — Copilot Chat does not expose token counts, so the health grade and cost columns are hidden for Copilot sessions.</li>
+          <li><strong>GitHub Copilot Chat (new in v1.5)</strong> — reads VS Code workspaceStorage JSON session files at <code>~/Library/Application Support/Code/User/workspaceStorage/</code>. Blue <code>copilot</code> badge. 20 internal tool IDs mapped to familiar names (Read, Write, Edit, Bash, etc.). Token tracking not available — Copilot Chat does not expose token counts, so the health grade and cost columns are hidden for Copilot sessions.</li>
         </ul>
       </section>
 

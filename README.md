@@ -101,7 +101,7 @@ All three show up in the same session picker. Context health scoring and token c
 - **Context Startup Flyout** — shows which instruction files (CLAUDE.md and others) loaded at session start with estimated token counts, parsed from JSONL system records
 - **Docker Support** — `npx noctrace --docker <container>` attaches to a running Docker container, injects a lightweight watcher, and streams JSONL events back to your host in real time. Zero container setup required
 - **Patterns View (new in v1.2)** — a second top-level tab that aggregates across every session in the chosen time window (today, 7 days, 30 days). Three panels: health distribution (A/B/C/D/F grade counts with week-over-week delta arrows), project rot leaderboard (which codebases are degrading, ranked), and tool health grid (per-tool failure rate and p50/p95 latency). Zero spend or token tracking — this is about quality and waste
-- **Multi-provider support (new in v1.4+)** — sessions from Claude Code, OpenAI Codex CLI, and GitHub Copilot Chat all appear in the same session picker with provider badges. Zero config — each provider auto-detects its session directory. Copilot Chat maps 19 internal tool IDs to familiar names (Read, Write, Edit, Bash, etc.)
+- **Multi-provider support (new in v1.4+)** — sessions from Claude Code, OpenAI Codex CLI, and GitHub Copilot Chat all appear in the same session picker with provider badges. Zero config — each provider auto-detects its session directory. Copilot Chat maps 20 internal tool IDs to familiar names (Read, Write, Edit, Bash, etc.)
 
 ![Noctrace waterfall timeline](docs/screenshots/noctrace-waterfall.gif)
 

@@ -42,7 +42,12 @@
     "tool-calls",
     "sub-agents",
     "opentelemetry",
-    "context-health"
+    "context-health",
+    "codex-cli",
+    "openai-codex",
+    "github-copilot",
+    "copilot-chat",
+    "copilot-observability"
   ],
   "bin": {
     "noctrace": "bin/noctrace.js"

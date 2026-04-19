@@ -22,7 +22,6 @@ const HOOK_EVENT_NAMES = [
   'PostCompact',
   'SessionStart',
   'SessionEnd',
-  'PermissionRequest',
   'PermissionDenied',
   'TaskCreated',
   'TaskCompleted',
